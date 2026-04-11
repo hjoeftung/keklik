@@ -1,0 +1,21 @@
+# Binaries and build outputs
+bin/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries and coverage reports
+*.test
+*.out
+coverage.out
+.coverprofile
+
+# Local environment files
+.env
+.env.*
+
+# Dependency directories
+vendor/
