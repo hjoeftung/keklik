@@ -1,6 +1,7 @@
 ## Story 2: Family Onboarding
 
 ### TASK-005: Model family aggregate and repository interfaces
+- Status: Done
 - Size: `S`
 - Goal: Define the family domain model before implementing commands.
 - Scope:
