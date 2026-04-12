@@ -94,6 +94,7 @@
   - Schema supports every persistence requirement in [requirements.md](/home/hjoeftung/code/projects/keklik/requirements.md)
 
 ### TASK-004: Establish shared error model and HTTP error mapping
+- Status: Done
 - Size: `S`
 - Goal: Standardize machine-readable error handling.
 - Scope:
