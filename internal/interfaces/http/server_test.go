@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"keklik/internal/infrastructure"
+	"github.com/hjoeftung/keklik/internal/infrastructure"
 )
 
 func TestHealthEndpointReturnsSuccess(t *testing.T) {

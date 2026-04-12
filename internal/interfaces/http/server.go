@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"keklik/internal/infrastructure"
+	"github.com/hjoeftung/keklik/internal/infrastructure"
 )
 
 type healthResponse struct {

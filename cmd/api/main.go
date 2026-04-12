@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"keklik/internal/infrastructure"
-	httpapi "keklik/internal/interfaces/http"
+	"github.com/hjoeftung/keklik/internal/infrastructure"
+	httpapi "github.com/hjoeftung/keklik/internal/interfaces/http"
 )
 
 func main() {
