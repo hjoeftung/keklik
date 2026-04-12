@@ -1,0 +1,37 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      HTTP_PORT: "8080"
+      DATABASE_URL: postgres://keklik:keklik@postgres:5432/keklik?sslmode=disable
+      GOOGLE_OAUTH_CLIENT_ID: local-dev-client-id
+      GOOGLE_OAUTH_CLIENT_SECRET: local-dev-client-secret
+      GOOGLE_OAUTH_REDIRECT_URL: http://localhost:8080/auth/google/callback
+      APP_BASE_URL: http://localhost:8080
+    ports:
+      - "8080:8080"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: keklik
+      POSTGRES_USER: keklik
+      POSTGRES_PASSWORD: keklik
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:

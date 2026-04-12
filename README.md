@@ -2,6 +2,39 @@
 
 Initial Go service skeleton for the Keklik backend, structured as a modular monolith with DDD-inspired package boundaries.
 
+## Run with Docker Compose
+
+```bash
+docker compose up --build
+```
+
+This starts:
+
+- the API on `http://localhost:8080`
+- PostgreSQL on `localhost:5432`
+
+The Compose stack uses a named Docker volume, `postgres-data`, so local database state survives container restarts.
+
+The API container is configured with development-safe placeholder Google OAuth values so the service can boot locally before the real OAuth flow is implemented. Override them in `compose.yaml` if you need different values.
+
+To verify the stack is healthy:
+
+```bash
+curl http://localhost:8080/healthz
+```
+
+To stop the stack:
+
+```bash
+docker compose down
+```
+
+To stop the stack and remove the local PostgreSQL volume:
+
+```bash
+docker compose down --volumes
+```
+
 ## Run locally
 
 ```bash

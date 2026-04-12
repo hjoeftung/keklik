@@ -1,0 +1,10 @@
+.git
+.gitignore
+bin
+dist
+coverage.out
+.coverprofile
+*.test
+*.out
+.env
+.env.*
