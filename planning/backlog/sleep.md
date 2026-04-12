@@ -1,6 +1,7 @@
 ## Story 3: Sleep Lifecycle
 
 ### TASK-011: Model sleep session aggregate and repository interfaces
+- Status: Done
 - Size: `S`
 - Goal: Define the core sleep domain model with business invariants.
 - Scope:
