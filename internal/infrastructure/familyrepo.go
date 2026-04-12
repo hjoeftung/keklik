@@ -251,6 +251,76 @@ func (r *PostgresFamilyRepository) queryBabies(ctx context.Context, familyID fam
 	return babies, rows.Err()
 }
 
+// PostgresFamilyMemberRepository implements family.FamilyMemberRepository using PostgreSQL.
+type PostgresFamilyMemberRepository struct {
+	db *sql.DB
+}
+
+// NewPostgresFamilyMemberRepository returns a repository backed by the given database connection.
+func NewPostgresFamilyMemberRepository(db *sql.DB) *PostgresFamilyMemberRepository {
+	return &PostgresFamilyMemberRepository{db: db}
+}
+
+// Save persists a FamilyMember record.
+func (r *PostgresFamilyMemberRepository) Save(ctx context.Context, m family.FamilyMember) error {
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO family_members (id, family_id, name, google_subject_id)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (id) DO UPDATE SET
+			name              = EXCLUDED.name,
+			google_subject_id = EXCLUDED.google_subject_id,
+			updated_at        = now()`,
+		string(m.ID), string(m.FamilyID), m.Name, m.GoogleSubjectID,
+	)
+	if err != nil {
+		return fmt.Errorf("upsert family member: %w", err)
+	}
+	return nil
+}
+
+// FindByID loads a FamilyMember by its ID.
+func (r *PostgresFamilyMemberRepository) FindByID(ctx context.Context, id family.FamilyMemberID) (family.FamilyMember, error) {
+	var m family.FamilyMember
+	var rawID, rawFamilyID string
+
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id, family_id, name, google_subject_id
+		FROM family_members WHERE id = $1`, string(id)).
+		Scan(&rawID, &rawFamilyID, &m.Name, &m.GoogleSubjectID)
+	if err == sql.ErrNoRows {
+		return family.FamilyMember{}, apperror.New(apperror.CodeNotFound, "family member not found")
+	}
+	if err != nil {
+		return family.FamilyMember{}, fmt.Errorf("query family member by id: %w", err)
+	}
+
+	m.ID = family.FamilyMemberID(rawID)
+	m.FamilyID = family.FamilyID(rawFamilyID)
+	return m, nil
+}
+
+// FindByGoogleSubjectID loads the FamilyMember associated with the given Google subject ID.
+// This is the explicit link between an auth.Account and a family-domain FamilyMember.
+func (r *PostgresFamilyMemberRepository) FindByGoogleSubjectID(ctx context.Context, googleSubjectID string) (family.FamilyMember, error) {
+	var m family.FamilyMember
+	var rawID, rawFamilyID string
+
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id, family_id, name, google_subject_id
+		FROM family_members WHERE google_subject_id = $1`, googleSubjectID).
+		Scan(&rawID, &rawFamilyID, &m.Name, &m.GoogleSubjectID)
+	if err == sql.ErrNoRows {
+		return family.FamilyMember{}, apperror.New(apperror.CodeNotFound, "family member not found")
+	}
+	if err != nil {
+		return family.FamilyMember{}, fmt.Errorf("query family member by google subject id: %w", err)
+	}
+
+	m.ID = family.FamilyMemberID(rawID)
+	m.FamilyID = family.FamilyID(rawFamilyID)
+	return m, nil
+}
+
 func (r *PostgresFamilyRepository) queryInviteLinks(ctx context.Context, familyID family.FamilyID) ([]family.InviteLink, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT token, family_id, created_by_member_id, expires_at

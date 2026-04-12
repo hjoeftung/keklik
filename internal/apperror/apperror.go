@@ -15,6 +15,7 @@ const (
 	CodeActiveSleepExists  Code = "active_sleep_exists"
 	CodeInvalidSleepInterval Code = "invalid_sleep_interval"
 	CodeInvalidInviteLink  Code = "invalid_invite_link"
+	CodeInternalError      Code = "internal_error"
 )
 
 // AppError is a structured application error with a stable code and a human-readable message.

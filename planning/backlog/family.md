@@ -47,6 +47,7 @@
   - API returns identifiers needed by clients
 
 ### TASK-007: Implement Google OAuth identity flow
+- Status: Done
 - Size: `S`
 - Goal: Support Google OAuth as the only authentication option for the MVP.
 - Scope:

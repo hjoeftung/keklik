@@ -4,6 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+
+	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/family"
 	"github.com/hjoeftung/keklik/internal/infrastructure"
 )
@@ -13,12 +17,39 @@ type healthResponse struct {
 }
 
 // NewServer wires the HTTP transport and returns a ready-to-start server.
-func NewServer(config infrastructure.Config, createFamily *family.CreateFamilyHandler) *http.Server {
+func NewServer(
+	config infrastructure.Config,
+	accounts auth.AccountRepository,
+	sessions auth.SessionRepository,
+	oauthCallback *auth.HandleOAuthCallbackHandler,
+	createFamily *family.CreateFamilyHandler,
+) *http.Server {
+	oauthCfg := &oauth2.Config{
+		ClientID:     config.GoogleOAuth.ClientID,
+		ClientSecret: config.GoogleOAuth.ClientSecret,
+		RedirectURL:  config.GoogleOAuth.RedirectURL,
+		Scopes:       []string{"openid", "email"},
+		Endpoint:     google.Endpoint,
+	}
+	stateSecret := config.GoogleOAuth.ClientSecret
+
 	mux := http.NewServeMux()
+
+	// Public endpoints.
 	mux.HandleFunc("GET /healthz", healthHandler)
-	mux.HandleFunc("POST /families", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /auth/google/start", func(w http.ResponseWriter, r *http.Request) {
+		oauthStartHandler(w, r, oauthCfg, stateSecret)
+	})
+	mux.HandleFunc("GET /auth/google/callback", func(w http.ResponseWriter, r *http.Request) {
+		oauthCallbackHandler(w, r, oauthCfg, stateSecret, oauthCallback)
+	})
+
+	// Protected endpoints — wrapped with requireAuth middleware.
+	protected := http.NewServeMux()
+	protected.HandleFunc("POST /families", func(w http.ResponseWriter, r *http.Request) {
 		createFamilyHandler(w, r, createFamily)
 	})
+	mux.Handle("/", requireAuth(accounts, sessions, protected))
 
 	return &http.Server{
 		Addr:    config.Address(),

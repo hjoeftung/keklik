@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/family"
 	"github.com/hjoeftung/keklik/internal/infrastructure"
 	httpapi "github.com/hjoeftung/keklik/internal/interfaces/http"
@@ -32,9 +33,13 @@ func main() {
 	}
 
 	familyRepo := infrastructure.NewPostgresFamilyRepository(db)
-	createFamily := family.NewCreateFamilyHandler(familyRepo)
+	accountRepo := infrastructure.NewPostgresAccountRepository(db)
+	sessionRepo := infrastructure.NewPostgresSessionRepository(db)
 
-	server := httpapi.NewServer(config, createFamily)
+	createFamily := family.NewCreateFamilyHandler(familyRepo)
+	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, sessionRepo)
+
+	server := httpapi.NewServer(config, accountRepo, sessionRepo, oauthCallback, createFamily)
 
 	log.Printf("starting HTTP server on %s", config.Address())
 
