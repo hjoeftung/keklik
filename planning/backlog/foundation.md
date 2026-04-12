@@ -1,6 +1,7 @@
 ## Story 1: Foundation and Architecture
 
 ### TASK-001: Bootstrap Go service skeleton
+- Status: Done
 - Size: `S`
 - Goal: Create the initial Go backend structure as a modular monolith with DDD boundaries.
 - Scope:
@@ -25,6 +26,7 @@
   - The package structure reflects the bounded contexts in [requirements.md](/home/hjoeftung/code/projects/keklik/requirements.md)
 
 ### TASK-002: Add configuration and environment contract
+- Status: Done
 - Size: `S`
 - Goal: Define runtime configuration for the backend.
 - Scope:
@@ -45,6 +47,7 @@
   - Config is injectable into application and infrastructure layers
 
 ### TASK-002A: Dockerize the app and bootstrap Docker Compose with PostgreSQL
+- Status: Done
 - Size: `S`
 - Goal: Make local development and integration testing reproducible with containers.
 - Scope:
@@ -72,6 +75,8 @@
   - Local setup steps are documented clearly enough for a new developer to run the stack
 
 ### TASK-003: Add PostgreSQL migration framework and baseline schema
+- Status: Partially done
+- Note: Only the migrations framework has been introduced so far.
 - Size: `S`
 - Goal: Establish schema management for the MVP.
 - Scope:

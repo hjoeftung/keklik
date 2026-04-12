@@ -52,6 +52,7 @@
   - The test suite runs locally with documented setup
 
 ### TASK-024: Add GitHub Actions CI and GHCR image publishing
+- Status: Done
 - Size: `S`
 - Goal: Establish a baseline GitHub-hosted CI/CD path for validating Go changes and publishing application images.
 - Scope:
