@@ -14,7 +14,7 @@ func TestHealthEndpointReturnsSuccess(t *testing.T) {
 
 	server := NewServer(infrastructure.Config{
 		HTTP: infrastructure.HTTPConfig{Port: 8080},
-	})
+	}, nil)
 	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	recorder := httptest.NewRecorder()
 

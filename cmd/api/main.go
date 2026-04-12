@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/hjoeftung/keklik/internal/family"
 	"github.com/hjoeftung/keklik/internal/infrastructure"
 	httpapi "github.com/hjoeftung/keklik/internal/interfaces/http"
 )
@@ -30,7 +31,10 @@ func main() {
 		log.Fatalf("migration error: %v", err)
 	}
 
-	server := httpapi.NewServer(config)
+	familyRepo := infrastructure.NewPostgresFamilyRepository(db)
+	createFamily := family.NewCreateFamilyHandler(familyRepo)
+
+	server := httpapi.NewServer(config, createFamily)
 
 	log.Printf("starting HTTP server on %s", config.Address())
 

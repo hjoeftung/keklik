@@ -23,6 +23,7 @@
   - Unit tests cover key family invariants
 
 ### TASK-006: Implement create family use case and API
+- Status: Done
 - Size: `S`
 - Goal: Allow creation of a family with the initial baby and settings.
 - Scope:
