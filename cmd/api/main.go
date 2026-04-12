@@ -20,6 +20,16 @@ func main() {
 		log.Fatalf("configuration error: %v", err)
 	}
 
+	db, err := infrastructure.OpenDB(config.Database.URL)
+	if err != nil {
+		log.Fatalf("database connection error: %v", err)
+	}
+	defer db.Close()
+
+	if err := infrastructure.RunMigrations(db); err != nil {
+		log.Fatalf("migration error: %v", err)
+	}
+
 	server := httpapi.NewServer(config)
 
 	log.Printf("starting HTTP server on %s", config.Address())
