@@ -1,12 +1,16 @@
-## Story 2: Authentication and Family Onboarding
+## Story 2: Family Onboarding
 
 ### TASK-005: Model family aggregate and repository interfaces
 - Size: `S`
 - Goal: Define the family domain model before implementing commands.
 - Scope:
-  - Add `Family`, `Account`, `Baby`, `NightWindow`, and `InviteLink` domain types
+  - Add `Family`, `FamilyMember`, `Baby`, `NightWindow`, and `InviteLink` domain types
   - Define repository interfaces
   - Encode MVP invariant of exactly one baby per family while keeping future extension possible
+- Boundary note:
+  - `FamilyMember` belongs to the family domain and represents membership in a family
+  - `Account` belongs to the auth domain and represents an authenticated identity
+  - A `FamilyMember` may be linked to an `Account`, but the concepts should remain separate in code and docs
 - Key rules to encode:
   - Family owns baby, members, timezone, and night window
   - Family members have identical permissions
@@ -23,7 +27,7 @@
 - Scope:
   - Implement `CreateFamily`
   - Validate family name, baby name, timezone, and night window
-  - Persist family, creator account, and initial baby in one transaction
+  - Persist family, creator family member, and initial baby in one transaction
   - Expose HTTP endpoint
 - Request must include:
   - Family name
@@ -47,16 +51,20 @@
   - Implement OAuth start and callback flow
   - Verify Google identity token or callback response
   - Resolve or provision internal account identity record
+  - Keep auth `Account` separate from family-domain `FamilyMember`
+  - Define how an authenticated `Account` is linked to an existing or newly created `FamilyMember`
   - Define how authenticated identity is attached to requests
 - Decision notes:
   - Keep session mechanism simple for MVP
   - Preserve Google subject identifier in account data
+  - Avoid leaking auth terminology into the family aggregate
 - Dependencies:
   - [TASK-002](#task-002-add-configuration-and-environment-contract)
   - [TASK-004](#task-004-establish-shared-error-model-and-http-error-mapping)
 - Acceptance criteria:
   - Unauthenticated requests are rejected on protected endpoints
   - Google-authenticated identity can be resolved to internal account data
+  - Authenticated account-to-family-member linking is explicit in the application flow
   - OAuth failure modes return stable API errors
 
 ### TASK-008: Implement edit family use case and API
@@ -102,7 +110,7 @@
 - Scope:
   - Implement `JoinFamilyByInviteLink`
   - Validate token, expiration, and family state
-  - Link authenticated user to the family as a member
+  - Link the authenticated `Account` to the family by creating or associating a `FamilyMember`
   - Prevent duplicate membership
   - Expose endpoint
 - Dependencies:
@@ -112,4 +120,4 @@
 - Acceptance criteria:
   - Only a Google-authenticated user can accept an invite
   - Invalid or expired links are rejected
-  - A valid invite links the user to the family exactly once
+  - A valid invite links the authenticated account to one family member exactly once

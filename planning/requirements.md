@@ -14,7 +14,7 @@ The backend should be designed using Domain-Driven Design (DDD) and implemented 
 ## 2. Scope
 
 ### In scope for the first version
-- Family account management
+- Family membership management
 - Shared access for multiple family members
 - Baby sleep tracking
 - Night sleep and nap classification
@@ -34,20 +34,20 @@ The system should allow a family to track a baby's sleep and awake periods from 
 ## 4. Users and Roles
 
 ### Family member
-- Belongs to a family account
+- Belongs to a family
 - Can create, start, stop, and edit sleep records for babies in the family
 - Can view sleep history and summary metrics for babies in the family
 - Has the same permissions as every other family member in the MVP
 
 ### Family
-- Represents the shared ownership boundary for babies and member accounts
+- Represents the shared ownership boundary for babies and family members
 - All family members work with the same underlying data
 
 ## 5. Functional Requirements
 
-### 5.1 Family and account management
-1. The system must allow creation of a family account.
-2. The system must allow multiple accounts to belong to the same family.
+### 5.1 Family and membership management
+1. The system must allow creation of a family.
+2. The system must allow multiple family members to belong to the same family.
 3. The system must treat family members as collaborators with access to the same babies and sleep data.
 4. The system must require the family's first baby to be created together with the family.
 5. The system must allow editing family settings after creation.
@@ -59,7 +59,7 @@ The system should allow a family to track a baby's sleep and awake periods from 
 ### 5.2 Authentication and identity
 1. The MVP must support OAuth sign-in with Google.
 2. Google OAuth must be the only authentication option in the MVP.
-3. The backend must map authenticated users to family member accounts.
+3. The backend must map authenticated users to family members.
 4. All family members must have identical permissions in the MVP.
 5. Invite-link acceptance must require successful Google authentication before a user is linked to a family.
 
@@ -137,9 +137,9 @@ The existing notes in [entities.md](/home/hjoeftung/code/projects/keklik/entitie
   - Own family settings such as timezone and night window
   - Enforce that only family members can act on family data
 
-#### Account entity
+#### FamilyMember entity
 - Fields:
-  - AccountId
+  - FamilyMemberId
   - Name
   - GoogleSubjectId
 - Responsibilities:
@@ -170,7 +170,7 @@ Note: A Baby entity is required even though it is only implied in [entities.md](
   - InviteToken
   - FamilyId
   - ExpiresAt
-  - CreatedByAccountId
+  - CreatedByMemberId
 - Responsibilities:
   - Represent a shareable link that allows a new member to join a family
   - Support validation before a Google-authenticated user is linked to the family
@@ -185,8 +185,8 @@ Note: A Baby entity is required even though it is only implied in [entities.md](
   - Duration
   - Classification
   - ClassificationRuleVersion
-  - CreatedByAccountId
-  - UpdatedByAccountId
+  - CreatedByMemberId
+  - UpdatedByMemberId
 - Responsibilities:
   - Represent one sleep interval
   - Enforce valid lifecycle transitions
@@ -200,7 +200,7 @@ Note: A Baby entity is required even though it is only implied in [entities.md](
 3. Only one active sleep session may exist per baby.
 4. A completed sleep session must have `StopTime >= StartTime`.
 5. Duration must be derived from start and stop times, not manually entered.
-6. Accounts may access only data belonging to their family.
+6. Family members may access only data belonging to their family.
 7. A family has exactly one baby in the MVP.
 8. A family must have a valid timezone and night window configuration.
 9. Sleep classification must be derived from the configured night window and the session interval, not entered manually.
@@ -210,7 +210,7 @@ Note: A Baby entity is required even though it is only implied in [entities.md](
 
 ### 7.1 Family Management
 - Manage families
-- Manage accounts within a family
+- Manage family members within a family
 - Manage the baby created with the family
 - Manage family timezone and night-window settings
 - Manage family invite links
@@ -282,11 +282,11 @@ The first version should provide a simple client-agnostic API suitable for Teleg
 - Errors must be returned with stable machine-readable codes.
 - Query endpoints must be idempotent.
 - Command endpoints must validate business rules before persistence.
-- The authentication layer must accept Google OAuth identity and resolve it to an internal account.
+- The authentication layer must accept Google OAuth identity and resolve it to an internal family member.
 
 ## 10. Persistence Requirements
 
-1. The system must persist families, accounts, babies, family settings, and sleep sessions.
+1. The system must persist families, family members, babies, family settings, and sleep sessions.
 2. The storage design must support querying by baby and date range efficiently.
 3. The storage design must support detection of an active sleep session for a baby.
 4. The system should keep audit metadata for create and update operations.
