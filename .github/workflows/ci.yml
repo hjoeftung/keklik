@@ -1,0 +1,49 @@
+name: ci
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Go changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Verify gofmt
+        shell: bash
+        run: |
+          mapfile -t files < <(find . -type f -name '*.go' -not -path './vendor/*' | sort)
+
+          if [ "${#files[@]}" -eq 0 ]; then
+            exit 0
+          fi
+
+          unformatted=$(gofmt -l "${files[@]}")
+
+          if [ -n "$unformatted" ]; then
+            echo "These files are not formatted with gofmt:" >&2
+            echo "$unformatted" >&2
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build API binary
+        run: go build ./cmd/api

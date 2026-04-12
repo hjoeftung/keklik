@@ -2,6 +2,30 @@
 
 Initial Go service skeleton for the Keklik backend, structured as a modular monolith with DDD-inspired package boundaries.
 
+## CI and image publishing
+
+GitHub Actions is split into two workflows:
+
+- Pull requests run `.github/workflows/ci.yml`.
+- Pushes to the default branch, `master`, and version tags matching `v*` run `.github/workflows/publish.yml`.
+
+Both workflows execute the standard Go validation steps:
+
+- `gofmt` verification
+- `go vet ./...`
+- `go test ./...`
+- `go build ./cmd/api`
+
+The publish workflow builds the root `Dockerfile` and pushes images to GitHub Container Registry as `ghcr.io/<owner>/keklik` using the repository `GITHUB_TOKEN`.
+
+Published tags include:
+
+- `sha-<full-commit-sha>` for every published image
+- `latest` for the default branch
+- the Git tag name for version tags such as `v1.2.3`
+
+If the repository default branch changes from `master`, update the branch filter and `latest` tag condition in `.github/workflows/publish.yml`.
+
 ## Run with Docker Compose
 
 ```bash
