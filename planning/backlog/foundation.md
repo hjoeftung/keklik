@@ -1,0 +1,112 @@
+## Story 1: Foundation and Architecture
+
+### TASK-001: Bootstrap Go service skeleton
+- Size: `S`
+- Goal: Create the initial Go backend structure as a modular monolith with DDD boundaries.
+- Scope:
+  - Initialize Go module
+  - Create package layout from the requirements
+  - Add entrypoint for HTTP server
+  - Add config loading skeleton
+  - Add health check endpoint
+- Suggested packages:
+  - `cmd/api`
+  - `internal/family`
+  - `internal/auth`
+  - `internal/sleep`
+  - `internal/reporting`
+  - `internal/infrastructure`
+  - `internal/interfaces/http`
+- Dependencies: none
+- Acceptance criteria:
+  - The project builds successfully
+  - The HTTP server starts locally
+  - A health endpoint returns success
+  - The package structure reflects the bounded contexts in [requirements.md](/home/hjoeftung/code/projects/keklik/requirements.md)
+
+### TASK-002: Add configuration and environment contract
+- Size: `S`
+- Goal: Define runtime configuration for the backend.
+- Scope:
+  - Add config struct and loader
+  - Define required environment variables
+  - Cover HTTP port, database DSN, Google OAuth settings, and base URL for invite links
+- Required config keys:
+  - `HTTP_PORT`
+  - `DATABASE_URL`
+  - `GOOGLE_OAUTH_CLIENT_ID`
+  - `GOOGLE_OAUTH_CLIENT_SECRET`
+  - `GOOGLE_OAUTH_REDIRECT_URL`
+  - `APP_BASE_URL`
+- Dependencies: [TASK-001](#task-001-bootstrap-go-service-skeleton)
+- Acceptance criteria:
+  - Service fails fast on missing required configuration
+  - Local development defaults are documented where appropriate
+  - Config is injectable into application and infrastructure layers
+
+### TASK-002A: Dockerize the app and bootstrap Docker Compose with PostgreSQL
+- Size: `S`
+- Goal: Make local development and integration testing reproducible with containers.
+- Scope:
+  - Add a Dockerfile for the Go API service
+  - Add a `compose.yaml` or `docker-compose.yml` for the API and PostgreSQL
+  - Configure database volume persistence for local development
+  - Wire environment variables for the app container and PostgreSQL container
+  - Add basic startup documentation for running the stack locally
+- Minimum setup expectations:
+  - One app service
+  - One PostgreSQL service
+  - App can connect to PostgreSQL over the Compose network
+  - Ports are exposed for local development
+- Suggested implementation details:
+  - Multi-stage Docker build for the Go binary
+  - Health check or startup dependency handling for PostgreSQL readiness
+  - Named volume for PostgreSQL data
+- Dependencies:
+  - [TASK-001](#task-001-bootstrap-go-service-skeleton)
+  - [TASK-002](#task-002-add-configuration-and-environment-contract)
+- Acceptance criteria:
+  - The backend can be started locally with Docker Compose
+  - PostgreSQL starts with persistent local storage
+  - The app container reads configuration correctly in Compose
+  - Local setup steps are documented clearly enough for a new developer to run the stack
+
+### TASK-003: Add PostgreSQL migration framework and baseline schema
+- Size: `S`
+- Goal: Establish schema management for the MVP.
+- Scope:
+  - Add migration tooling
+  - Create initial schema for families, accounts, babies, invite links, and sleep sessions
+  - Add indexes for active sleep lookups and date-range queries
+- Minimum schema expectations:
+  - Store timestamps in UTC
+  - Store family timezone as IANA identifier
+  - Persist sleep classification and classification rule version
+- Dependencies: [TASK-001](#task-001-bootstrap-go-service-skeleton)
+- Acceptance criteria:
+  - Migrations run cleanly on an empty database
+  - Migrations are repeatable in local development
+  - Schema supports every persistence requirement in [requirements.md](/home/hjoeftung/code/projects/keklik/requirements.md)
+
+### TASK-004: Establish shared error model and HTTP error mapping
+- Size: `S`
+- Goal: Standardize machine-readable error handling.
+- Scope:
+  - Define domain and application error codes
+  - Add HTTP mapping for validation, auth, conflict, not-found, and forbidden cases
+  - Add consistent JSON error response shape
+- Example codes:
+  - `invalid_argument`
+  - `unauthenticated`
+  - `forbidden`
+  - `not_found`
+  - `conflict`
+  - `invalid_timezone`
+  - `active_sleep_exists`
+  - `invalid_sleep_interval`
+  - `invalid_invite_link`
+- Dependencies: [TASK-001](#task-001-bootstrap-go-service-skeleton)
+- Acceptance criteria:
+  - All handlers can return the shared error model
+  - Error responses include stable code and human-readable message
+  - Conflict scenarios map to HTTP 409
