@@ -12,7 +12,9 @@ import (
 func TestHealthEndpointReturnsSuccess(t *testing.T) {
 	t.Parallel()
 
-	server := NewServer(infrastructure.Config{HTTPPort: 8080})
+	server := NewServer(infrastructure.Config{
+		HTTP: infrastructure.HTTPConfig{Port: 8080},
+	})
 	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	recorder := httptest.NewRecorder()
 

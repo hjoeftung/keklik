@@ -15,7 +15,11 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	config := infrastructure.LoadConfig()
+	config, err := infrastructure.LoadConfig()
+	if err != nil {
+		log.Fatalf("configuration error: %v", err)
+	}
+
 	server := httpapi.NewServer(config)
 
 	log.Printf("starting HTTP server on %s", config.Address())
