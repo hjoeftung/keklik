@@ -100,10 +100,9 @@ func newTestServer(familyRepo family.FamilyRepository) *http.Server {
 
 func validCreateFamilyBody() map[string]any {
 	return map[string]any{
-		"family_name":              "Smith Family",
-		"baby_name":                "Emma",
-		"creator_name":             "Alice",
-		"creator_google_subject_id": "google-subject-123",
+		"family_name":  "Smith Family",
+		"baby_name":    "Emma",
+		"creator_name": "Alice",
 	}
 }
 

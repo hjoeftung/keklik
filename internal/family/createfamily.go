@@ -8,10 +8,8 @@ import (
 
 // CreateFamilyCommand holds the inputs for creating a new family.
 type CreateFamilyCommand struct {
-	FamilyName string
-	BabyName   string
-	// CreatorName and CreatorGoogleSubjectID will be sourced from auth context once
-	// TASK-007 is implemented. For now they are supplied explicitly by the caller.
+	FamilyName             string
+	BabyName               string
 	CreatorName            string
 	CreatorGoogleSubjectID string
 }

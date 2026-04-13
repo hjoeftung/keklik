@@ -6,14 +6,14 @@ import (
 	"net/http"
 
 	"github.com/hjoeftung/keklik/internal/apperror"
+	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/family"
 )
 
 type createFamilyRequest struct {
-	FamilyName             string `json:"family_name"`
-	BabyName               string `json:"baby_name"`
-	CreatorName            string `json:"creator_name"`
-	CreatorGoogleSubjectID string `json:"creator_google_subject_id"`
+	FamilyName  string `json:"family_name"`
+	BabyName    string `json:"baby_name"`
+	CreatorName string `json:"creator_name"`
 }
 
 type createFamilyResponse struct {
@@ -23,6 +23,12 @@ type createFamilyResponse struct {
 }
 
 func createFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.CreateFamilyHandler) {
+	account, ok := auth.AccountFromContext(r.Context())
+	if !ok {
+		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		return
+	}
+
 	var req createFamilyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
@@ -33,7 +39,7 @@ func createFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.Creat
 		FamilyName:             req.FamilyName,
 		BabyName:               req.BabyName,
 		CreatorName:            req.CreatorName,
-		CreatorGoogleSubjectID: req.CreatorGoogleSubjectID,
+		CreatorGoogleSubjectID: account.GoogleSubjectID,
 	})
 	if err != nil {
 		writeError(w, mapFamilyError(err))
