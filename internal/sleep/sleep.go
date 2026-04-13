@@ -33,13 +33,15 @@ const (
 	SleepClassificationNight   SleepClassification = "night"
 )
 
+type ClassificationRuleVersion int
+
 type SleepSession struct {
 	id                        SleepSessionID
 	babyID                    BabyID
 	startedAt                 time.Time
 	stoppedAt                 *time.Time
 	classification            SleepClassification
-	classificationRuleVersion int
+	classificationRuleVersion ClassificationRuleVersion
 }
 
 type DateRange struct {
@@ -85,7 +87,7 @@ func NewSleepSession(id SleepSessionID, babyID BabyID, startedAt time.Time) (Sle
 	return newSleepSession(id, babyID, startedAt, nil, SleepClassificationUnknown, 0)
 }
 
-func NewCompletedSleepSession(id SleepSessionID, babyID BabyID, startedAt time.Time, stoppedAt time.Time, classification SleepClassification, classificationRuleVersion int) (SleepSession, error) {
+func NewCompletedSleepSession(id SleepSessionID, babyID BabyID, startedAt time.Time, stoppedAt time.Time, classification SleepClassification, classificationRuleVersion ClassificationRuleVersion) (SleepSession, error) {
 	return newSleepSession(id, babyID, startedAt, &stoppedAt, classification, classificationRuleVersion)
 }
 
@@ -155,6 +157,10 @@ func (s SleepSession) Classification() SleepClassification {
 	return s.classification
 }
 
+func (s SleepSession) ClassificationRuleVersion() ClassificationRuleVersion {
+	return s.classificationRuleVersion
+}
+
 func (s SleepSession) IsActive() bool {
 	return s.stoppedAt == nil
 }
@@ -167,7 +173,7 @@ func (s SleepSession) Duration() (time.Duration, bool) {
 	return s.stoppedAt.Sub(s.startedAt), true
 }
 
-func (s *SleepSession) Stop(stoppedAt time.Time, classification SleepClassification) error {
+func (s *SleepSession) Stop(stoppedAt time.Time, classification SleepClassification, ruleVersion ClassificationRuleVersion) error {
 	if s.stoppedAt != nil {
 		return ErrSleepSessionAlreadyStopped
 	}
@@ -183,6 +189,7 @@ func (s *SleepSession) Stop(stoppedAt time.Time, classification SleepClassificat
 
 	s.stoppedAt = &stoppedAt
 	s.classification = normalizedClassification
+	s.classificationRuleVersion = ruleVersion
 
 	return nil
 }
@@ -223,7 +230,7 @@ func (p SleepProfile) NightWindow() NightWindow {
 	return p.nightWindow
 }
 
-func newSleepSession(id SleepSessionID, babyID BabyID, startedAt time.Time, stoppedAt *time.Time, classification SleepClassification, classificationRuleVersion int) (SleepSession, error) {
+func newSleepSession(id SleepSessionID, babyID BabyID, startedAt time.Time, stoppedAt *time.Time, classification SleepClassification, classificationRuleVersion ClassificationRuleVersion) (SleepSession, error) {
 	trimmedID := strings.TrimSpace(string(id))
 	if trimmedID == "" {
 		return SleepSession{}, ErrEmptySleepSessionID

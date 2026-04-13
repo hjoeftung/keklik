@@ -47,7 +47,7 @@ func TestSleepSessionStopCompletesSessionAndDerivesDuration(t *testing.T) {
 	stoppedAt := startedAt.Add(90 * time.Minute)
 	session := mustSleepSession(t, startedAt)
 
-	if err := session.Stop(stoppedAt, SleepClassificationNight); err != nil {
+	if err := session.Stop(stoppedAt, SleepClassificationNight, 0); err != nil {
 		t.Fatalf("Stop returned error: %v", err)
 	}
 
@@ -84,7 +84,7 @@ func TestSleepSessionAllowsEqualStartAndStop(t *testing.T) {
 	startedAt := time.Date(2026, time.April, 12, 19, 0, 0, 0, time.UTC)
 	session := mustSleepSession(t, startedAt)
 
-	if err := session.Stop(startedAt, SleepClassificationNap); err != nil {
+	if err := session.Stop(startedAt, SleepClassificationNap, 0); err != nil {
 		t.Fatalf("Stop returned error: %v", err)
 	}
 
@@ -104,7 +104,7 @@ func TestSleepSessionStopRejectsEarlierStop(t *testing.T) {
 	startedAt := time.Date(2026, time.April, 12, 19, 0, 0, 0, time.UTC)
 	session := mustSleepSession(t, startedAt)
 
-	err := session.Stop(startedAt.Add(-time.Second), SleepClassificationNap)
+	err := session.Stop(startedAt.Add(-time.Second), SleepClassificationNap, 0)
 	if !errors.Is(err, ErrInvalidSleepSessionStop) {
 		t.Fatalf("expected ErrInvalidSleepSessionStop, got %v", err)
 	}
@@ -116,11 +116,11 @@ func TestSleepSessionStopRejectsSecondStop(t *testing.T) {
 	startedAt := time.Date(2026, time.April, 12, 19, 0, 0, 0, time.UTC)
 	session := mustSleepSession(t, startedAt)
 
-	if err := session.Stop(startedAt.Add(30*time.Minute), SleepClassificationNap); err != nil {
+	if err := session.Stop(startedAt.Add(30*time.Minute), SleepClassificationNap, 0); err != nil {
 		t.Fatalf("Stop returned error: %v", err)
 	}
 
-	err := session.Stop(startedAt.Add(45*time.Minute), SleepClassificationNight)
+	err := session.Stop(startedAt.Add(45*time.Minute), SleepClassificationNight, 0)
 	if !errors.Is(err, ErrSleepSessionAlreadyStopped) {
 		t.Fatalf("expected ErrSleepSessionAlreadyStopped, got %v", err)
 	}
