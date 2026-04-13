@@ -9,20 +9,11 @@ import (
 	"github.com/hjoeftung/keklik/internal/family"
 )
 
-type nightWindowRequest struct {
-	StartHour   int `json:"start_hour"`
-	StartMinute int `json:"start_minute"`
-	EndHour     int `json:"end_hour"`
-	EndMinute   int `json:"end_minute"`
-}
-
 type createFamilyRequest struct {
-	FamilyName             string             `json:"family_name"`
-	BabyName               string             `json:"baby_name"`
-	Timezone               string             `json:"timezone"`
-	NightWindow            nightWindowRequest `json:"night_window"`
-	CreatorName            string             `json:"creator_name"`
-	CreatorGoogleSubjectID string             `json:"creator_google_subject_id"`
+	FamilyName             string `json:"family_name"`
+	BabyName               string `json:"baby_name"`
+	CreatorName            string `json:"creator_name"`
+	CreatorGoogleSubjectID string `json:"creator_google_subject_id"`
 }
 
 type createFamilyResponse struct {
@@ -41,11 +32,6 @@ func createFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.Creat
 	result, err := h.Handle(r.Context(), family.CreateFamilyCommand{
 		FamilyName:             req.FamilyName,
 		BabyName:               req.BabyName,
-		Timezone:               req.Timezone,
-		NightWindowStartHour:   req.NightWindow.StartHour,
-		NightWindowStartMinute: req.NightWindow.StartMinute,
-		NightWindowEndHour:     req.NightWindow.EndHour,
-		NightWindowEndMinute:   req.NightWindow.EndMinute,
 		CreatorName:            req.CreatorName,
 		CreatorGoogleSubjectID: req.CreatorGoogleSubjectID,
 	})
@@ -65,11 +51,6 @@ func createFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.Creat
 
 func mapFamilyError(err error) apperror.AppError {
 	switch {
-	case errors.Is(err, family.ErrInvalidTimezone):
-		return apperror.New(apperror.CodeInvalidTimezone, err.Error())
-	case errors.Is(err, family.ErrInvalidNightWindow),
-		errors.Is(err, family.ErrInvalidLocalTime):
-		return apperror.New(apperror.CodeInvalidArgument, err.Error())
 	case errors.Is(err, family.ErrInvalidFamilyName),
 		errors.Is(err, family.ErrInvalidBabyName),
 		errors.Is(err, family.ErrInvalidFamilyMemberName),

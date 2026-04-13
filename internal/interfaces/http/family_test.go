@@ -13,6 +13,7 @@ import (
 	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/family"
 	"github.com/hjoeftung/keklik/internal/infrastructure"
+	"github.com/hjoeftung/keklik/internal/sleep"
 )
 
 const testSessionToken = "test-session-token"
@@ -65,8 +66,22 @@ func (r *stubSessionRepository) FindByToken(_ context.Context, _ auth.SessionTok
 	return r.session, nil
 }
 
-func newTestServer(repo family.FamilyRepository) *http.Server {
-	h := family.NewCreateFamilyHandler(repo)
+// stubSleepProfileRepository is a minimal SleepProfileRepository test double.
+type stubSleepProfileRepository struct {
+	err error
+}
+
+func (r *stubSleepProfileRepository) Save(_ context.Context, _ sleep.SleepProfile) error {
+	return r.err
+}
+
+func (r *stubSleepProfileRepository) FindByBabyID(_ context.Context, _ sleep.BabyID) (sleep.SleepProfile, error) {
+	return sleep.SleepProfile{}, errors.New("not implemented")
+}
+
+func newTestServer(familyRepo family.FamilyRepository) *http.Server {
+	createFamily := family.NewCreateFamilyHandler(familyRepo)
+	createSleepProfile := sleep.NewCreateSleepProfileHandler(&stubSleepProfileRepository{})
 	account := auth.Account{ID: "test-account-id", GoogleSubjectID: "google-subject-123"}
 	session := auth.Session{
 		Token:     testSessionToken,
@@ -78,21 +93,15 @@ func newTestServer(repo family.FamilyRepository) *http.Server {
 		&stubAccountRepository{account: account},
 		&stubSessionRepository{session: session},
 		nil,
-		h,
+		createFamily,
+		createSleepProfile,
 	)
 }
 
 func validCreateFamilyBody() map[string]any {
 	return map[string]any{
-		"family_name": "Smith Family",
-		"baby_name":   "Emma",
-		"timezone":    "Europe/Berlin",
-		"night_window": map[string]any{
-			"start_hour":   20,
-			"start_minute": 30,
-			"end_hour":     7,
-			"end_minute":   0,
-		},
+		"family_name":              "Smith Family",
+		"baby_name":                "Emma",
 		"creator_name":             "Alice",
 		"creator_google_subject_id": "google-subject-123",
 	}
@@ -137,47 +146,6 @@ func TestCreateFamilyReturns201WithIDs(t *testing.T) {
 	}
 	if resp.BabyID == "" {
 		t.Error("expected non-empty baby_id")
-	}
-}
-
-func TestCreateFamilyRejects400OnInvalidTimezone(t *testing.T) {
-	t.Parallel()
-
-	server := newTestServer(&stubFamilyRepository{})
-	body := validCreateFamilyBody()
-	body["timezone"] = "Not/ATimezone"
-
-	rec := postJSON(t, server, "/families", body)
-
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", rec.Code)
-	}
-
-	var resp errorResponse
-	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("decode error response: %v", err)
-	}
-	if resp.Code != "invalid_timezone" {
-		t.Errorf("expected code %q, got %q", "invalid_timezone", resp.Code)
-	}
-}
-
-func TestCreateFamilyRejects400OnInvalidNightWindow(t *testing.T) {
-	t.Parallel()
-
-	server := newTestServer(&stubFamilyRepository{})
-	body := validCreateFamilyBody()
-	body["night_window"] = map[string]any{
-		"start_hour":   8,
-		"start_minute": 0,
-		"end_hour":     8,
-		"end_minute":   0,
-	}
-
-	rec := postJSON(t, server, "/families", body)
-
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", rec.Code)
 	}
 }
 

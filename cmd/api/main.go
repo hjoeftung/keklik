@@ -11,6 +11,7 @@ import (
 	"github.com/hjoeftung/keklik/internal/family"
 	"github.com/hjoeftung/keklik/internal/infrastructure"
 	httpapi "github.com/hjoeftung/keklik/internal/interfaces/http"
+	"github.com/hjoeftung/keklik/internal/sleep"
 )
 
 func main() {
@@ -35,11 +36,13 @@ func main() {
 	familyRepo := infrastructure.NewPostgresFamilyRepository(db)
 	accountRepo := infrastructure.NewPostgresAccountRepository(db)
 	sessionRepo := infrastructure.NewPostgresSessionRepository(db)
+	sleepProfileRepo := infrastructure.NewPostgresSleepProfileRepository(db)
 
 	createFamily := family.NewCreateFamilyHandler(familyRepo)
+	createSleepProfile := sleep.NewCreateSleepProfileHandler(sleepProfileRepo)
 	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, sessionRepo)
 
-	server := httpapi.NewServer(config, accountRepo, sessionRepo, oauthCallback, createFamily)
+	server := httpapi.NewServer(config, accountRepo, sessionRepo, oauthCallback, createFamily, createSleepProfile)
 
 	log.Printf("starting HTTP server on %s", config.Address())
 

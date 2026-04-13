@@ -36,11 +36,6 @@ func validCreateFamilyCommand() CreateFamilyCommand {
 	return CreateFamilyCommand{
 		FamilyName:             "Smith Family",
 		BabyName:               "Emma",
-		Timezone:               "Europe/Berlin",
-		NightWindowStartHour:   20,
-		NightWindowStartMinute: 30,
-		NightWindowEndHour:     7,
-		NightWindowEndMinute:   0,
 		CreatorName:            "Alice",
 		CreatorGoogleSubjectID: "google-subject-123",
 	}
@@ -83,40 +78,6 @@ func TestCreateFamilyPersistsFamilyMemberAndBaby(t *testing.T) {
 	}
 }
 
-func TestCreateFamilyRejectsInvalidTimezone(t *testing.T) {
-	t.Parallel()
-
-	repo := &inMemoryFamilyRepository{}
-	h := NewCreateFamilyHandler(repo)
-
-	cmd := validCreateFamilyCommand()
-	cmd.Timezone = "Not/ATimezone"
-
-	_, err := h.Handle(context.Background(), cmd)
-	if !errors.Is(err, ErrInvalidTimezone) {
-		t.Errorf("expected ErrInvalidTimezone, got %v", err)
-	}
-}
-
-func TestCreateFamilyRejectsInvalidNightWindow(t *testing.T) {
-	t.Parallel()
-
-	repo := &inMemoryFamilyRepository{}
-	h := NewCreateFamilyHandler(repo)
-
-	cmd := validCreateFamilyCommand()
-	// start == end is invalid
-	cmd.NightWindowStartHour = 20
-	cmd.NightWindowStartMinute = 0
-	cmd.NightWindowEndHour = 20
-	cmd.NightWindowEndMinute = 0
-
-	_, err := h.Handle(context.Background(), cmd)
-	if !errors.Is(err, ErrInvalidNightWindow) {
-		t.Errorf("expected ErrInvalidNightWindow, got %v", err)
-	}
-}
-
 func TestCreateFamilyRejectsEmptyFamilyName(t *testing.T) {
 	t.Parallel()
 
@@ -144,21 +105,6 @@ func TestCreateFamilyRejectsEmptyBabyName(t *testing.T) {
 	_, err := h.Handle(context.Background(), cmd)
 	if !errors.Is(err, ErrInvalidBabyName) {
 		t.Errorf("expected ErrInvalidBabyName, got %v", err)
-	}
-}
-
-func TestCreateFamilyRejectsInvalidLocalTime(t *testing.T) {
-	t.Parallel()
-
-	repo := &inMemoryFamilyRepository{}
-	h := NewCreateFamilyHandler(repo)
-
-	cmd := validCreateFamilyCommand()
-	cmd.NightWindowStartHour = 25 // out of range
-
-	_, err := h.Handle(context.Background(), cmd)
-	if !errors.Is(err, ErrInvalidLocalTime) {
-		t.Errorf("expected ErrInvalidLocalTime, got %v", err)
 	}
 }
 

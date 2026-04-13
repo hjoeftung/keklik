@@ -29,24 +29,13 @@ func (r *PostgresFamilyRepository) Save(ctx context.Context, f family.Family) er
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	nw := f.NightWindow()
-
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO families (id, name, timezone,
-			night_window_start_hour, night_window_start_minute,
-			night_window_end_hour,   night_window_end_minute)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO families (id, name)
+		VALUES ($1, $2)
 		ON CONFLICT (id) DO UPDATE SET
-			name                      = EXCLUDED.name,
-			timezone                  = EXCLUDED.timezone,
-			night_window_start_hour   = EXCLUDED.night_window_start_hour,
-			night_window_start_minute = EXCLUDED.night_window_start_minute,
-			night_window_end_hour     = EXCLUDED.night_window_end_hour,
-			night_window_end_minute   = EXCLUDED.night_window_end_minute,
-			updated_at                = now()`,
-		string(f.ID()), f.Name(), f.Timezone(),
-		nw.Start().Hour(), nw.Start().Minute(),
-		nw.End().Hour(), nw.End().Minute(),
+			name       = EXCLUDED.name,
+			updated_at = now()`,
+		string(f.ID()), f.Name(),
 	)
 	if err != nil {
 		return fmt.Errorf("upsert family: %w", err)
@@ -86,15 +75,11 @@ func (r *PostgresFamilyRepository) Save(ctx context.Context, f family.Family) er
 
 // FindByID loads a family aggregate by its ID.
 func (r *PostgresFamilyRepository) FindByID(ctx context.Context, id family.FamilyID) (family.Family, error) {
-	var name, timezone string
-	var startHour, startMinute, endHour, endMinute int
+	var name string
 
 	err := r.db.QueryRowContext(ctx, `
-		SELECT name, timezone,
-			night_window_start_hour, night_window_start_minute,
-			night_window_end_hour,   night_window_end_minute
-		FROM families WHERE id = $1`, string(id)).
-		Scan(&name, &timezone, &startHour, &startMinute, &endHour, &endMinute)
+		SELECT name FROM families WHERE id = $1`, string(id)).
+		Scan(&name)
 	if err == sql.ErrNoRows {
 		return family.Family{}, apperror.New(apperror.CodeNotFound, "family not found")
 	}
@@ -102,23 +87,20 @@ func (r *PostgresFamilyRepository) FindByID(ctx context.Context, id family.Famil
 		return family.Family{}, fmt.Errorf("query family: %w", err)
 	}
 
-	return r.reconstruct(ctx, id, name, timezone, startHour, startMinute, endHour, endMinute)
+	return r.reconstruct(ctx, id, name)
 }
 
 // FindByMemberID loads the family that contains the given member.
 func (r *PostgresFamilyRepository) FindByMemberID(ctx context.Context, memberID family.FamilyMemberID) (family.Family, error) {
 	var familyID family.FamilyID
-	var name, timezone string
-	var startHour, startMinute, endHour, endMinute int
+	var name string
 
 	err := r.db.QueryRowContext(ctx, `
-		SELECT f.id, f.name, f.timezone,
-			f.night_window_start_hour, f.night_window_start_minute,
-			f.night_window_end_hour,   f.night_window_end_minute
+		SELECT f.id, f.name
 		FROM families f
 		JOIN family_members m ON m.family_id = f.id
 		WHERE m.id = $1`, string(memberID)).
-		Scan(&familyID, &name, &timezone, &startHour, &startMinute, &endHour, &endMinute)
+		Scan(&familyID, &name)
 	if err == sql.ErrNoRows {
 		return family.Family{}, apperror.New(apperror.CodeNotFound, "family not found")
 	}
@@ -126,23 +108,20 @@ func (r *PostgresFamilyRepository) FindByMemberID(ctx context.Context, memberID 
 		return family.Family{}, fmt.Errorf("query family by member: %w", err)
 	}
 
-	return r.reconstruct(ctx, familyID, name, timezone, startHour, startMinute, endHour, endMinute)
+	return r.reconstruct(ctx, familyID, name)
 }
 
 // FindByInviteToken loads the family associated with the given invite token.
 func (r *PostgresFamilyRepository) FindByInviteToken(ctx context.Context, token family.InviteToken) (family.Family, error) {
 	var familyID family.FamilyID
-	var name, timezone string
-	var startHour, startMinute, endHour, endMinute int
+	var name string
 
 	err := r.db.QueryRowContext(ctx, `
-		SELECT f.id, f.name, f.timezone,
-			f.night_window_start_hour, f.night_window_start_minute,
-			f.night_window_end_hour,   f.night_window_end_minute
+		SELECT f.id, f.name
 		FROM families f
 		JOIN invite_links l ON l.family_id = f.id
 		WHERE l.token = $1`, string(token)).
-		Scan(&familyID, &name, &timezone, &startHour, &startMinute, &endHour, &endMinute)
+		Scan(&familyID, &name)
 	if err == sql.ErrNoRows {
 		return family.Family{}, apperror.New(apperror.CodeNotFound, "family not found")
 	}
@@ -150,30 +129,14 @@ func (r *PostgresFamilyRepository) FindByInviteToken(ctx context.Context, token 
 		return family.Family{}, fmt.Errorf("query family by invite token: %w", err)
 	}
 
-	return r.reconstruct(ctx, familyID, name, timezone, startHour, startMinute, endHour, endMinute)
+	return r.reconstruct(ctx, familyID, name)
 }
 
 // reconstruct builds a Family aggregate from raw DB columns, loading members, babies, and invite links.
 func (r *PostgresFamilyRepository) reconstruct(
 	ctx context.Context,
-	id family.FamilyID, name, timezone string,
-	startHour, startMinute, endHour, endMinute int,
+	id family.FamilyID, name string,
 ) (family.Family, error) {
-	start, err := family.NewLocalTime(startHour, startMinute)
-	if err != nil {
-		return family.Family{}, fmt.Errorf("reconstruct night window start: %w", err)
-	}
-
-	end, err := family.NewLocalTime(endHour, endMinute)
-	if err != nil {
-		return family.Family{}, fmt.Errorf("reconstruct night window end: %w", err)
-	}
-
-	nightWindow, err := family.NewNightWindow(start, end)
-	if err != nil {
-		return family.Family{}, fmt.Errorf("reconstruct night window: %w", err)
-	}
-
 	members, err := r.queryMembers(ctx, id)
 	if err != nil {
 		return family.Family{}, err
@@ -184,7 +147,7 @@ func (r *PostgresFamilyRepository) reconstruct(
 		return family.Family{}, err
 	}
 
-	f, err := family.NewFamily(id, name, timezone, nightWindow, members, babies)
+	f, err := family.NewFamily(id, name, members, babies)
 	if err != nil {
 		return family.Family{}, fmt.Errorf("reconstruct family aggregate: %w", err)
 	}

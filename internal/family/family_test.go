@@ -16,13 +16,10 @@ func TestNewFamilyRequiresExactlyOneBaby(t *testing.T) {
 		Name:            "Parent One",
 		GoogleSubjectID: "google-1",
 	}
-	nightWindow := mustNightWindow(t, 19, 30, 7, 0)
 
 	_, err := NewFamily(
 		familyID,
 		"The Owls",
-		"Europe/Oslo",
-		nightWindow,
 		[]FamilyMember{member},
 		nil,
 	)
@@ -33,8 +30,6 @@ func TestNewFamilyRequiresExactlyOneBaby(t *testing.T) {
 	_, err = NewFamily(
 		familyID,
 		"The Owls",
-		"Europe/Oslo",
-		nightWindow,
 		[]FamilyMember{member},
 		[]Baby{
 			{ID: BabyID("baby-1"), FamilyID: familyID, Name: "Mika"},
@@ -43,41 +38,6 @@ func TestNewFamilyRequiresExactlyOneBaby(t *testing.T) {
 	)
 	if !errors.Is(err, ErrFamilyMustHaveExactlyOneBaby) {
 		t.Fatalf("expected ErrFamilyMustHaveExactlyOneBaby, got %v", err)
-	}
-}
-
-func TestNewFamilyRejectsInvalidTimezone(t *testing.T) {
-	t.Parallel()
-
-	_, err := NewFamily(
-		FamilyID("family-1"),
-		"The Owls",
-		"Mars/Phobos",
-		mustNightWindow(t, 20, 0, 6, 0),
-		[]FamilyMember{{
-			ID:              FamilyMemberID("member-1"),
-			FamilyID:        FamilyID("family-1"),
-			Name:            "Parent One",
-			GoogleSubjectID: "google-1",
-		}},
-		[]Baby{{ID: BabyID("baby-1"), FamilyID: FamilyID("family-1"), Name: "Mika"}},
-	)
-	if !errors.Is(err, ErrInvalidTimezone) {
-		t.Fatalf("expected ErrInvalidTimezone, got %v", err)
-	}
-}
-
-func TestNewNightWindowRejectsEqualBounds(t *testing.T) {
-	t.Parallel()
-
-	start, err := NewLocalTime(20, 0)
-	if err != nil {
-		t.Fatalf("NewLocalTime returned error: %v", err)
-	}
-
-	_, err = NewNightWindow(start, start)
-	if !errors.Is(err, ErrInvalidNightWindow) {
-		t.Fatalf("expected ErrInvalidNightWindow, got %v", err)
 	}
 }
 
@@ -119,8 +79,6 @@ func mustFamily(t *testing.T) Family {
 	aggregate, err := NewFamily(
 		FamilyID("family-1"),
 		"The Owls",
-		"Europe/Oslo",
-		mustNightWindow(t, 19, 30, 7, 0),
 		[]FamilyMember{{
 			ID:              FamilyMemberID("member-1"),
 			FamilyID:        FamilyID("family-1"),
@@ -134,25 +92,4 @@ func mustFamily(t *testing.T) Family {
 	}
 
 	return aggregate
-}
-
-func mustNightWindow(t *testing.T, startHour int, startMinute int, endHour int, endMinute int) NightWindow {
-	t.Helper()
-
-	start, err := NewLocalTime(startHour, startMinute)
-	if err != nil {
-		t.Fatalf("NewLocalTime returned error: %v", err)
-	}
-
-	end, err := NewLocalTime(endHour, endMinute)
-	if err != nil {
-		t.Fatalf("NewLocalTime returned error: %v", err)
-	}
-
-	nightWindow, err := NewNightWindow(start, end)
-	if err != nil {
-		t.Fatalf("NewNightWindow returned error: %v", err)
-	}
-
-	return nightWindow
 }

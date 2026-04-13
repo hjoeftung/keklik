@@ -10,6 +10,7 @@ import (
 	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/family"
 	"github.com/hjoeftung/keklik/internal/infrastructure"
+	"github.com/hjoeftung/keklik/internal/sleep"
 )
 
 type healthResponse struct {
@@ -23,6 +24,7 @@ func NewServer(
 	sessions auth.SessionRepository,
 	oauthCallback *auth.HandleOAuthCallbackHandler,
 	createFamily *family.CreateFamilyHandler,
+	createSleepProfile *sleep.CreateSleepProfileHandler,
 ) *http.Server {
 	oauthCfg := &oauth2.Config{
 		ClientID:     config.GoogleOAuth.ClientID,
@@ -48,6 +50,9 @@ func NewServer(
 	protected := http.NewServeMux()
 	protected.HandleFunc("POST /families", func(w http.ResponseWriter, r *http.Request) {
 		createFamilyHandler(w, r, createFamily)
+	})
+	protected.HandleFunc("POST /sleep-profiles", func(w http.ResponseWriter, r *http.Request) {
+		createSleepProfileHandler(w, r, createSleepProfile)
 	})
 	mux.Handle("/", requireAuth(accounts, sessions, protected))
 

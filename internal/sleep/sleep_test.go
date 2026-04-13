@@ -136,6 +136,7 @@ func TestNewCompletedSleepSessionRejectsUnknownClassification(t *testing.T) {
 		startedAt,
 		startedAt.Add(time.Hour),
 		SleepClassification("catnap"),
+		0,
 	)
 	if !errors.Is(err, ErrUnknownSleepClassification) {
 		t.Fatalf("expected ErrUnknownSleepClassification, got %v", err)

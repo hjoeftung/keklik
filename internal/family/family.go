@@ -12,9 +12,6 @@ var (
 	ErrInvalidFamilyMemberName        = errors.New("family member name must not be empty")
 	ErrInvalidBabyName                = errors.New("baby name must not be empty")
 	ErrEmptyGoogleSubjectID           = errors.New("google subject id must not be empty")
-	ErrInvalidTimezone                = errors.New("invalid timezone")
-	ErrInvalidLocalTime               = errors.New("invalid local time")
-	ErrInvalidNightWindow             = errors.New("invalid night window")
 	ErrFamilyMustHaveAtLeastOneMember = errors.New("family must have at least one member")
 	ErrFamilyMustHaveExactlyOneBaby   = errors.New("family must have exactly one baby in the mvp")
 	ErrFamilyMemberFamilyMismatch     = errors.New("family member belongs to another family")
@@ -37,8 +34,6 @@ type InviteToken string
 type Family struct {
 	id          FamilyID
 	name        string
-	timezone    string
-	nightWindow NightWindow
 	members     []FamilyMember
 	babies      []Baby
 	inviteLinks []InviteLink
@@ -55,16 +50,6 @@ type Baby struct {
 	ID       BabyID
 	FamilyID FamilyID
 	Name     string
-}
-
-type LocalTime struct {
-	hour   int
-	minute int
-}
-
-type NightWindow struct {
-	start LocalTime
-	end   LocalTime
 }
 
 type InviteLink struct {
@@ -87,19 +72,10 @@ type FamilyMemberRepository interface {
 	FindByGoogleSubjectID(ctx context.Context, googleSubjectID string) (FamilyMember, error)
 }
 
-func NewFamily(id FamilyID, name string, timezone string, nightWindow NightWindow, members []FamilyMember, babies []Baby) (Family, error) {
+func NewFamily(id FamilyID, name string, members []FamilyMember, babies []Baby) (Family, error) {
 	trimmedName := strings.TrimSpace(name)
 	if trimmedName == "" {
 		return Family{}, ErrInvalidFamilyName
-	}
-
-	trimmedTimezone := strings.TrimSpace(timezone)
-	if _, err := time.LoadLocation(trimmedTimezone); err != nil {
-		return Family{}, ErrInvalidTimezone
-	}
-
-	if nightWindow.start == nightWindow.end {
-		return Family{}, ErrInvalidNightWindow
 	}
 
 	if len(members) == 0 {
@@ -145,8 +121,6 @@ func NewFamily(id FamilyID, name string, timezone string, nightWindow NightWindo
 	return Family{
 		id:          id,
 		name:        trimmedName,
-		timezone:    trimmedTimezone,
-		nightWindow: nightWindow,
 		members:     validatedMembers,
 		babies:      validatedBabies,
 		inviteLinks: nil,
@@ -159,14 +133,6 @@ func (f Family) ID() FamilyID {
 
 func (f Family) Name() string {
 	return f.name
-}
-
-func (f Family) Timezone() string {
-	return f.timezone
-}
-
-func (f Family) NightWindow() NightWindow {
-	return f.nightWindow
 }
 
 func (f Family) Members() []FamilyMember {
@@ -230,38 +196,6 @@ func (f *Family) AddInviteLink(inviteLink InviteLink) error {
 	f.inviteLinks = append(f.inviteLinks, inviteLink)
 
 	return nil
-}
-
-func NewLocalTime(hour int, minute int) (LocalTime, error) {
-	if hour < 0 || hour > 23 || minute < 0 || minute > 59 {
-		return LocalTime{}, ErrInvalidLocalTime
-	}
-
-	return LocalTime{hour: hour, minute: minute}, nil
-}
-
-func (t LocalTime) Hour() int {
-	return t.hour
-}
-
-func (t LocalTime) Minute() int {
-	return t.minute
-}
-
-func NewNightWindow(start LocalTime, end LocalTime) (NightWindow, error) {
-	if start == end {
-		return NightWindow{}, ErrInvalidNightWindow
-	}
-
-	return NightWindow{start: start, end: end}, nil
-}
-
-func (n NightWindow) Start() LocalTime {
-	return n.start
-}
-
-func (n NightWindow) End() LocalTime {
-	return n.end
 }
 
 func (i InviteLink) IsExpired(now time.Time) bool {
