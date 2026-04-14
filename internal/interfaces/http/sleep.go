@@ -12,6 +12,148 @@ import (
 	"github.com/hjoeftung/keklik/internal/sleep"
 )
 
+// sleepSessionResponse is the JSON shape for a single sleep session.
+type sleepSessionResponse struct {
+	ID              string   `json:"id"`
+	BabyID          string   `json:"baby_id"`
+	StartedAt       string   `json:"started_at"`
+	StoppedAt       *string  `json:"stopped_at,omitempty"`
+	Classification  string   `json:"classification,omitempty"`
+	DurationSeconds *float64 `json:"duration_seconds,omitempty"`
+}
+
+func toSleepSessionResponse(s sleep.SleepSession) sleepSessionResponse {
+	resp := sleepSessionResponse{
+		ID:             string(s.ID()),
+		BabyID:         string(s.BabyID()),
+		StartedAt:      s.StartedAt().UTC().Format(time.RFC3339),
+		Classification: string(s.Classification()),
+	}
+	if t, ok := s.StoppedAt(); ok {
+		ts := t.UTC().Format(time.RFC3339)
+		resp.StoppedAt = &ts
+	}
+	if d, ok := s.Duration(); ok {
+		secs := d.Seconds()
+		resp.DurationSeconds = &secs
+	}
+	return resp
+}
+
+func getSleepHistoryHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	resolver sleepContextResolver,
+	h *sleep.GetSleepHistoryHandler,
+) {
+	account, ok := auth.AccountFromContext(r.Context())
+	if !ok {
+		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		return
+	}
+
+	babyID, _, err := resolver.ResolveSleepContext(r.Context(), account.GoogleSubjectID)
+	if err != nil {
+		writeError(w, mapStartSleepError(err))
+		return
+	}
+
+	period := r.URL.Query().Get("period")
+	if period == "" {
+		period = "7d"
+	}
+	switch period {
+	case "today", "7d", "14d":
+		// valid
+	default:
+		writeError(w, apperror.New(apperror.CodeInvalidArgument, sleep.ErrInvalidSleepHistoryPeriod.Error()))
+		return
+	}
+
+	// Timezone is resolved from the sleep profile inside the handler.
+	sessions, err := h.Handle(r.Context(), sleep.GetSleepHistoryQuery{
+		BabyID: babyID,
+		Period: period,
+	})
+	if err != nil {
+		writeError(w, mapSleepHistoryError(err))
+		return
+	}
+
+	resp := make([]sleepSessionResponse, len(sessions))
+	for i, s := range sessions {
+		resp[i] = toSleepSessionResponse(s)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+type elapsedTimeResponse struct {
+	TimeSinceLastSleepStartSeconds *float64 `json:"time_since_last_sleep_start_seconds,omitempty"`
+	TimeSinceLastAwakeningSeconds  *float64 `json:"time_since_last_awakening_seconds,omitempty"`
+}
+
+func getElapsedTimeHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	resolver sleepContextResolver,
+	h *sleep.GetElapsedTimeHandler,
+) {
+	account, ok := auth.AccountFromContext(r.Context())
+	if !ok {
+		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		return
+	}
+
+	babyID, _, err := resolver.ResolveSleepContext(r.Context(), account.GoogleSubjectID)
+	if err != nil {
+		writeError(w, mapStartSleepError(err))
+		return
+	}
+
+	result, err := h.Handle(r.Context(), babyID)
+	if err != nil {
+		var appErr apperror.AppError
+		if errors.As(err, &appErr) {
+			writeError(w, appErr)
+		} else {
+			writeError(w, apperror.New(apperror.CodeInternalError, "unexpected error"))
+		}
+		return
+	}
+
+	resp := elapsedTimeResponse{}
+	if result.TimeSinceLastSleepStart != nil {
+		secs := result.TimeSinceLastSleepStart.Seconds()
+		resp.TimeSinceLastSleepStartSeconds = &secs
+	}
+	if result.TimeSinceLastAwakening != nil {
+		secs := result.TimeSinceLastAwakening.Seconds()
+		resp.TimeSinceLastAwakeningSeconds = &secs
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func mapSleepHistoryError(err error) apperror.AppError {
+	switch {
+	case errors.Is(err, sleep.ErrInvalidSleepHistoryPeriod):
+		return apperror.New(apperror.CodeInvalidArgument, err.Error())
+	case errors.Is(err, sleep.ErrInvalidTimezone):
+		return apperror.New(apperror.CodeInvalidTimezone, err.Error())
+	default:
+		var appErr apperror.AppError
+		if errors.As(err, &appErr) {
+			return appErr
+		}
+		return apperror.New(apperror.CodeInternalError, "unexpected error")
+	}
+}
+
 // sleepContextResolver resolves the baby and member IDs from the caller's Google subject ID
 // in a single database round-trip.
 type sleepContextResolver interface {
