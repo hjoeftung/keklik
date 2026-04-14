@@ -19,3 +19,6 @@ coverage.out
 
 # Dependency directories
 vendor/
+
+# Worktrees
+.claude/Worktrees
