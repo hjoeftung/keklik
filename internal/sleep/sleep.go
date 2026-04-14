@@ -17,6 +17,7 @@ var (
 	ErrUnknownSleepClassification   = errors.New("unknown sleep classification")
 	ErrInvalidSleepSessionDateRange = errors.New("sleep session date range is invalid")
 	ErrActiveSleepSessionExists     = errors.New("active sleep session already exists for this baby")
+	ErrInvalidSleepHistoryPeriod    = errors.New("period must be one of: today, 7d, 14d")
 
 	ErrInvalidTimezone    = errors.New("invalid timezone")
 	ErrInvalidLocalTime   = errors.New("invalid local time")
@@ -81,6 +82,10 @@ type ActiveSleepSessionRepository interface {
 
 type SleepSessionHistoryRepository interface {
 	FindByBabyIDAndDateRange(ctx context.Context, babyID BabyID, dateRange DateRange) ([]SleepSession, error)
+}
+
+type SleepSessionQueryRepository interface {
+	FindMostRecentByBabyID(ctx context.Context, babyID BabyID) (SleepSession, bool, error)
 }
 
 type SleepProfileRepository interface {
