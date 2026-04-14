@@ -9,7 +9,7 @@ import (
 func mustCompletedSession(t *testing.T, start, stop time.Time) SleepSession {
 	t.Helper()
 
-	session, err := NewSleepSession(SleepSessionID("s1"), BabyID("b1"), start)
+	session, err := NewSleepSession(SleepSessionID("s1"), BabyID("b1"), FamilyMemberID("member-1"), start)
 	if err != nil {
 		t.Fatalf("NewSleepSession: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestClassifyActiveSessionReturnsUnknown(t *testing.T) {
 
 	nw := mustNightWindow(t, 21, 0, 7, 0)
 	start := time.Date(2026, time.January, 10, 22, 0, 0, 0, time.UTC)
-	session, err := NewSleepSession(SleepSessionID("s1"), BabyID("b1"), start)
+	session, err := NewSleepSession(SleepSessionID("s1"), BabyID("b1"), FamilyMemberID("member-1"), start)
 	if err != nil {
 		t.Fatalf("NewSleepSession: %v", err)
 	}

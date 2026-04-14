@@ -1,13 +1,22 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/hjoeftung/keklik/internal/apperror"
+	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/sleep"
 )
+
+// sleepContextResolver resolves the baby and member IDs from the caller's Google subject ID
+// in a single database round-trip.
+type sleepContextResolver interface {
+	ResolveSleepContext(ctx context.Context, googleSubjectID string) (sleep.BabyID, sleep.FamilyMemberID, error)
+}
 
 type nightWindowRequest struct {
 	StartHour   int `json:"start_hour"`
@@ -43,6 +52,71 @@ func createSleepProfileHandler(w http.ResponseWriter, r *http.Request, h *sleep.
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type startSleepRequest struct {
+	StartedAt time.Time `json:"started_at"`
+}
+
+type startSleepResponse struct {
+	ID        string    `json:"id"`
+	StartedAt time.Time `json:"started_at"`
+}
+
+func startSleepHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	resolver sleepContextResolver,
+	h *sleep.StartSleepHandler,
+) {
+	account, ok := auth.AccountFromContext(r.Context())
+	if !ok {
+		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		return
+	}
+
+	babyID, memberID, err := resolver.ResolveSleepContext(r.Context(), account.GoogleSubjectID)
+	if err != nil {
+		writeError(w, mapStartSleepError(err))
+		return
+	}
+
+	var req startSleepRequest
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	result, err := h.Handle(r.Context(), sleep.StartSleepCommand{
+		BabyID:            babyID,
+		CreatedByMemberID: memberID,
+		StartedAt:         req.StartedAt,
+	})
+	if err != nil {
+		writeError(w, mapStartSleepError(err))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(startSleepResponse{
+		ID:        string(result.ID),
+		StartedAt: result.StartedAt,
+	})
+}
+
+func mapStartSleepError(err error) apperror.AppError {
+	switch {
+	case errors.Is(err, sleep.ErrActiveSleepSessionExists):
+		return apperror.New(apperror.CodeActiveSleepExists, err.Error())
+	case errors.Is(err, sleep.ErrEmptyBabyID),
+		errors.Is(err, sleep.ErrEmptyFamilyMemberID),
+		errors.Is(err, sleep.ErrZeroSleepSessionStart):
+		return apperror.New(apperror.CodeInvalidArgument, err.Error())
+	default:
+		var appErr apperror.AppError
+		if errors.As(err, &appErr) {
+			return appErr
+		}
+		return apperror.New(apperror.CodeInternalError, "unexpected error")
+	}
 }
 
 func mapSleepProfileError(err error) apperror.AppError {

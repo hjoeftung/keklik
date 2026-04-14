@@ -10,7 +10,7 @@ func TestNewSleepSessionCreatesActiveSession(t *testing.T) {
 	t.Parallel()
 
 	startedAt := time.Date(2026, time.April, 12, 19, 0, 0, 0, time.UTC)
-	session, err := NewSleepSession(SleepSessionID("session-1"), BabyID("baby-1"), startedAt)
+	session, err := NewSleepSession(SleepSessionID("session-1"), BabyID("baby-1"), FamilyMemberID("member-1"), startedAt)
 	if err != nil {
 		t.Fatalf("NewSleepSession returned error: %v", err)
 	}
@@ -133,6 +133,7 @@ func TestNewCompletedSleepSessionRejectsUnknownClassification(t *testing.T) {
 	_, err := NewCompletedSleepSession(
 		SleepSessionID("session-1"),
 		BabyID("baby-1"),
+		FamilyMemberID("member-1"),
 		startedAt,
 		startedAt.Add(time.Hour),
 		SleepClassification("catnap"),
@@ -156,7 +157,7 @@ func TestNewDateRangeRejectsEndBeforeStart(t *testing.T) {
 func mustSleepSession(t *testing.T, startedAt time.Time) SleepSession {
 	t.Helper()
 
-	session, err := NewSleepSession(SleepSessionID("session-1"), BabyID("baby-1"), startedAt)
+	session, err := NewSleepSession(SleepSessionID("session-1"), BabyID("baby-1"), FamilyMemberID("member-1"), startedAt)
 	if err != nil {
 		t.Fatalf("NewSleepSession returned error: %v", err)
 	}

@@ -24,7 +24,9 @@ func NewServer(
 	sessions auth.SessionRepository,
 	oauthCallback *auth.HandleOAuthCallbackHandler,
 	createFamily *family.CreateFamilyHandler,
+	sleepCtx sleepContextResolver,
 	createSleepProfile *sleep.CreateSleepProfileHandler,
+	startSleep *sleep.StartSleepHandler,
 ) *http.Server {
 	oauthCfg := &oauth2.Config{
 		ClientID:     config.GoogleOAuth.ClientID,
@@ -53,6 +55,9 @@ func NewServer(
 	})
 	protected.HandleFunc("POST /sleep-profiles", func(w http.ResponseWriter, r *http.Request) {
 		createSleepProfileHandler(w, r, createSleepProfile)
+	})
+	protected.HandleFunc("POST /sleep-sessions", func(w http.ResponseWriter, r *http.Request) {
+		startSleepHandler(w, r, sleepCtx, startSleep)
 	})
 	mux.Handle("/", requireAuth(accounts, sessions, protected))
 

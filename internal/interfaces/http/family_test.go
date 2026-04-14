@@ -94,7 +94,9 @@ func newTestServer(familyRepo family.FamilyRepository) *http.Server {
 		&stubSessionRepository{session: session},
 		nil,
 		createFamily,
+		nil,
 		createSleepProfile,
+		nil,
 	)
 }
 

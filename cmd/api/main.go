@@ -37,12 +37,15 @@ func main() {
 	accountRepo := infrastructure.NewPostgresAccountRepository(db)
 	sessionRepo := infrastructure.NewPostgresSessionRepository(db)
 	sleepProfileRepo := infrastructure.NewPostgresSleepProfileRepository(db)
+	sleepSessionRepo := infrastructure.NewPostgresSleepSessionRepository(db)
+	sleepCtxResolver := infrastructure.NewPostgresSleepContextResolver(db)
 
 	createFamily := family.NewCreateFamilyHandler(familyRepo)
 	createSleepProfile := sleep.NewCreateSleepProfileHandler(sleepProfileRepo)
+	startSleep := sleep.NewStartSleepHandler(sleepSessionRepo)
 	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, sessionRepo)
 
-	server := httpapi.NewServer(config, accountRepo, sessionRepo, oauthCallback, createFamily, createSleepProfile)
+	server := httpapi.NewServer(config, accountRepo, sessionRepo, oauthCallback, createFamily, sleepCtxResolver, createSleepProfile, startSleep)
 
 	log.Printf("starting HTTP server on %s", config.Address())
 
