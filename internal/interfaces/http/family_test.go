@@ -97,6 +97,7 @@ func newTestServer(familyRepo family.FamilyRepository) *http.Server {
 		nil,
 		createSleepProfile,
 		nil,
+		nil,
 	)
 }
 

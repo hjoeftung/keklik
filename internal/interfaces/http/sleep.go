@@ -119,6 +119,71 @@ func mapStartSleepError(err error) apperror.AppError {
 	}
 }
 
+type stopSleepRequest struct {
+	StoppedAt time.Time `json:"stopped_at"`
+}
+
+type stopSleepResponse struct {
+	ID             string    `json:"id"`
+	StartedAt      time.Time `json:"started_at"`
+	StoppedAt      time.Time `json:"stopped_at"`
+	Classification string    `json:"classification"`
+}
+
+func stopSleepHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	resolver sleepContextResolver,
+	h *sleep.StopSleepHandler,
+) {
+	account, ok := auth.AccountFromContext(r.Context())
+	if !ok {
+		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		return
+	}
+
+	babyID, _, err := resolver.ResolveSleepContext(r.Context(), account.GoogleSubjectID)
+	if err != nil {
+		writeError(w, mapStopSleepError(err))
+		return
+	}
+
+	var req stopSleepRequest
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	result, err := h.Handle(r.Context(), sleep.StopSleepCommand{
+		BabyID:    babyID,
+		StoppedAt: req.StoppedAt,
+	})
+	if err != nil {
+		writeError(w, mapStopSleepError(err))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(stopSleepResponse{
+		ID:             string(result.ID),
+		StartedAt:      result.StartedAt,
+		StoppedAt:      result.StoppedAt,
+		Classification: string(result.Classification),
+	})
+}
+
+func mapStopSleepError(err error) apperror.AppError {
+	switch {
+	case errors.Is(err, sleep.ErrSleepSessionAlreadyStopped),
+		errors.Is(err, sleep.ErrInvalidSleepSessionStop):
+		return apperror.New(apperror.CodeInvalidArgument, err.Error())
+	default:
+		var appErr apperror.AppError
+		if errors.As(err, &appErr) {
+			return appErr
+		}
+		return apperror.New(apperror.CodeInternalError, "unexpected error")
+	}
+}
+
 func mapSleepProfileError(err error) apperror.AppError {
 	switch {
 	case errors.Is(err, sleep.ErrInvalidTimezone):

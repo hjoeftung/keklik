@@ -43,9 +43,10 @@ func main() {
 	createFamily := family.NewCreateFamilyHandler(familyRepo)
 	createSleepProfile := sleep.NewCreateSleepProfileHandler(sleepProfileRepo)
 	startSleep := sleep.NewStartSleepHandler(sleepSessionRepo)
+	stopSleep := sleep.NewStopSleepHandler(sleepSessionRepo, sleepProfileRepo)
 	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, sessionRepo)
 
-	server := httpapi.NewServer(config, accountRepo, sessionRepo, oauthCallback, createFamily, sleepCtxResolver, createSleepProfile, startSleep)
+	server := httpapi.NewServer(config, accountRepo, sessionRepo, oauthCallback, createFamily, sleepCtxResolver, createSleepProfile, startSleep, stopSleep)
 
 	log.Printf("starting HTTP server on %s", config.Address())
 

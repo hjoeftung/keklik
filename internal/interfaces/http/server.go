@@ -27,6 +27,7 @@ func NewServer(
 	sleepCtx sleepContextResolver,
 	createSleepProfile *sleep.CreateSleepProfileHandler,
 	startSleep *sleep.StartSleepHandler,
+	stopSleep *sleep.StopSleepHandler,
 ) *http.Server {
 	oauthCfg := &oauth2.Config{
 		ClientID:     config.GoogleOAuth.ClientID,
@@ -58,6 +59,9 @@ func NewServer(
 	})
 	protected.HandleFunc("POST /sleep-sessions", func(w http.ResponseWriter, r *http.Request) {
 		startSleepHandler(w, r, sleepCtx, startSleep)
+	})
+	protected.HandleFunc("DELETE /sleep-sessions/active", func(w http.ResponseWriter, r *http.Request) {
+		stopSleepHandler(w, r, sleepCtx, stopSleep)
 	})
 	mux.Handle("/", requireAuth(accounts, sessions, protected))
 
