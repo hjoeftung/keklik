@@ -14,7 +14,7 @@ func mustCompletedSession(t *testing.T, start, stop time.Time) SleepSession {
 		t.Fatalf("NewSleepSession: %v", err)
 	}
 
-	if err := session.Stop(stop, SleepClassificationNap, 0); err != nil {
+	if err := session.Stop(stop, SleepClassificationNap, mustNightWindow(t, 21, 0, 7, 0)); err != nil {
 		t.Fatalf("Stop: %v", err)
 	}
 
@@ -216,13 +216,20 @@ func TestClassifyDSTFallBackNightSleep(t *testing.T) {
 func TestClassifyForwardOnlyWindowChange(t *testing.T) {
 	t.Parallel()
 
-	// Session 22:30–05:30 (7 hours).
+	// Session 22:30–05:30 (7 hours), classified using the old window.
 	start := time.Date(2026, time.January, 10, 22, 30, 0, 0, time.UTC)
 	stop := time.Date(2026, time.January, 11, 5, 30, 0, 0, time.UTC)
-	session := mustCompletedSession(t, start, stop)
+	oldWindow := mustNightWindow(t, 22, 0, 6, 0)
+
+	session, err := NewSleepSession(SleepSessionID("s1"), BabyID("b1"), FamilyMemberID("member-1"), start)
+	if err != nil {
+		t.Fatalf("NewSleepSession: %v", err)
+	}
+	if err := session.Stop(stop, SleepClassificationNap, oldWindow); err != nil {
+		t.Fatalf("Stop: %v", err)
+	}
 
 	// Old window 22:00–06:00: full session inside → night.
-	oldWindow := mustNightWindow(t, 22, 0, 6, 0)
 	gotOld, err := Classify(session, "UTC", oldWindow)
 	if err != nil {
 		t.Fatalf("unexpected error with old window: %v", err)
@@ -243,10 +250,11 @@ func TestClassifyForwardOnlyWindowChange(t *testing.T) {
 		t.Fatalf("expected nap with narrow window, got %q", gotNarrow)
 	}
 
-	// The stored ClassificationRuleVersion on the session (0) signals that it
-	// was classified under the old rule. A use-case layer increments the version
-	// on window changes and skips reclassification for sessions with older versions.
-	if session.ClassificationRuleVersion() != 0 {
-		t.Fatalf("expected rule version 0 on original session, got %d", session.ClassificationRuleVersion())
+	// The snapshot night window on the session signals which window was active
+	// when it was classified. A use-case layer compares the current window to
+	// ClassifiedWithNightWindow() to detect whether reclassification is needed.
+	snapped := session.ClassifiedWithNightWindow()
+	if snapped == nil || *snapped != oldWindow {
+		t.Fatalf("expected session to carry oldWindow as its classification snapshot, got %v", snapped)
 	}
 }

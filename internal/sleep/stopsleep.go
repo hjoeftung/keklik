@@ -5,11 +5,6 @@ import (
 	"time"
 )
 
-// CurrentClassificationRuleVersion is the version of the classification rules
-// currently in use. Increment this when the classification logic changes so
-// that past sessions can be detected and reclassified if needed.
-const CurrentClassificationRuleVersion ClassificationRuleVersion = 1
-
 // StopSleepCommand holds the inputs for stopping the active sleep session.
 type StopSleepCommand struct {
 	BabyID    BabyID
@@ -68,7 +63,7 @@ func (h *StopSleepHandler) Handle(ctx context.Context, cmd StopSleepCommand) (St
 		session.StartedAt(),
 		stoppedAt,
 		SleepClassificationNap, // placeholder; replaced below
-		CurrentClassificationRuleVersion,
+		nil,
 	)
 	if err != nil {
 		// NewCompletedSleepSession returns ErrInvalidSleepSessionStop when
@@ -76,12 +71,13 @@ func (h *StopSleepHandler) Handle(ctx context.Context, cmd StopSleepCommand) (St
 		return StopSleepResult{}, err
 	}
 
-	classification, err := Classify(tentative, profile.Timezone(), profile.NightWindow())
+	nightWindow := profile.NightWindow()
+	classification, err := Classify(tentative, profile.Timezone(), nightWindow)
 	if err != nil {
 		return StopSleepResult{}, err
 	}
 
-	if err := session.Stop(stoppedAt, classification, CurrentClassificationRuleVersion); err != nil {
+	if err := session.Stop(stoppedAt, classification, nightWindow); err != nil {
 		return StopSleepResult{}, err
 	}
 

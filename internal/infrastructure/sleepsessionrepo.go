@@ -38,25 +38,41 @@ func (r *PostgresSleepSessionRepository) Save(ctx context.Context, s sleep.Sleep
 		classification = string(c)
 	}
 
+	var (
+		nwStartHour, nwStartMinute *int
+		nwEndHour, nwEndMinute     *int
+	)
+	if nw := s.ClassifiedWithNightWindow(); nw != nil {
+		sh, sm, eh, em := nw.Start().Hour(), nw.Start().Minute(), nw.End().Hour(), nw.End().Minute()
+		nwStartHour, nwStartMinute = &sh, &sm
+		nwEndHour, nwEndMinute = &eh, &em
+	}
+
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO sleep_sessions (
 			id, baby_id, created_by_member_id,
 			started_at, stopped_at,
-			classification, classification_rule_version
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+			classification,
+			classified_with_nw_start_hour, classified_with_nw_start_minute,
+			classified_with_nw_end_hour,   classified_with_nw_end_minute
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		ON CONFLICT (id) DO UPDATE SET
-			stopped_at                  = EXCLUDED.stopped_at,
-			classification              = EXCLUDED.classification,
-			classification_rule_version = EXCLUDED.classification_rule_version,
-			updated_by_member_id        = EXCLUDED.created_by_member_id,
-			updated_at                  = now()`,
+			stopped_at                     = EXCLUDED.stopped_at,
+			classification                 = EXCLUDED.classification,
+			classified_with_nw_start_hour  = EXCLUDED.classified_with_nw_start_hour,
+			classified_with_nw_start_minute= EXCLUDED.classified_with_nw_start_minute,
+			classified_with_nw_end_hour    = EXCLUDED.classified_with_nw_end_hour,
+			classified_with_nw_end_minute  = EXCLUDED.classified_with_nw_end_minute,
+			updated_by_member_id           = EXCLUDED.created_by_member_id,
+			updated_at                     = now()`,
 		string(s.ID()),
 		string(s.BabyID()),
 		string(s.CreatedByMemberID()),
 		s.StartedAt().UTC(),
 		stoppedAt,
 		classification,
-		int(s.ClassificationRuleVersion()),
+		nwStartHour, nwStartMinute,
+		nwEndHour, nwEndMinute,
 	)
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
@@ -72,7 +88,9 @@ func (r *PostgresSleepSessionRepository) FindByID(ctx context.Context, id sleep.
 	row := r.db.QueryRowContext(ctx, `
 		SELECT id, baby_id, created_by_member_id,
 		       started_at, stopped_at,
-		       classification, classification_rule_version
+		       classification,
+		       classified_with_nw_start_hour, classified_with_nw_start_minute,
+		       classified_with_nw_end_hour,   classified_with_nw_end_minute
 		FROM sleep_sessions WHERE id = $1`, string(id))
 
 	return scanSleepSession(row)
@@ -84,7 +102,9 @@ func (r *PostgresSleepSessionRepository) FindActiveByBabyID(ctx context.Context,
 	row := r.db.QueryRowContext(ctx, `
 		SELECT id, baby_id, created_by_member_id,
 		       started_at, stopped_at,
-		       classification, classification_rule_version
+		       classification,
+		       classified_with_nw_start_hour, classified_with_nw_start_minute,
+		       classified_with_nw_end_hour,   classified_with_nw_end_minute
 		FROM sleep_sessions
 		WHERE baby_id = $1 AND stopped_at IS NULL`, string(babyID))
 
@@ -97,7 +117,9 @@ func (r *PostgresSleepSessionRepository) FindByBabyIDAndDateRange(ctx context.Co
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, baby_id, created_by_member_id,
 		       started_at, stopped_at,
-		       classification, classification_rule_version
+		       classification,
+		       classified_with_nw_start_hour, classified_with_nw_start_minute,
+		       classified_with_nw_end_hour,   classified_with_nw_end_minute
 		FROM sleep_sessions
 		WHERE baby_id = $1 AND started_at >= $2 AND started_at < $3
 		ORDER BY started_at DESC`,
@@ -131,7 +153,9 @@ func (r *PostgresSleepSessionRepository) FindMostRecentByBabyID(ctx context.Cont
 	row := r.db.QueryRowContext(ctx, `
 		SELECT id, baby_id, created_by_member_id,
 		       started_at, stopped_at,
-		       classification, classification_rule_version
+		       classification,
+		       classified_with_nw_start_hour, classified_with_nw_start_minute,
+		       classified_with_nw_end_hour,   classified_with_nw_end_minute
 		FROM sleep_sessions
 		WHERE baby_id = $1
 		ORDER BY started_at DESC
@@ -150,14 +174,17 @@ func (r *PostgresSleepSessionRepository) FindMostRecentByBabyID(ctx context.Cont
 
 func scanSleepSession(row *sql.Row) (sleep.SleepSession, error) {
 	var (
-		id, babyID, memberID string
-		classification       string
-		ruleVersion          int
-		startedAt            sql.NullTime
-		stoppedAt            sql.NullTime
+		id, babyID, memberID                         string
+		classification                               string
+		nwStartHour, nwStartMinute, nwEndHour, nwEndMinute sql.NullInt32
+		startedAt, stoppedAt                         sql.NullTime
 	)
 
-	err := row.Scan(&id, &babyID, &memberID, &startedAt, &stoppedAt, &classification, &ruleVersion)
+	err := row.Scan(
+		&id, &babyID, &memberID, &startedAt, &stoppedAt,
+		&classification,
+		&nwStartHour, &nwStartMinute, &nwEndHour, &nwEndMinute,
+	)
 	if err == sql.ErrNoRows {
 		return sleep.SleepSession{}, apperror.New(apperror.CodeNotFound, "sleep session not found")
 	}
@@ -165,27 +192,46 @@ func scanSleepSession(row *sql.Row) (sleep.SleepSession, error) {
 		return sleep.SleepSession{}, fmt.Errorf("scan sleep session: %w", err)
 	}
 
-	return assembleSleepSession(id, babyID, memberID, startedAt, stoppedAt, classification, ruleVersion)
+	return assembleSleepSession(id, babyID, memberID, startedAt, stoppedAt, classification, nwStartHour, nwStartMinute, nwEndHour, nwEndMinute)
 }
 
 func scanSleepSessionRows(rows *sql.Rows) (sleep.SleepSession, error) {
 	var (
-		id, babyID, memberID string
-		classification       string
-		ruleVersion          int
-		startedAt            sql.NullTime
-		stoppedAt            sql.NullTime
+		id, babyID, memberID                         string
+		classification                               string
+		nwStartHour, nwStartMinute, nwEndHour, nwEndMinute sql.NullInt32
+		startedAt, stoppedAt                         sql.NullTime
 	)
 
-	if err := rows.Scan(&id, &babyID, &memberID, &startedAt, &stoppedAt, &classification, &ruleVersion); err != nil {
+	if err := rows.Scan(
+		&id, &babyID, &memberID, &startedAt, &stoppedAt,
+		&classification,
+		&nwStartHour, &nwStartMinute, &nwEndHour, &nwEndMinute,
+	); err != nil {
 		return sleep.SleepSession{}, fmt.Errorf("scan sleep session row: %w", err)
 	}
 
-	return assembleSleepSession(id, babyID, memberID, startedAt, stoppedAt, classification, ruleVersion)
+	return assembleSleepSession(id, babyID, memberID, startedAt, stoppedAt, classification, nwStartHour, nwStartMinute, nwEndHour, nwEndMinute)
 }
 
-func assembleSleepSession(id, babyID, memberID string, startedAt, stoppedAt sql.NullTime, classification string, ruleVersion int) (sleep.SleepSession, error) {
+func assembleSleepSession(id, babyID, memberID string, startedAt, stoppedAt sql.NullTime, classification string, nwStartHour, nwStartMinute, nwEndHour, nwEndMinute sql.NullInt32) (sleep.SleepSession, error) {
 	if stoppedAt.Valid {
+		var classifiedWith *sleep.NightWindow
+		if nwStartHour.Valid {
+			start, err := sleep.NewLocalTime(int(nwStartHour.Int32), int(nwStartMinute.Int32))
+			if err != nil {
+				return sleep.SleepSession{}, fmt.Errorf("reconstruct night window start: %w", err)
+			}
+			end, err := sleep.NewLocalTime(int(nwEndHour.Int32), int(nwEndMinute.Int32))
+			if err != nil {
+				return sleep.SleepSession{}, fmt.Errorf("reconstruct night window end: %w", err)
+			}
+			nw, err := sleep.NewNightWindow(start, end)
+			if err != nil {
+				return sleep.SleepSession{}, fmt.Errorf("reconstruct night window: %w", err)
+			}
+			classifiedWith = &nw
+		}
 		return sleep.NewCompletedSleepSession(
 			sleep.SleepSessionID(id),
 			sleep.BabyID(babyID),
@@ -193,7 +239,7 @@ func assembleSleepSession(id, babyID, memberID string, startedAt, stoppedAt sql.
 			startedAt.Time,
 			stoppedAt.Time,
 			sleep.SleepClassification(classification),
-			sleep.ClassificationRuleVersion(ruleVersion),
+			classifiedWith,
 		)
 	}
 
