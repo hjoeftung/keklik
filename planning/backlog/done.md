@@ -1,0 +1,295 @@
+## Story 1: Foundation and Architecture
+
+### TASK-001: Bootstrap Go service skeleton
+- Status: Done
+- Size: `S`
+- Goal: Create the initial Go backend structure as a modular monolith with DDD boundaries.
+- Scope:
+  - Initialize Go module
+  - Create package layout from the requirements
+  - Add entrypoint for HTTP server
+  - Add config loading skeleton
+  - Add health check endpoint
+- Suggested packages:
+  - `cmd/api`
+  - `internal/family`
+  - `internal/auth`
+  - `internal/sleep`
+  - `internal/reporting`
+  - `internal/infrastructure`
+  - `internal/interfaces/http`
+- Dependencies: none
+- Acceptance criteria:
+  - The project builds successfully
+  - The HTTP server starts locally
+  - A health endpoint returns success
+  - The package structure reflects the bounded contexts in [requirements.md](/home/hjoeftung/code/projects/keklik/requirements.md)
+
+### TASK-002: Add configuration and environment contract
+- Status: Done
+- Size: `S`
+- Goal: Define runtime configuration for the backend.
+- Scope:
+  - Add config struct and loader
+  - Define required environment variables
+  - Cover HTTP port, database DSN, Google OAuth settings, and base URL for invite links
+- Required config keys:
+  - `HTTP_PORT`
+  - `DATABASE_URL`
+  - `GOOGLE_OAUTH_CLIENT_ID`
+  - `GOOGLE_OAUTH_CLIENT_SECRET`
+  - `GOOGLE_OAUTH_REDIRECT_URL`
+  - `APP_BASE_URL`
+- Dependencies: [TASK-001](#task-001-bootstrap-go-service-skeleton)
+- Acceptance criteria:
+  - Service fails fast on missing required configuration
+  - Local development defaults are documented where appropriate
+  - Config is injectable into application and infrastructure layers
+
+### TASK-002A: Dockerize the app and bootstrap Docker Compose with PostgreSQL
+- Status: Done
+- Size: `S`
+- Goal: Make local development and integration testing reproducible with containers.
+- Scope:
+  - Add a Dockerfile for the Go API service
+  - Add a `compose.yaml` or `docker-compose.yml` for the API and PostgreSQL
+  - Configure database volume persistence for local development
+  - Wire environment variables for the app container and PostgreSQL container
+  - Add basic startup documentation for running the stack locally
+- Minimum setup expectations:
+  - One app service
+  - One PostgreSQL service
+  - App can connect to PostgreSQL over the Compose network
+  - Ports are exposed for local development
+- Suggested implementation details:
+  - Multi-stage Docker build for the Go binary
+  - Health check or startup dependency handling for PostgreSQL readiness
+  - Named volume for PostgreSQL data
+- Dependencies:
+  - [TASK-001](#task-001-bootstrap-go-service-skeleton)
+  - [TASK-002](#task-002-add-configuration-and-environment-contract)
+- Acceptance criteria:
+  - The backend can be started locally with Docker Compose
+  - PostgreSQL starts with persistent local storage
+  - The app container reads configuration correctly in Compose
+  - Local setup steps are documented clearly enough for a new developer to run the stack
+
+### TASK-003: Add PostgreSQL migration framework and baseline schema
+- Status: Done
+- Note: Only the migrations framework has been introduced so far.
+- Size: `S`
+- Goal: Establish schema management for the MVP.
+- Scope:
+  - Add migration tooling
+  - Create initial schema for families, accounts, babies, invite links, and sleep sessions
+  - Add indexes for active sleep lookups and date-range queries
+- Minimum schema expectations:
+  - Store timestamps in UTC
+  - Store family timezone as IANA identifier
+  - Persist sleep classification and classification rule version
+- Dependencies: [TASK-001](#task-001-bootstrap-go-service-skeleton)
+- Acceptance criteria:
+  - Migrations run cleanly on an empty database
+  - Migrations are repeatable in local development
+  - Schema supports every persistence requirement in [requirements.md](/home/hjoeftung/code/projects/keklik/requirements.md)
+
+### TASK-004: Establish shared error model and HTTP error mapping
+- Status: Done
+- Size: `S`
+- Goal: Standardize machine-readable error handling.
+- Scope:
+  - Define domain and application error codes
+  - Add HTTP mapping for validation, auth, conflict, not-found, and forbidden cases
+  - Add consistent JSON error response shape
+- Example codes:
+  - `invalid_argument`
+  - `unauthenticated`
+  - `forbidden`
+  - `not_found`
+  - `conflict`
+  - `invalid_timezone`
+  - `active_sleep_exists`
+  - `invalid_sleep_interval`
+  - `invalid_invite_link`
+- Dependencies: [TASK-001](#task-001-bootstrap-go-service-skeleton)
+- Acceptance criteria:
+  - All handlers can return the shared error model
+  - Error responses include stable code and human-readable message
+  - Conflict scenarios map to HTTP 409
+
+### TASK-005: Model family aggregate and repository interfaces
+- Status: Done
+- Size: `S`
+- Goal: Define the family domain model before implementing commands.
+- Scope:
+  - Add `Family`, `FamilyMember`, `Baby`, `NightWindow`, and `InviteLink` domain types
+  - Define repository interfaces
+  - Encode MVP invariant of exactly one baby per family while keeping future extension possible
+- Boundary note:
+  - `FamilyMember` belongs to the family domain and represents membership in a family
+  - `Account` belongs to the auth domain and represents an authenticated identity
+  - A `FamilyMember` may be linked to an `Account`, but the concepts should remain separate in code and docs
+- Key rules to encode:
+  - Family owns baby, members, timezone, and night window
+  - Family members have identical permissions
+  - Invite links belong to a family
+- Dependencies: [TASK-001](#task-001-bootstrap-go-service-skeleton)
+- Acceptance criteria:
+  - Domain types compile without infrastructure dependencies
+  - Repository interfaces support the planned commands and queries
+  - Unit tests cover key family invariants
+
+### TASK-006: Implement create family use case and API
+- Status: Done
+- Size: `S`
+- Goal: Allow creation of a family with the initial baby and settings.
+- Scope:
+  - Implement `CreateFamily`
+  - Validate family name, baby name, timezone, and night window
+  - Persist family, creator family member, and initial baby in one transaction
+  - Expose HTTP endpoint
+- Request must include:
+  - Family name
+  - Baby name
+  - Family timezone
+  - Night window start and end local time
+- Dependencies:
+  - [TASK-003](#task-003-add-postgresql-migration-framework-and-baseline-schema)
+  - [TASK-005](#task-005-model-family-aggregate-and-repository-interfaces)
+  - [TASK-004](#task-004-establish-shared-error-model-and-http-error-mapping)
+- Acceptance criteria:
+  - Family creation stores the first baby together with the family
+  - Invalid IANA timezones are rejected
+  - Invalid night windows are rejected
+  - API returns identifiers needed by clients
+
+### TASK-007: Implement Google OAuth identity flow
+- Status: Done
+- Size: `S`
+- Goal: Support Google OAuth as the only authentication option for the MVP.
+- Scope:
+  - Implement OAuth start and callback flow
+  - Verify Google identity token or callback response
+  - Resolve or provision internal account identity record
+  - Keep auth `Account` separate from family-domain `FamilyMember`
+  - Define how an authenticated `Account` is linked to an existing or newly created `FamilyMember`
+  - Define how authenticated identity is attached to requests
+- Decision notes:
+  - Keep session mechanism simple for MVP
+  - Preserve Google subject identifier in account data
+  - Avoid leaking auth terminology into the family aggregate
+- Dependencies:
+  - [TASK-002](#task-002-add-configuration-and-environment-contract)
+  - [TASK-004](#task-004-establish-shared-error-model-and-http-error-mapping)
+- Acceptance criteria:
+  - Unauthenticated requests are rejected on protected endpoints
+  - Google-authenticated identity can be resolved to internal account data
+  - Authenticated account-to-family-member linking is explicit in the application flow
+  - OAuth failure modes return stable API errors
+
+### TASK-011: Model sleep session aggregate and repository interfaces
+- Status: Done
+- Size: `S`
+- Goal: Define the core sleep domain model with business invariants.
+- Scope:
+  - Add `SleepSession` domain type
+  - Add classification enum or value object for nap versus night sleep
+  - Add repository interfaces for active session lookup and date-range queries
+- Key rules to encode:
+  - Only one active sleep session per baby
+  - `stop >= start`
+  - Duration is derived
+  - Classification is derived, not user-entered
+- Dependencies: [TASK-001](#task-001-bootstrap-go-service-skeleton)
+- Acceptance criteria:
+  - Domain model is independent from transport and persistence
+  - Unit tests cover aggregate lifecycle and invariants
+
+### TASK-012: Implement timezone-aware sleep classification service
+- Size: `S`
+- Goal: Derive nap versus night-sleep classification safely across DST and midnight boundaries.
+- Scope:
+  - Implement calculation based on family timezone and night window
+  - Support windows that cross midnight
+  - Persist classification and classification rule version
+  - Ensure future night-window changes do not silently reclassify past sessions
+- Required behaviors:
+  - Night sleep if more than half of session duration falls inside the night window
+  - Nap otherwise
+  - Recalculate on session edit
+- Dependencies:
+  - [TASK-005](#task-005-model-family-aggregate-and-repository-interfaces)
+  - [TASK-011](#task-011-model-sleep-session-aggregate-and-repository-interfaces)
+- Acceptance criteria:
+  - Unit tests cover DST forward and backward cases
+  - Unit tests cover night windows spanning midnight
+  - Unit tests cover forward-only night-window changes
+
+### TASK-013: Implement start sleep use case and API
+- Size: `S`
+- Goal: Start a sleep session for the family's baby.
+- Scope:
+  - Implement `StartSleep`
+  - Validate family membership
+  - Check for existing active sleep session
+  - Persist active session atomically
+  - Expose endpoint
+- Dependencies:
+  - [TASK-007](#task-007-implement-google-oauth-identity-flow)
+  - [TASK-011](#task-011-model-sleep-session-aggregate-and-repository-interfaces)
+  - [TASK-003](#task-003-add-postgresql-migration-framework-and-baseline-schema)
+  - [TASK-004](#task-004-establish-shared-error-model-and-http-error-mapping)
+- Acceptance criteria:
+  - Starting a sleep creates an active session
+  - Starting a second active sleep for the same baby returns conflict
+  - Concurrent requests do not create duplicate active sessions
+
+### TASK-014: Implement stop sleep use case and API
+- Size: `S`
+- Goal: Stop the current active sleep session.
+- Scope:
+  - Implement `StopSleep`
+  - Load active session
+  - Validate stop time
+  - Calculate duration and final classification
+  - Persist atomically
+  - Expose endpoint
+- Dependencies:
+  - [TASK-012](#task-012-implement-timezone-aware-sleep-classification-service)
+  - [TASK-013](#task-013-implement-start-sleep-use-case-and-api)
+- Acceptance criteria:
+  - Stopping an active sleep produces a completed session
+  - Invalid stop time is rejected
+  - Classification is stored with the completed session
+
+### TASK-024: Add GitHub Actions CI and GHCR image publishing
+- Status: Done
+- Size: `S`
+- Goal: Establish a baseline GitHub-hosted CI/CD path for validating Go changes and publishing application images.
+- Scope:
+  - Add GitHub Actions workflow files for pull requests and default-branch pushes
+  - Run standard Go validation steps:
+    - `go fmt` verification
+    - `go vet ./...`
+    - `go test ./...`
+    - `go build ./cmd/api`
+  - Configure dependency and build caching to keep workflow runtime reasonable
+  - Build the application image from the existing root `Dockerfile`
+  - Authenticate to GitHub Container Registry with the repository token and push images to `ghcr.io`
+  - Publish a predictable tag set, at minimum using the commit SHA and a stable tag for the default branch
+  - Document the CI behavior and image naming convention for developers
+- Suggested implementation details:
+  - Use `actions/setup-go` with the version from `go.mod`
+  - Use `docker/login-action`, `docker/metadata-action`, and `docker/build-push-action`
+  - Separate validation and publish jobs so pull requests do not push images
+  - Limit image publishing to the default branch and optional version tags
+  - Set workflow permissions explicitly, including `packages: write` only where image publishing requires it
+- Dependencies:
+  - [TASK-001](#task-001-bootstrap-go-service-skeleton)
+  - [TASK-002A](#task-002a-dockerize-the-app-and-bootstrap-docker-compose-with-postgresql)
+- Acceptance criteria:
+  - Every pull request runs Go formatting verification, vet, tests, and an application build on GitHub Actions
+  - A push to the default branch builds the container image and publishes it to GitHub Container Registry
+  - Published images use a documented naming scheme and include at least a commit-specific tag
+  - Workflow configuration does not require long-lived registry credentials outside standard GitHub repository permissions
+  - Repository documentation explains when CI runs and where published images are available
