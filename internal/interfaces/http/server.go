@@ -17,20 +17,32 @@ type healthResponse struct {
 	Status string `json:"status"`
 }
 
+// Dependencies holds all handler and repository dependencies for the HTTP server.
+type Dependencies struct {
+	Accounts           auth.AccountRepository
+	Sessions           auth.SessionRepository
+	OAuthCallback      *auth.HandleOAuthCallbackHandler
+	CreateFamily       *family.CreateFamilyHandler
+	SleepCtx           sleepContextResolver
+	CreateSleepProfile *sleep.CreateSleepProfileHandler
+	StartSleep         *sleep.StartSleepHandler
+	StopSleep          *sleep.StopSleepHandler
+	GetSleepHistory    *sleep.GetSleepHistoryHandler
+	GetElapsedTime     *sleep.GetElapsedTimeHandler
+}
+
 // NewServer wires the HTTP transport and returns a ready-to-start server.
-func NewServer(
-	config infrastructure.Config,
-	accounts auth.AccountRepository,
-	sessions auth.SessionRepository,
-	oauthCallback *auth.HandleOAuthCallbackHandler,
-	createFamily *family.CreateFamilyHandler,
-	sleepCtx sleepContextResolver,
-	createSleepProfile *sleep.CreateSleepProfileHandler,
-	startSleep *sleep.StartSleepHandler,
-	stopSleep *sleep.StopSleepHandler,
-	getSleepHistory *sleep.GetSleepHistoryHandler,
-	getElapsedTime *sleep.GetElapsedTimeHandler,
-) *http.Server {
+func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
+	accounts := deps.Accounts
+	sessions := deps.Sessions
+	oauthCallback := deps.OAuthCallback
+	createFamily := deps.CreateFamily
+	sleepCtx := deps.SleepCtx
+	createSleepProfile := deps.CreateSleepProfile
+	startSleep := deps.StartSleep
+	stopSleep := deps.StopSleep
+	getSleepHistory := deps.GetSleepHistory
+	getElapsedTime := deps.GetElapsedTime
 	oauthCfg := &oauth2.Config{
 		ClientID:     config.GoogleOAuth.ClientID,
 		ClientSecret: config.GoogleOAuth.ClientSecret,

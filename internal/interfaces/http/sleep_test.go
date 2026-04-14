@@ -117,14 +117,12 @@ func newStopSleepTestServer(
 
 	return NewServer(
 		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
-		&stubAccountRepository{account: account},
-		&stubSessionRepository{session: session},
-		nil,
-		nil,
-		resolver,
-		nil,
-		nil,
-		stopSleep,
+		Dependencies{
+			Accounts:  &stubAccountRepository{account: account},
+			Sessions:  &stubSessionRepository{session: session},
+			SleepCtx:  resolver,
+			StopSleep: stopSleep,
+		},
 	)
 }
 

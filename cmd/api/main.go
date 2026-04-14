@@ -48,7 +48,18 @@ func main() {
 	getElapsedTime := sleep.NewGetElapsedTimeHandler(sleepSessionRepo)
 	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, sessionRepo)
 
-	server := httpapi.NewServer(config, accountRepo, sessionRepo, oauthCallback, createFamily, sleepCtxResolver, createSleepProfile, startSleep, stopSleep, getSleepHistory, getElapsedTime)
+	server := httpapi.NewServer(config, httpapi.Dependencies{
+		Accounts:           accountRepo,
+		Sessions:           sessionRepo,
+		OAuthCallback:      oauthCallback,
+		CreateFamily:       createFamily,
+		SleepCtx:           sleepCtxResolver,
+		CreateSleepProfile: createSleepProfile,
+		StartSleep:         startSleep,
+		StopSleep:          stopSleep,
+		GetSleepHistory:    getSleepHistory,
+		GetElapsedTime:     getElapsedTime,
+	})
 
 	log.Printf("starting HTTP server on %s", config.Address())
 

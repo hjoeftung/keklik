@@ -90,16 +90,12 @@ func newTestServer(familyRepo family.FamilyRepository) *http.Server {
 	}
 	return NewServer(
 		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
-		&stubAccountRepository{account: account},
-		&stubSessionRepository{session: session},
-		nil,
-		createFamily,
-		nil,
-		createSleepProfile,
-		nil,
-		nil,
-		nil,
-		nil,
+		Dependencies{
+			Accounts:           &stubAccountRepository{account: account},
+			Sessions:           &stubSessionRepository{session: session},
+			CreateFamily:       createFamily,
+			CreateSleepProfile: createSleepProfile,
+		},
 	)
 }
 
