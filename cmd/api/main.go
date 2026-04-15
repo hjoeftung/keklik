@@ -1,3 +1,18 @@
+// Package main is the entry point for the Keklik HTTP API server.
+//
+//go:generate go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g main.go --dir ../.. --output ../../docs --outputTypes yaml
+//
+// @title       Keklik API
+// @version     1.0
+// @description Baby sleep tracking API for families.
+//
+// @host        localhost:8080
+// @BasePath    /
+//
+// @securityDefinitions.apikey  BearerAuth
+// @in                          header
+// @name                        Authorization
+// @description                 Session token obtained from the auth endpoints.
 package main
 
 import (

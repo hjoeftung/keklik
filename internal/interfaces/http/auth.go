@@ -39,6 +39,11 @@ type testLoginRequest struct {
 
 // oauthStartHandler generates a random state, stores it in a signed cookie, and
 // redirects the client to Google's authorisation page.
+//
+// @Summary  Start Google OAuth flow
+// @Tags     auth
+// @Success  307  {string}  string  "Redirect to Google authorisation page"
+// @Router   /auth/google/start [get]
 func oauthStartHandler(w http.ResponseWriter, r *http.Request, cfg *oauth2.Config, stateSecret string) {
 	stateBytes := make([]byte, 16)
 	if _, err := rand.Read(stateBytes); err != nil {
@@ -62,6 +67,15 @@ func oauthStartHandler(w http.ResponseWriter, r *http.Request, cfg *oauth2.Confi
 // oauthCallbackHandler verifies the state, exchanges the code for a Google token,
 // fetches the user's identity from Google, then resolves or provisions an internal
 // Account and issues a session token.
+//
+// @Summary   Google OAuth callback
+// @Tags      auth
+// @Produce   json
+// @Param     code   query     string  true  "Authorization code returned by Google"
+// @Param     state  query     string  true  "State value for CSRF verification"
+// @Success   200    {object}  authSessionResponse
+// @Failure   401    {object}  errorResponse
+// @Router    /auth/google/callback [get]
 func oauthCallbackHandler(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -121,6 +135,16 @@ func oauthCallbackHandler(
 }
 
 // testLoginHandler issues a regular application session for a test-only identity.
+// Only available when ENABLE_TEST_AUTH=true.
+//
+// @Summary   Test login (dev/staging only)
+// @Tags      auth
+// @Accept    json
+// @Produce   json
+// @Param     body  body      testLoginRequest  true  "Test login credentials"
+// @Success   200   {object}  authSessionResponse
+// @Failure   400   {object}  errorResponse
+// @Router    /auth/test/login [post]
 func testLoginHandler(w http.ResponseWriter, r *http.Request, enabled bool, h *auth.HandleTestLoginHandler) {
 	if !enabled {
 		http.NotFound(w, r)

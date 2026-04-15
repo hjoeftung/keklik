@@ -40,6 +40,17 @@ func toSleepSessionResponse(s sleep.SleepSession) sleepSessionResponse {
 	return resp
 }
 
+// getSleepHistoryHandler returns the sleep session history for the caller's baby.
+//
+// @Summary   Get sleep history
+// @Tags      sleep
+// @Produce   json
+// @Security  BearerAuth
+// @Param     period  query     string  false  "History window: today, 7d (default), or 14d"
+// @Success   200     {array}   sleepSessionResponse
+// @Failure   400     {object}  errorResponse
+// @Failure   401     {object}  errorResponse
+// @Router    /sleep-sessions [get]
 func getSleepHistoryHandler(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -124,6 +135,17 @@ type createSleepProfileRequest struct {
 	NightWindow nightWindowRequest `json:"night_window"`
 }
 
+// createSleepProfileHandler creates or updates the sleep profile (timezone + night window) for a baby.
+//
+// @Summary   Create sleep profile
+// @Tags      sleep
+// @Accept    json
+// @Security  BearerAuth
+// @Param     body  body  createSleepProfileRequest  true  "Sleep profile configuration"
+// @Success   204
+// @Failure   400  {object}  errorResponse
+// @Failure   401  {object}  errorResponse
+// @Router    /sleep-profiles [post]
 func createSleepProfileHandler(w http.ResponseWriter, r *http.Request, h *sleep.CreateSleepProfileHandler) {
 	var req createSleepProfileRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -156,6 +178,19 @@ type startSleepResponse struct {
 	StartedAt time.Time `json:"started_at"`
 }
 
+// startSleepHandler starts a new sleep session for the caller's baby.
+//
+// @Summary   Start sleep session
+// @Tags      sleep
+// @Accept    json
+// @Produce   json
+// @Security  BearerAuth
+// @Param     body  body      startSleepRequest  false  "Optional explicit start time (defaults to now)"
+// @Success   201   {object}  startSleepResponse
+// @Failure   400   {object}  errorResponse
+// @Failure   401   {object}  errorResponse
+// @Failure   409   {object}  errorResponse  "Active sleep session already exists"
+// @Router    /sleep-sessions [post]
 func startSleepHandler(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -228,6 +263,18 @@ type editSleepSessionRequest struct {
 	StoppedAt *time.Time `json:"stopped_at"`
 }
 
+// stopSleepHandler stops the active sleep session for the caller's baby.
+//
+// @Summary   Stop active sleep session
+// @Tags      sleep
+// @Accept    json
+// @Produce   json
+// @Security  BearerAuth
+// @Param     body  body      stopSleepRequest  false  "Optional explicit stop time (defaults to now)"
+// @Success   200   {object}  stopSleepResponse
+// @Failure   400   {object}  errorResponse
+// @Failure   401   {object}  errorResponse
+// @Router    /sleep-sessions/active [delete]
 func stopSleepHandler(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -282,6 +329,19 @@ func mapStopSleepError(err error) apperror.AppError {
 	}
 }
 
+// editSleepSessionHandler updates the start or stop time of an existing sleep session.
+//
+// @Summary   Edit sleep session
+// @Tags      sleep
+// @Accept    json
+// @Produce   json
+// @Security  BearerAuth
+// @Param     id    path      string                   true  "Sleep session UUID"
+// @Param     body  body      editSleepSessionRequest  true  "Fields to update (at least one required)"
+// @Success   200   {object}  sleepSessionResponse
+// @Failure   400   {object}  errorResponse
+// @Failure   401   {object}  errorResponse
+// @Router    /sleep-sessions/{id} [patch]
 func editSleepSessionHandler(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -322,6 +382,15 @@ func editSleepSessionHandler(
 	_ = json.NewEncoder(w).Encode(toSleepSessionResponse(session))
 }
 
+// deleteSleepSessionHandler permanently removes a sleep session.
+//
+// @Summary   Delete sleep session
+// @Tags      sleep
+// @Security  BearerAuth
+// @Param     id   path  string  true  "Sleep session UUID"
+// @Success   204
+// @Failure   401  {object}  errorResponse
+// @Router    /sleep-sessions/{id} [delete]
 func deleteSleepSessionHandler(
 	w http.ResponseWriter,
 	r *http.Request,

@@ -25,6 +25,16 @@ type joinFamilyByInviteLinkResponse struct {
 	MemberID string `json:"member_id"`
 }
 
+// createFamilyInviteLinkHandler generates a one-time invite link for the caller's family.
+//
+// @Summary   Create family invite link
+// @Tags      families
+// @Produce   json
+// @Security  BearerAuth
+// @Success   201  {object}  createFamilyInviteLinkResponse
+// @Failure   401  {object}  errorResponse
+// @Failure   403  {object}  errorResponse
+// @Router    /families/invite-links [post]
 func createFamilyInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.CreateFamilyInviteLinkHandler) {
 	account, ok := auth.AccountFromContext(r.Context())
 	if !ok {
@@ -49,6 +59,18 @@ func createFamilyInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *fa
 	})
 }
 
+// joinFamilyByInviteLinkHandler adds the authenticated user to a family using an invite token.
+//
+// @Summary   Join family by invite link
+// @Tags      families
+// @Accept    json
+// @Produce   json
+// @Security  BearerAuth
+// @Param     body  body      joinFamilyByInviteLinkRequest   true  "Invite token and member name"
+// @Success   201   {object}  joinFamilyByInviteLinkResponse
+// @Failure   400   {object}  errorResponse
+// @Failure   401   {object}  errorResponse
+// @Router    /families/join-by-invite-link [post]
 func joinFamilyByInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.JoinFamilyByInviteLinkHandler) {
 	account, ok := auth.AccountFromContext(r.Context())
 	if !ok {
