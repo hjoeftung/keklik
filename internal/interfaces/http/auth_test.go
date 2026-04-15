@@ -1,6 +1,8 @@
 package httpapi
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,6 +11,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/hjoeftung/keklik/internal/auth"
+	"github.com/hjoeftung/keklik/internal/infrastructure"
 )
 
 // --- requireAuth middleware ---
@@ -227,6 +230,110 @@ func TestOAuthCallbackHandler_StateMismatch(t *testing.T) {
 	}
 }
 
+func TestTestLoginHandlerReturns404WhenDisabled(t *testing.T) {
+	t.Parallel()
+
+	server := NewServer(
+		minimalServerConfig(),
+		Dependencies{
+			Accounts:  &stubAccountRepository{},
+			Sessions:  &stubSessionRepository{},
+			TestLogin: auth.NewHandleTestLoginHandler(&stubAccountRepository{}, &stubSessionRepository{}),
+		},
+	)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/auth/test/login", bytes.NewBufferString(`{"identifier":"qa-user"}`))
+	req.Header.Set("Content-Type", "application/json")
+	server.Handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", rec.Code)
+	}
+}
+
+func TestTestLoginHandlerReturnsSessionWhenEnabled(t *testing.T) {
+	t.Parallel()
+
+	accounts := &stubAccountRepository{}
+	sessions := &stubSessionRepository{}
+	server := NewServer(
+		infrastructure.Config{
+			HTTP: infrastructure.HTTPConfig{Port: 8080},
+			Auth: infrastructure.AuthConfig{EnableTestAuth: true},
+		},
+		Dependencies{
+			Accounts:  accounts,
+			Sessions:  sessions,
+			TestLogin: auth.NewHandleTestLoginHandler(accounts, sessions),
+		},
+	)
+
+	body, err := json.Marshal(testLoginRequest{Identifier: "qa-user"})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/auth/test/login", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	server.Handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp authSessionResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if resp.Token == "" {
+		t.Fatal("expected non-empty token")
+	}
+
+	if resp.AccountID == "" {
+		t.Fatal("expected non-empty account_id")
+	}
+
+	if len(accounts.saved) != 1 {
+		t.Fatalf("expected 1 saved account, got %d", len(accounts.saved))
+	}
+
+	if accounts.saved[0].GoogleSubjectID != "test:qa-user" {
+		t.Fatalf("expected test subject ID %q, got %q", "test:qa-user", accounts.saved[0].GoogleSubjectID)
+	}
+
+	if len(sessions.saved) != 1 {
+		t.Fatalf("expected 1 saved session, got %d", len(sessions.saved))
+	}
+}
+
+func TestTestLoginHandlerRejectsBadJSON(t *testing.T) {
+	t.Parallel()
+
+	server := NewServer(
+		infrastructure.Config{
+			HTTP: infrastructure.HTTPConfig{Port: 8080},
+			Auth: infrastructure.AuthConfig{EnableTestAuth: true},
+		},
+		Dependencies{
+			Accounts:  &stubAccountRepository{},
+			Sessions:  &stubSessionRepository{},
+			TestLogin: auth.NewHandleTestLoginHandler(&stubAccountRepository{}, &stubSessionRepository{}),
+		},
+	)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/auth/test/login", bytes.NewBufferString("{bad json"))
+	req.Header.Set("Content-Type", "application/json")
+	server.Handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
 // --- helpers ---
 
 func okHandler() http.Handler {
@@ -247,5 +354,11 @@ func minimalOAuthConfig() *oauth2.Config {
 			AuthURL:  "https://accounts.google.com/o/oauth2/v2/auth",
 			TokenURL: "https://oauth2.googleapis.com/token",
 		},
+	}
+}
+
+func minimalServerConfig() infrastructure.Config {
+	return infrastructure.Config{
+		HTTP: infrastructure.HTTPConfig{Port: 8080},
 	}
 }

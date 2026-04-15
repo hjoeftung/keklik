@@ -28,6 +28,15 @@ type googleUserInfo struct {
 	Email string `json:"email"`
 }
 
+type authSessionResponse struct {
+	Token     string `json:"token"`
+	AccountID string `json:"account_id"`
+}
+
+type testLoginRequest struct {
+	Identifier string `json:"identifier"`
+}
+
 // oauthStartHandler generates a random state, stores it in a signed cookie, and
 // redirects the client to Google's authorisation page.
 func oauthStartHandler(w http.ResponseWriter, r *http.Request, cfg *oauth2.Config, stateSecret string) {
@@ -108,12 +117,40 @@ func oauthCallbackHandler(
 		Path:     "/",
 	})
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"token":      string(result.Session.Token),
-		"account_id": string(result.Account.ID),
-	})
+	writeAuthSessionResponse(w, result)
+}
+
+// testLoginHandler issues a regular application session for a test-only identity.
+func testLoginHandler(w http.ResponseWriter, r *http.Request, enabled bool, h *auth.HandleTestLoginHandler) {
+	if !enabled {
+		http.NotFound(w, r)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	if h == nil {
+		writeError(w, apperror.New(apperror.CodeInternalError, "test auth is unavailable"))
+		return
+	}
+
+	var req testLoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid JSON body"))
+		return
+	}
+
+	result, err := h.Handle(r.Context(), auth.HandleTestLoginCommand{Identifier: req.Identifier})
+	if err != nil {
+		writeError(w, apperror.New(apperror.CodeInvalidArgument, err.Error()))
+		return
+	}
+
+	writeAuthSessionResponse(w, result)
 }
 
 // requireAuth is middleware that validates the Bearer session token in the Authorization
@@ -165,6 +202,15 @@ func fetchGoogleUserInfo(ctx context.Context, cfg *oauth2.Config, token *oauth2.
 	}
 
 	return info, nil
+}
+
+func writeAuthSessionResponse(w http.ResponseWriter, result auth.HandleOAuthCallbackResult) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(authSessionResponse{
+		Token:     string(result.Session.Token),
+		AccountID: string(result.Account.ID),
+	})
 }
 
 // signState returns "state.HMAC" where HMAC is computed over state using secret.

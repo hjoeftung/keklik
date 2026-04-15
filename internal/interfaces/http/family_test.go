@@ -42,23 +42,49 @@ func (r *stubFamilyRepository) FindByInviteToken(_ context.Context, _ family.Inv
 // stubAccountRepository is a minimal AccountRepository test double.
 type stubAccountRepository struct {
 	account auth.Account
+	saved   []auth.Account
+	err     error
 }
 
-func (r *stubAccountRepository) Save(_ context.Context, _ auth.Account) error { return nil }
+func (r *stubAccountRepository) Save(_ context.Context, account auth.Account) error {
+	if r.err != nil {
+		return r.err
+	}
+	r.saved = append(r.saved, account)
+	r.account = account
+	return nil
+}
 func (r *stubAccountRepository) FindByID(_ context.Context, _ auth.AccountID) (auth.Account, error) {
+	if r.err != nil {
+		return auth.Account{}, r.err
+	}
 	return r.account, nil
 }
 func (r *stubAccountRepository) FindByGoogleSubjectID(_ context.Context, _ string) (auth.Account, error) {
+	if r.err != nil {
+		return auth.Account{}, r.err
+	}
+	if r.account.ID == "" {
+		return auth.Account{}, auth.ErrAccountNotFound
+	}
 	return r.account, nil
 }
 
 // stubSessionRepository is a minimal SessionRepository test double.
 type stubSessionRepository struct {
 	session auth.Session
+	saved   []auth.Session
 	err     error
 }
 
-func (r *stubSessionRepository) Save(_ context.Context, _ auth.Session) error { return nil }
+func (r *stubSessionRepository) Save(_ context.Context, session auth.Session) error {
+	if r.err != nil {
+		return r.err
+	}
+	r.saved = append(r.saved, session)
+	r.session = session
+	return nil
+}
 func (r *stubSessionRepository) FindByToken(_ context.Context, _ auth.SessionToken) (auth.Session, error) {
 	if r.err != nil {
 		return auth.Session{}, r.err

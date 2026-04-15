@@ -47,11 +47,13 @@ func main() {
 	getSleepHistory := sleep.NewGetSleepHistoryHandler(sleepSessionRepo, sleepProfileRepo)
 	getElapsedTime := sleep.NewGetElapsedTimeHandler(sleepSessionRepo)
 	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, sessionRepo)
+	testLogin := auth.NewHandleTestLoginHandler(accountRepo, sessionRepo)
 
 	server := httpapi.NewServer(config, httpapi.Dependencies{
 		Accounts:           accountRepo,
 		Sessions:           sessionRepo,
 		OAuthCallback:      oauthCallback,
+		TestLogin:          testLogin,
 		CreateFamily:       createFamily,
 		SleepCtx:           sleepCtxResolver,
 		CreateSleepProfile: createSleepProfile,

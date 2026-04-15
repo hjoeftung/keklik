@@ -13,6 +13,8 @@ import (
 
 const sessionDuration = 30 * 24 * time.Hour
 
+var now = time.Now
+
 // HandleOAuthCallbackCommand holds the verified Google identity from the OAuth callback.
 type HandleOAuthCallbackCommand struct {
 	GoogleSubjectID string
@@ -45,35 +47,54 @@ func (h *HandleOAuthCallbackHandler) Handle(ctx context.Context, cmd HandleOAuth
 		return HandleOAuthCallbackResult{}, fmt.Errorf("google subject ID must not be empty")
 	}
 
-	account, err := h.accounts.FindByGoogleSubjectID(ctx, cmd.GoogleSubjectID)
+	account, err := findOrCreateAccount(ctx, h.accounts, cmd.GoogleSubjectID, cmd.Email)
 	if err != nil {
-		if !errors.Is(err, ErrAccountNotFound) {
-			return HandleOAuthCallbackResult{}, fmt.Errorf("look up account: %w", err)
-		}
-
-		account = Account{
-			ID:              AccountID(uuid.New().String()),
-			GoogleSubjectID: cmd.GoogleSubjectID,
-			Email:           cmd.Email,
-		}
-		if err := h.accounts.Save(ctx, account); err != nil {
-			return HandleOAuthCallbackResult{}, fmt.Errorf("save account: %w", err)
-		}
+		return HandleOAuthCallbackResult{}, err
 	}
 
+	session, err := issueSession(ctx, h.sessions, account.ID, now)
+	if err != nil {
+		return HandleOAuthCallbackResult{}, err
+	}
+
+	return HandleOAuthCallbackResult{Account: account, Session: session}, nil
+}
+
+func findOrCreateAccount(ctx context.Context, accounts AccountRepository, subjectID, email string) (Account, error) {
+	account, err := accounts.FindByGoogleSubjectID(ctx, subjectID)
+	if err == nil {
+		return account, nil
+	}
+	if !errors.Is(err, ErrAccountNotFound) {
+		return Account{}, fmt.Errorf("look up account: %w", err)
+	}
+
+	account = Account{
+		ID:              AccountID(uuid.New().String()),
+		GoogleSubjectID: subjectID,
+		Email:           email,
+	}
+	if err := accounts.Save(ctx, account); err != nil {
+		return Account{}, fmt.Errorf("save account: %w", err)
+	}
+
+	return account, nil
+}
+
+func issueSession(ctx context.Context, sessions SessionRepository, accountID AccountID, clock func() time.Time) (Session, error) {
 	tokenBytes := make([]byte, 32)
 	if _, err := rand.Read(tokenBytes); err != nil {
-		return HandleOAuthCallbackResult{}, fmt.Errorf("generate session token: %w", err)
+		return Session{}, fmt.Errorf("generate session token: %w", err)
 	}
 
 	session := Session{
 		Token:     SessionToken(base64.RawURLEncoding.EncodeToString(tokenBytes)),
-		AccountID: account.ID,
-		ExpiresAt: time.Now().Add(sessionDuration),
+		AccountID: accountID,
+		ExpiresAt: clock().Add(sessionDuration),
 	}
-	if err := h.sessions.Save(ctx, session); err != nil {
-		return HandleOAuthCallbackResult{}, fmt.Errorf("save session: %w", err)
+	if err := sessions.Save(ctx, session); err != nil {
+		return Session{}, fmt.Errorf("save session: %w", err)
 	}
 
-	return HandleOAuthCallbackResult{Account: account, Session: session}, nil
+	return session, nil
 }

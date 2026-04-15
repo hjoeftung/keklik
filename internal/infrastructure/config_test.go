@@ -34,8 +34,26 @@ func TestLoadConfigUsesDefaultHTTPPortAndLoadsRequiredEnvironment(t *testing.T) 
 		t.Fatalf("unexpected app base url: %q", config.App.BaseURL)
 	}
 
+	if config.Auth.EnableTestAuth {
+		t.Fatal("expected test auth to be disabled by default")
+	}
+
 	if config.Address() != ":8080" {
 		t.Fatalf("unexpected server address: %q", config.Address())
+	}
+}
+
+func TestLoadConfigEnablesTestAuthWhenConfigured(t *testing.T) {
+	setRequiredEnv(t)
+	t.Setenv("ENABLE_TEST_AUTH", "true")
+
+	config, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("LoadConfig returned error: %v", err)
+	}
+
+	if !config.Auth.EnableTestAuth {
+		t.Fatal("expected test auth to be enabled")
 	}
 }
 
@@ -78,6 +96,20 @@ func TestLoadConfigFailsOnInvalidURLs(t *testing.T) {
 	}
 
 	if got := err.Error(); got != "invalid APP_BASE_URL: must be an absolute URL" {
+		t.Fatalf("unexpected error: %q", got)
+	}
+}
+
+func TestLoadConfigFailsOnInvalidEnableTestAuth(t *testing.T) {
+	setRequiredEnv(t)
+	t.Setenv("ENABLE_TEST_AUTH", "not-a-bool")
+
+	_, err := LoadConfig()
+	if err == nil {
+		t.Fatal("expected error for invalid ENABLE_TEST_AUTH")
+	}
+
+	if got := err.Error(); got != "invalid ENABLE_TEST_AUTH: must be a boolean" {
 		t.Fatalf("unexpected error: %q", got)
 	}
 }

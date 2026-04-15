@@ -21,6 +21,7 @@ type Config struct {
 	HTTP            HTTPConfig
 	Database        DatabaseConfig
 	GoogleOAuth     GoogleOAuthConfig
+	Auth            AuthConfig
 	App             AppConfig
 	ShutdownTimeout time.Duration
 }
@@ -42,6 +43,11 @@ type GoogleOAuthConfig struct {
 	RedirectURL  string
 }
 
+// AuthConfig contains authentication feature flags.
+type AuthConfig struct {
+	EnableTestAuth bool
+}
+
 // AppConfig contains application-level URLs and other cross-cutting settings.
 type AppConfig struct {
 	BaseURL string
@@ -50,6 +56,11 @@ type AppConfig struct {
 // LoadConfig loads and validates the runtime environment contract.
 func LoadConfig() (Config, error) {
 	httpPort, err := readIntEnv("HTTP_PORT", defaultHTTPPort)
+	if err != nil {
+		return Config{}, err
+	}
+
+	enableTestAuth, err := readBoolEnv("ENABLE_TEST_AUTH", false)
 	if err != nil {
 		return Config{}, err
 	}
@@ -91,6 +102,9 @@ func LoadConfig() (Config, error) {
 			ClientSecret: clientSecret,
 			RedirectURL:  redirectURL,
 		},
+		Auth: AuthConfig{
+			EnableTestAuth: enableTestAuth,
+		},
 		App: AppConfig{
 			BaseURL: appBaseURL,
 		},
@@ -112,6 +126,20 @@ func readIntEnv(key string, fallback int) (int, error) {
 	parsed, err := strconv.Atoi(value)
 	if err != nil || parsed <= 0 {
 		return 0, fmt.Errorf("invalid %s: must be a positive integer", key)
+	}
+
+	return parsed, nil
+}
+
+func readBoolEnv(key string, fallback bool) (bool, error) {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback, nil
+	}
+
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, fmt.Errorf("invalid %s: must be a boolean", key)
 	}
 
 	return parsed, nil

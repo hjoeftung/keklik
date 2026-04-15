@@ -22,6 +22,7 @@ type Dependencies struct {
 	Accounts           auth.AccountRepository
 	Sessions           auth.SessionRepository
 	OAuthCallback      *auth.HandleOAuthCallbackHandler
+	TestLogin          *auth.HandleTestLoginHandler
 	CreateFamily       *family.CreateFamilyHandler
 	SleepCtx           sleepContextResolver
 	CreateSleepProfile *sleep.CreateSleepProfileHandler
@@ -36,6 +37,7 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	accounts := deps.Accounts
 	sessions := deps.Sessions
 	oauthCallback := deps.OAuthCallback
+	testLogin := deps.TestLogin
 	createFamily := deps.CreateFamily
 	sleepCtx := deps.SleepCtx
 	createSleepProfile := deps.CreateSleepProfile
@@ -61,6 +63,9 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	})
 	mux.HandleFunc("GET /auth/google/callback", func(w http.ResponseWriter, r *http.Request) {
 		oauthCallbackHandler(w, r, oauthCfg, stateSecret, oauthCallback)
+	})
+	mux.HandleFunc("/auth/test/login", func(w http.ResponseWriter, r *http.Request) {
+		testLoginHandler(w, r, config.Auth.EnableTestAuth, testLogin)
 	})
 
 	// Protected endpoints — wrapped with requireAuth middleware.

@@ -66,6 +66,7 @@ export DATABASE_URL='postgres://keklik:keklik@localhost:5432/keklik?sslmode=disa
 export GOOGLE_OAUTH_CLIENT_ID='your-google-client-id'
 export GOOGLE_OAUTH_CLIENT_SECRET='your-google-client-secret'
 export GOOGLE_OAUTH_REDIRECT_URL='http://localhost:8080/auth/google/callback'
+export ENABLE_TEST_AUTH='true'
 export APP_BASE_URL='http://localhost:8080'
 go run ./cmd/api
 ```
@@ -83,7 +84,38 @@ The service validates its environment contract during startup and exits immediat
 | `GOOGLE_OAUTH_CLIENT_ID` | Yes | Google OAuth client identifier. |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Yes | Google OAuth client secret. |
 | `GOOGLE_OAUTH_REDIRECT_URL` | Yes | Absolute callback URL registered with Google. |
+| `ENABLE_TEST_AUTH` | No | Enables the test-only `POST /auth/test/login` endpoint. Defaults to `false`. |
 | `APP_BASE_URL` | Yes | Absolute base URL used to build application links such as family invite URLs. |
+
+## Test-only auth flow
+
+For local development and QA, you can enable a non-Google auth path that mints a normal application session without completing the real OAuth flow.
+
+The endpoint is disabled by default and is intended only for local or explicitly approved environments.
+
+1. Start the service with `ENABLE_TEST_AUTH=true`.
+1. Request a test session:
+
+```bash
+curl -X POST http://localhost:8080/auth/test/login \
+  -H 'Content-Type: application/json' \
+  -d '{"identifier":"qa-user"}'
+```
+
+Expected response:
+
+```json
+{"token":"<bearer-token>","account_id":"<account-id>"}
+```
+
+Use the returned token exactly like a normal authenticated session:
+
+```bash
+curl http://localhost:8080/sleep-sessions \
+  -H 'Authorization: Bearer <bearer-token>'
+```
+
+The test login provisions or reuses an account whose subject ID is derived as `test:<identifier>`. If you need the test user to line up with seeded local data, seed related records with the same subject ID value.
 
 ## Health check
 
