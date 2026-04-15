@@ -13,7 +13,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/keklik-
 
 FROM alpine:3.21
 
-RUN apk add --no-cache ca-certificates && adduser -D -g '' appuser
+RUN apk add --no-cache ca-certificates tzdata && adduser -D -g '' appuser
 
 COPY --from=builder /out/keklik-api /usr/local/bin/keklik-api
 
