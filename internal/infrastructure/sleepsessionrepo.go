@@ -174,10 +174,10 @@ func (r *PostgresSleepSessionRepository) FindMostRecentByBabyID(ctx context.Cont
 
 func scanSleepSession(row *sql.Row) (sleep.SleepSession, error) {
 	var (
-		id, babyID, memberID                         string
-		classification                               string
+		id, babyID, memberID                               string
+		classification                                     string
 		nwStartHour, nwStartMinute, nwEndHour, nwEndMinute sql.NullInt32
-		startedAt, stoppedAt                         sql.NullTime
+		startedAt, stoppedAt                               sql.NullTime
 	)
 
 	err := row.Scan(
@@ -197,10 +197,10 @@ func scanSleepSession(row *sql.Row) (sleep.SleepSession, error) {
 
 func scanSleepSessionRows(rows *sql.Rows) (sleep.SleepSession, error) {
 	var (
-		id, babyID, memberID                         string
-		classification                               string
+		id, babyID, memberID                               string
+		classification                                     string
 		nwStartHour, nwStartMinute, nwEndHour, nwEndMinute sql.NullInt32
-		startedAt, stoppedAt                         sql.NullTime
+		startedAt, stoppedAt                               sql.NullTime
 	)
 
 	if err := rows.Scan(

@@ -6,16 +6,16 @@ import "net/http"
 type Code string
 
 const (
-	CodeInvalidArgument    Code = "invalid_argument"
-	CodeUnauthenticated    Code = "unauthenticated"
-	CodeForbidden          Code = "forbidden"
-	CodeNotFound           Code = "not_found"
-	CodeConflict           Code = "conflict"
-	CodeInvalidTimezone    Code = "invalid_timezone"
-	CodeActiveSleepExists  Code = "active_sleep_exists"
+	CodeInvalidArgument      Code = "invalid_argument"
+	CodeUnauthenticated      Code = "unauthenticated"
+	CodeForbidden            Code = "forbidden"
+	CodeNotFound             Code = "not_found"
+	CodeConflict             Code = "conflict"
+	CodeInvalidTimezone      Code = "invalid_timezone"
+	CodeActiveSleepExists    Code = "active_sleep_exists"
 	CodeInvalidSleepInterval Code = "invalid_sleep_interval"
-	CodeInvalidInviteLink  Code = "invalid_invite_link"
-	CodeInternalError      Code = "internal_error"
+	CodeInvalidInviteLink    Code = "invalid_invite_link"
+	CodeInternalError        Code = "internal_error"
 )
 
 // AppError is a structured application error with a stable code and a human-readable message.

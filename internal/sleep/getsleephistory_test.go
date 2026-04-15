@@ -287,4 +287,3 @@ func TestGetSleepHistoryHandlerInvalidPeriodReturnsError(t *testing.T) {
 		t.Fatalf("expected ErrInvalidSleepHistoryPeriod, got %v", err)
 	}
 }
-

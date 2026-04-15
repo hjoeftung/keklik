@@ -12,7 +12,7 @@ import (
 // --- test doubles ---
 
 type stubSleepSessionRepo struct {
-	active SleepSession
+	active  SleepSession
 	findErr error
 	saveErr error
 	saved   *SleepSession
