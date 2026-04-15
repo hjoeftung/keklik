@@ -55,7 +55,6 @@ func main() {
 	editSleepSession := sleep.NewEditSleepSessionHandler(sleepSessionRepo, sleepProfileRepo)
 	deleteSleepSession := sleep.NewDeleteSleepSessionHandler(sleepSessionRepo)
 	getSleepHistory := sleep.NewGetSleepHistoryHandler(sleepSessionRepo, sleepProfileRepo)
-	getElapsedTime := sleep.NewGetElapsedTimeHandler(sleepSessionRepo)
 	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, sessionRepo)
 	testLogin := auth.NewHandleTestLoginHandler(accountRepo, sessionRepo)
 
@@ -74,7 +73,6 @@ func main() {
 		EditSleepSession:   editSleepSession,
 		DeleteSleepSession: deleteSleepSession,
 		GetSleepHistory:    getSleepHistory,
-		GetElapsedTime:     getElapsedTime,
 	})
 
 	log.Printf("starting HTTP server on %s", config.Address())

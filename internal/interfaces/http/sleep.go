@@ -90,55 +90,6 @@ func getSleepHistoryHandler(
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
-type elapsedTimeResponse struct {
-	TimeSinceLastSleepStartSeconds *float64 `json:"time_since_last_sleep_start_seconds,omitempty"`
-	TimeSinceLastAwakeningSeconds  *float64 `json:"time_since_last_awakening_seconds,omitempty"`
-}
-
-func getElapsedTimeHandler(
-	w http.ResponseWriter,
-	r *http.Request,
-	resolver sleepContextResolver,
-	h *sleep.GetElapsedTimeHandler,
-) {
-	account, ok := auth.AccountFromContext(r.Context())
-	if !ok {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
-		return
-	}
-
-	babyID, _, err := resolver.ResolveSleepContext(r.Context(), account.GoogleSubjectID)
-	if err != nil {
-		writeError(w, mapStartSleepError(err))
-		return
-	}
-
-	result, err := h.Handle(r.Context(), babyID)
-	if err != nil {
-		var appErr apperror.AppError
-		if errors.As(err, &appErr) {
-			writeError(w, appErr)
-		} else {
-			writeError(w, apperror.New(apperror.CodeInternalError, "unexpected error"))
-		}
-		return
-	}
-
-	resp := elapsedTimeResponse{}
-	if result.TimeSinceLastSleepStart != nil {
-		secs := result.TimeSinceLastSleepStart.Seconds()
-		resp.TimeSinceLastSleepStartSeconds = &secs
-	}
-	if result.TimeSinceLastAwakening != nil {
-		secs := result.TimeSinceLastAwakening.Seconds()
-		resp.TimeSinceLastAwakeningSeconds = &secs
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(resp)
-}
-
 func mapSleepHistoryError(err error) apperror.AppError {
 	switch {
 	case errors.Is(err, sleep.ErrInvalidSleepHistoryPeriod):

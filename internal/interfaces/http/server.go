@@ -33,7 +33,6 @@ type Dependencies struct {
 	EditSleepSession   *sleep.EditSleepSessionHandler
 	DeleteSleepSession *sleep.DeleteSleepSessionHandler
 	GetSleepHistory    *sleep.GetSleepHistoryHandler
-	GetElapsedTime     *sleep.GetElapsedTimeHandler
 }
 
 // NewServer wires the HTTP transport and returns a ready-to-start server.
@@ -52,7 +51,6 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	editSleepSession := deps.EditSleepSession
 	deleteSleepSession := deps.DeleteSleepSession
 	getSleepHistory := deps.GetSleepHistory
-	getElapsedTime := deps.GetElapsedTime
 	oauthCfg := &oauth2.Config{
 		ClientID:     config.GoogleOAuth.ClientID,
 		ClientSecret: config.GoogleOAuth.ClientSecret,
@@ -104,9 +102,6 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	})
 	protected.HandleFunc("GET /sleep-sessions", func(w http.ResponseWriter, r *http.Request) {
 		getSleepHistoryHandler(w, r, sleepCtx, getSleepHistory)
-	})
-	protected.HandleFunc("GET /sleep-sessions/elapsed", func(w http.ResponseWriter, r *http.Request) {
-		getElapsedTimeHandler(w, r, sleepCtx, getElapsedTime)
 	})
 	mux.Handle("/", requireAuth(accounts, sessions, protected))
 

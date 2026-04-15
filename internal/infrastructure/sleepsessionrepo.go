@@ -3,7 +3,6 @@ package infrastructure
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"time"
 
@@ -169,31 +168,6 @@ func (r *PostgresSleepSessionRepository) FindByBabyIDAndDateRange(ctx context.Co
 	return sessions, nil
 }
 
-// FindMostRecentByBabyID returns the most recently started session for a baby
-// (active or stopped). The bool is false when no session exists.
-func (r *PostgresSleepSessionRepository) FindMostRecentByBabyID(ctx context.Context, babyID sleep.BabyID) (sleep.SleepSession, bool, error) {
-	row := r.db.QueryRowContext(ctx, `
-		SELECT id, baby_id, created_by_member_id,
-		       started_at, stopped_at,
-		       classification,
-		       classified_with_nw_start_hour, classified_with_nw_start_minute,
-		       classified_with_nw_end_hour,   classified_with_nw_end_minute
-		FROM sleep_sessions
-		WHERE baby_id = $1
-		ORDER BY started_at DESC
-		LIMIT 1`, string(babyID))
-
-	s, err := scanSleepSession(row)
-	if err != nil {
-		var appErr apperror.AppError
-		if errors.As(err, &appErr) && appErr.Code == apperror.CodeNotFound {
-			return sleep.SleepSession{}, false, nil
-		}
-		return sleep.SleepSession{}, false, err
-	}
-	return s, true, nil
-}
-
 // DeleteByIDForFamilyMember hard-deletes a sleep session after verifying the
 // given family member belongs to the same family as the session's baby.
 func (r *PostgresSleepSessionRepository) DeleteByIDForFamilyMember(ctx context.Context, id sleep.SleepSessionID, memberID sleep.FamilyMemberID) error {
@@ -221,6 +195,7 @@ func (r *PostgresSleepSessionRepository) DeleteByIDForFamilyMember(ctx context.C
 
 	return nil
 }
+
 
 func scanSleepSession(row *sql.Row) (sleep.SleepSession, error) {
 	var (
