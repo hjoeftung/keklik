@@ -354,39 +354,6 @@ paths:
       summary: Get sleep history
       tags:
       - sleep
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Optional explicit start time (defaults to now)
-        in: body
-        name: body
-        schema:
-          $ref: '#/definitions/httpapi.startSleepRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/httpapi.startSleepResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-        "409":
-          description: Active sleep session already exists
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-      security:
-      - BearerAuth: []
-      summary: Start sleep session
-      tags:
-      - sleep
   /sleep-sessions/{id}:
     delete:
       parameters:
@@ -470,6 +437,39 @@ paths:
       security:
       - BearerAuth: []
       summary: Stop active sleep session
+      tags:
+      - sleep
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Optional explicit start time (defaults to now)
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/httpapi.startSleepRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/httpapi.startSleepResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "409":
+          description: Active sleep session already exists
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Start sleep session
       tags:
       - sleep
 securityDefinitions:

@@ -1,6 +1,6 @@
 // Package main is the entry point for the Keklik HTTP API server.
 //
-//go:generate go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g main.go --dir ../.. --output ../../docs --outputTypes yaml
+//go:generate go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g cmd/api/main.go --dir ../.. --output ../../docs --outputTypes yaml
 //
 // @title       Keklik API
 // @version     1.0

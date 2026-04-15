@@ -190,7 +190,7 @@ type startSleepResponse struct {
 // @Failure   400   {object}  errorResponse
 // @Failure   401   {object}  errorResponse
 // @Failure   409   {object}  errorResponse  "Active sleep session already exists"
-// @Router    /sleep-sessions [post]
+// @Router    /sleep-sessions/active [post]
 func startSleepHandler(
 	w http.ResponseWriter,
 	r *http.Request,

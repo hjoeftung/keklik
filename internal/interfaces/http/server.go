@@ -88,7 +88,7 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	protected.HandleFunc("POST /sleep-profiles", func(w http.ResponseWriter, r *http.Request) {
 		createSleepProfileHandler(w, r, createSleepProfile)
 	})
-	protected.HandleFunc("POST /sleep-sessions", func(w http.ResponseWriter, r *http.Request) {
+	protected.HandleFunc("POST /sleep-sessions/active", func(w http.ResponseWriter, r *http.Request) {
 		startSleepHandler(w, r, sleepCtx, startSleep)
 	})
 	protected.HandleFunc("DELETE /sleep-sessions/active", func(w http.ResponseWriter, r *http.Request) {
