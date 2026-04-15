@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/lib/pq"
 
@@ -27,9 +28,9 @@ func NewPostgresSleepSessionRepository(db *sql.DB) *PostgresSleepSessionReposito
 // same baby (unique partial index violation), it returns an AppError with
 // CodeActiveSleepExists so the use case can surface the correct conflict response.
 func (r *PostgresSleepSessionRepository) Save(ctx context.Context, s sleep.SleepSession) error {
-	var stoppedAt *string
+	var stoppedAt *time.Time
 	if t, ok := s.StoppedAt(); ok {
-		ts := t.UTC().Format("2006-01-02T15:04:05.999999999Z")
+		ts := t.UTC()
 		stoppedAt = &ts
 	}
 
@@ -57,6 +58,7 @@ func (r *PostgresSleepSessionRepository) Save(ctx context.Context, s sleep.Sleep
 			classified_with_nw_end_hour,   classified_with_nw_end_minute
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		ON CONFLICT (id) DO UPDATE SET
+			started_at                      = EXCLUDED.started_at,
 			stopped_at                     = EXCLUDED.stopped_at,
 			classification                 = EXCLUDED.classification,
 			classified_with_nw_start_hour  = EXCLUDED.classified_with_nw_start_hour,
@@ -92,6 +94,26 @@ func (r *PostgresSleepSessionRepository) FindByID(ctx context.Context, id sleep.
 		       classified_with_nw_start_hour, classified_with_nw_start_minute,
 		       classified_with_nw_end_hour,   classified_with_nw_end_minute
 		FROM sleep_sessions WHERE id = $1`, string(id))
+
+	return scanSleepSession(row)
+}
+
+// FindByIDForFamilyMember loads a sleep session by ID after verifying the
+// given family member belongs to the same family as the session's baby.
+func (r *PostgresSleepSessionRepository) FindByIDForFamilyMember(ctx context.Context, id sleep.SleepSessionID, memberID sleep.FamilyMemberID) (sleep.SleepSession, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT s.id, s.baby_id, s.created_by_member_id,
+		       s.started_at, s.stopped_at,
+		       s.classification,
+		       s.classified_with_nw_start_hour, s.classified_with_nw_start_minute,
+		       s.classified_with_nw_end_hour,   s.classified_with_nw_end_minute
+		FROM sleep_sessions s
+		JOIN babies b ON b.id = s.baby_id
+		JOIN family_members fm ON fm.family_id = b.family_id
+		WHERE s.id = $1 AND fm.id = $2`,
+		string(id),
+		string(memberID),
+	)
 
 	return scanSleepSession(row)
 }
@@ -170,6 +192,34 @@ func (r *PostgresSleepSessionRepository) FindMostRecentByBabyID(ctx context.Cont
 		return sleep.SleepSession{}, false, err
 	}
 	return s, true, nil
+}
+
+// DeleteByIDForFamilyMember hard-deletes a sleep session after verifying the
+// given family member belongs to the same family as the session's baby.
+func (r *PostgresSleepSessionRepository) DeleteByIDForFamilyMember(ctx context.Context, id sleep.SleepSessionID, memberID sleep.FamilyMemberID) error {
+	result, err := r.db.ExecContext(ctx, `
+		DELETE FROM sleep_sessions s
+		USING babies b, family_members fm
+		WHERE s.id = $1
+		  AND s.baby_id = b.id
+		  AND fm.id = $2
+		  AND fm.family_id = b.family_id`,
+		string(id),
+		string(memberID),
+	)
+	if err != nil {
+		return fmt.Errorf("delete sleep session: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("delete sleep session rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return apperror.New(apperror.CodeNotFound, "sleep session not found")
+	}
+
+	return nil
 }
 
 func scanSleepSession(row *sql.Row) (sleep.SleepSession, error) {

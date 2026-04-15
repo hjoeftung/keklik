@@ -12,6 +12,7 @@ var (
 	ErrEmptyBabyID                  = errors.New("baby id must not be empty")
 	ErrEmptyFamilyMemberID          = errors.New("family member id must not be empty")
 	ErrZeroSleepSessionStart        = errors.New("sleep session start must not be zero")
+	ErrMissingSleepSessionEdit      = errors.New("sleep session edit requires started_at or stopped_at")
 	ErrSleepSessionAlreadyStopped   = errors.New("sleep session already stopped")
 	ErrInvalidSleepSessionStop      = errors.New("sleep session stop must not be before start")
 	ErrUnknownSleepClassification   = errors.New("unknown sleep classification")
@@ -72,6 +73,12 @@ type SleepProfile struct {
 type SleepSessionRepository interface {
 	Save(ctx context.Context, session SleepSession) error
 	FindByID(ctx context.Context, id SleepSessionID) (SleepSession, error)
+}
+
+type EditableSleepSessionRepository interface {
+	SleepSessionRepository
+	FindByIDForFamilyMember(ctx context.Context, id SleepSessionID, memberID FamilyMemberID) (SleepSession, error)
+	DeleteByIDForFamilyMember(ctx context.Context, id SleepSessionID, memberID FamilyMemberID) error
 }
 
 type ActiveSleepSessionRepository interface {

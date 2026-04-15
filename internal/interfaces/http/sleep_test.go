@@ -45,6 +45,34 @@ func (r *stubStopSleepSessionRepo) FindActiveByBabyID(_ context.Context, _ sleep
 	return r.active, r.findErr
 }
 
+type stubEditableHTTPSleepSessionRepo struct {
+	session   sleep.SleepSession
+	findErr   error
+	saveErr   error
+	deleteErr error
+	saved     *sleep.SleepSession
+}
+
+func (r *stubEditableHTTPSleepSessionRepo) Save(_ context.Context, s sleep.SleepSession) error {
+	if r.saveErr != nil {
+		return r.saveErr
+	}
+	r.saved = &s
+	return nil
+}
+
+func (r *stubEditableHTTPSleepSessionRepo) FindByID(_ context.Context, _ sleep.SleepSessionID) (sleep.SleepSession, error) {
+	return r.session, r.findErr
+}
+
+func (r *stubEditableHTTPSleepSessionRepo) FindByIDForFamilyMember(_ context.Context, _ sleep.SleepSessionID, _ sleep.FamilyMemberID) (sleep.SleepSession, error) {
+	return r.session, r.findErr
+}
+
+func (r *stubEditableHTTPSleepSessionRepo) DeleteByIDForFamilyMember(_ context.Context, _ sleep.SleepSessionID, _ sleep.FamilyMemberID) error {
+	return r.deleteErr
+}
+
 // stubStopSleepProfileRepo implements SleepProfileRepository for tests.
 type stubStopSleepProfileRepo struct {
 	profile sleep.SleepProfile
@@ -126,6 +154,33 @@ func newStopSleepTestServer(
 	)
 }
 
+func newEditDeleteSleepTestServer(
+	resolver sleepContextResolver,
+	sessRepo *stubEditableHTTPSleepSessionRepo,
+	profRepo *stubStopSleepProfileRepo,
+) *http.Server {
+	account := auth.Account{ID: "test-account-id", GoogleSubjectID: "google-subject-123"}
+	session := auth.Session{
+		Token:     testSessionToken,
+		AccountID: "test-account-id",
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+
+	editSleep := sleep.NewEditSleepSessionHandler(sessRepo, profRepo)
+	deleteSleep := sleep.NewDeleteSleepSessionHandler(sessRepo)
+
+	return NewServer(
+		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
+		Dependencies{
+			Accounts:           &stubAccountRepository{account: account},
+			Sessions:           &stubSessionRepository{session: session},
+			SleepCtx:           resolver,
+			EditSleepSession:   editSleep,
+			DeleteSleepSession: deleteSleep,
+		},
+	)
+}
+
 func deleteJSON(t *testing.T, server *http.Server, path string, body any) *httptest.ResponseRecorder {
 	t.Helper()
 
@@ -135,6 +190,22 @@ func deleteJSON(t *testing.T, server *http.Server, path string, body any) *httpt
 	}
 
 	req := httptest.NewRequest(http.MethodDelete, path, bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+testSessionToken)
+	rec := httptest.NewRecorder()
+	server.Handler.ServeHTTP(rec, req)
+	return rec
+}
+
+func patchJSON(t *testing.T, server *http.Server, path string, body any) *httptest.ResponseRecorder {
+	t.Helper()
+
+	b, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPatch, path, bytes.NewReader(b))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+testSessionToken)
 	rec := httptest.NewRecorder()
@@ -229,5 +300,89 @@ func TestStopSleepReturns400WhenStopBeforeStart(t *testing.T) {
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestEditSleepSessionReturns200WithUpdatedSession(t *testing.T) {
+	t.Parallel()
+
+	startedAt := time.Date(2026, time.April, 14, 10, 0, 0, 0, time.UTC)
+	editedStart := startedAt.Add(-15 * time.Minute)
+
+	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	sessRepo := &stubEditableHTTPSleepSessionRepo{session: mustActiveSleepSession(t, startedAt)}
+	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
+
+	server := newEditDeleteSleepTestServer(resolver, sessRepo, profRepo)
+	rec := patchJSON(t, server, "/sleep-sessions/session-1", map[string]any{
+		"started_at": editedStart,
+	})
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp sleepSessionResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if resp.ID != "session-1" {
+		t.Fatalf("expected session-1, got %q", resp.ID)
+	}
+	if resp.StoppedAt != nil {
+		t.Fatal("expected edited active session to remain active")
+	}
+}
+
+func TestEditSleepSessionReturns400ForInvalidInterval(t *testing.T) {
+	t.Parallel()
+
+	startedAt := time.Date(2026, time.April, 14, 10, 0, 0, 0, time.UTC)
+	stoppedAt := startedAt.Add(-time.Minute)
+
+	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	sessRepo := &stubEditableHTTPSleepSessionRepo{session: mustActiveSleepSession(t, startedAt)}
+	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
+
+	server := newEditDeleteSleepTestServer(resolver, sessRepo, profRepo)
+	rec := patchJSON(t, server, "/sleep-sessions/session-1", map[string]any{
+		"stopped_at": stoppedAt,
+	})
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestDeleteSleepSessionReturns204(t *testing.T) {
+	t.Parallel()
+
+	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	sessRepo := &stubEditableHTTPSleepSessionRepo{}
+	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
+
+	server := newEditDeleteSleepTestServer(resolver, sessRepo, profRepo)
+	rec := deleteJSON(t, server, "/sleep-sessions/session-1", map[string]any{})
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestDeleteSleepSessionReturns404WhenMissing(t *testing.T) {
+	t.Parallel()
+
+	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	sessRepo := &stubEditableHTTPSleepSessionRepo{
+		deleteErr: apperror.New(apperror.CodeNotFound, "sleep session not found"),
+	}
+	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
+
+	server := newEditDeleteSleepTestServer(resolver, sessRepo, profRepo)
+	rec := deleteJSON(t, server, "/sleep-sessions/missing", map[string]any{})
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
 	}
 }

@@ -272,6 +272,11 @@ type stopSleepResponse struct {
 	Classification string    `json:"classification"`
 }
 
+type editSleepSessionRequest struct {
+	StartedAt *time.Time `json:"started_at"`
+	StoppedAt *time.Time `json:"stopped_at"`
+}
+
 func stopSleepHandler(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -324,6 +329,100 @@ func mapStopSleepError(err error) apperror.AppError {
 		}
 		return apperror.New(apperror.CodeInternalError, "unexpected error")
 	}
+}
+
+func editSleepSessionHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	resolver sleepContextResolver,
+	h *sleep.EditSleepSessionHandler,
+) {
+	account, ok := auth.AccountFromContext(r.Context())
+	if !ok {
+		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		return
+	}
+
+	_, memberID, err := resolver.ResolveSleepContext(r.Context(), account.GoogleSubjectID)
+	if err != nil {
+		writeError(w, mapStartSleepError(err))
+		return
+	}
+
+	var req editSleepSessionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
+		return
+	}
+
+	session, err := h.Handle(r.Context(), sleep.EditSleepSessionCommand{
+		SessionID:      sleep.SleepSessionID(r.PathValue("id")),
+		FamilyMemberID: memberID,
+		StartedAt:      req.StartedAt,
+		StoppedAt:      req.StoppedAt,
+	})
+	if err != nil {
+		writeError(w, mapEditSleepSessionError(err))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(toSleepSessionResponse(session))
+}
+
+func deleteSleepSessionHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	resolver sleepContextResolver,
+	h *sleep.DeleteSleepSessionHandler,
+) {
+	account, ok := auth.AccountFromContext(r.Context())
+	if !ok {
+		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		return
+	}
+
+	_, memberID, err := resolver.ResolveSleepContext(r.Context(), account.GoogleSubjectID)
+	if err != nil {
+		writeError(w, mapStartSleepError(err))
+		return
+	}
+
+	if err := h.Handle(r.Context(), sleep.DeleteSleepSessionCommand{
+		SessionID:      sleep.SleepSessionID(r.PathValue("id")),
+		FamilyMemberID: memberID,
+	}); err != nil {
+		writeError(w, mapDeleteSleepSessionError(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func mapEditSleepSessionError(err error) apperror.AppError {
+	switch {
+	case errors.Is(err, sleep.ErrMissingSleepSessionEdit),
+		errors.Is(err, sleep.ErrZeroSleepSessionStart),
+		errors.Is(err, sleep.ErrInvalidSleepSessionStop):
+		return apperror.New(apperror.CodeInvalidArgument, err.Error())
+	case errors.Is(err, sleep.ErrActiveSleepSessionExists):
+		return apperror.New(apperror.CodeActiveSleepExists, err.Error())
+	default:
+		var appErr apperror.AppError
+		if errors.As(err, &appErr) {
+			return appErr
+		}
+		return apperror.New(apperror.CodeInternalError, "unexpected error")
+	}
+}
+
+func mapDeleteSleepSessionError(err error) apperror.AppError {
+	var appErr apperror.AppError
+	if errors.As(err, &appErr) {
+		return appErr
+	}
+	return apperror.New(apperror.CodeInternalError, "unexpected error")
 }
 
 func mapSleepProfileError(err error) apperror.AppError {
