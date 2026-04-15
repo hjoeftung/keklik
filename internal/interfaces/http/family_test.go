@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hjoeftung/keklik/internal/apperror"
 	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/family"
 	"github.com/hjoeftung/keklik/internal/infrastructure"
@@ -20,23 +21,73 @@ const testSessionToken = "test-session-token"
 
 // stubFamilyRepository is a minimal FamilyRepository test double.
 type stubFamilyRepository struct {
-	err error
+	family family.Family
+	err    error
 }
 
-func (r *stubFamilyRepository) Save(_ context.Context, _ family.Family) error {
+func (r *stubFamilyRepository) Save(_ context.Context, f family.Family) error {
+	if r.err == nil {
+		r.family = f
+	}
 	return r.err
 }
 
 func (r *stubFamilyRepository) FindByID(_ context.Context, _ family.FamilyID) (family.Family, error) {
-	return family.Family{}, errors.New("not implemented")
+	if r.err != nil {
+		return family.Family{}, r.err
+	}
+	if r.family.ID() == "" {
+		return family.Family{}, apperror.New(apperror.CodeNotFound, "family not found")
+	}
+	return r.family, nil
 }
 
 func (r *stubFamilyRepository) FindByMemberID(_ context.Context, _ family.FamilyMemberID) (family.Family, error) {
-	return family.Family{}, errors.New("not implemented")
+	if r.err != nil {
+		return family.Family{}, r.err
+	}
+	if r.family.ID() == "" {
+		return family.Family{}, apperror.New(apperror.CodeNotFound, "family not found")
+	}
+	return r.family, nil
 }
 
-func (r *stubFamilyRepository) FindByInviteToken(_ context.Context, _ family.InviteToken) (family.Family, error) {
-	return family.Family{}, errors.New("not implemented")
+func (r *stubFamilyRepository) FindByInviteToken(_ context.Context, token family.InviteToken) (family.Family, error) {
+	if r.err != nil {
+		return family.Family{}, r.err
+	}
+	if r.family.ID() == "" {
+		return family.Family{}, apperror.New(apperror.CodeNotFound, "family not found")
+	}
+	for _, inviteLink := range r.family.InviteLinks() {
+		if inviteLink.Token == token {
+			return r.family, nil
+		}
+	}
+	return family.Family{}, apperror.New(apperror.CodeNotFound, "family not found")
+}
+
+type stubFamilyMemberRepository struct {
+	member family.FamilyMember
+}
+
+func (r *stubFamilyMemberRepository) Save(_ context.Context, member family.FamilyMember) error {
+	r.member = member
+	return nil
+}
+
+func (r *stubFamilyMemberRepository) FindByID(_ context.Context, _ family.FamilyMemberID) (family.FamilyMember, error) {
+	if r.member.ID == "" {
+		return family.FamilyMember{}, apperror.New(apperror.CodeNotFound, "family member not found")
+	}
+	return r.member, nil
+}
+
+func (r *stubFamilyMemberRepository) FindByGoogleSubjectID(_ context.Context, googleSubjectID string) (family.FamilyMember, error) {
+	if r.member.GoogleSubjectID == googleSubjectID {
+		return r.member, nil
+	}
+	return family.FamilyMember{}, apperror.New(apperror.CodeNotFound, "family member not found")
 }
 
 // stubAccountRepository is a minimal AccountRepository test double.
@@ -105,21 +156,37 @@ func (r *stubSleepProfileRepository) FindByBabyID(_ context.Context, _ sleep.Bab
 	return sleep.SleepProfile{}, errors.New("not implemented")
 }
 
-func newTestServer(familyRepo family.FamilyRepository) *http.Server {
+func newTestServer(familyRepo family.FamilyRepository, memberRepo family.FamilyMemberRepository) *http.Server {
 	createFamily := family.NewCreateFamilyHandler(familyRepo)
+	createInviteLink := family.NewCreateFamilyInviteLinkHandler(
+		familyRepo,
+		memberRepo,
+		"http://localhost:8080",
+		24*time.Hour,
+	)
+	joinByInvite := family.NewJoinFamilyByInviteLinkHandler(familyRepo, memberRepo)
 	createSleepProfile := sleep.NewCreateSleepProfileHandler(&stubSleepProfileRepository{})
-	account := auth.Account{ID: "test-account-id", GoogleSubjectID: "google-subject-123"}
+	account := auth.Account{
+		ID:              "test-account-id",
+		GoogleSubjectID: "google-subject-123",
+		Email:           "alice@example.com",
+	}
 	session := auth.Session{
 		Token:     testSessionToken,
 		AccountID: "test-account-id",
 		ExpiresAt: time.Now().Add(time.Hour),
 	}
 	return NewServer(
-		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
+		infrastructure.Config{
+			HTTP: infrastructure.HTTPConfig{Port: 8080},
+			App:  infrastructure.AppConfig{BaseURL: "http://localhost:8080"},
+		},
 		Dependencies{
 			Accounts:           &stubAccountRepository{account: account},
 			Sessions:           &stubSessionRepository{session: session},
 			CreateFamily:       createFamily,
+			CreateInviteLink:   createInviteLink,
+			JoinFamilyByInvite: joinByInvite,
 			CreateSleepProfile: createSleepProfile,
 		},
 	)
@@ -152,7 +219,7 @@ func postJSON(t *testing.T, server *http.Server, path string, body any) *httptes
 func TestCreateFamilyReturns201WithIDs(t *testing.T) {
 	t.Parallel()
 
-	server := newTestServer(&stubFamilyRepository{})
+	server := newTestServer(&stubFamilyRepository{}, &stubFamilyMemberRepository{})
 	rec := postJSON(t, server, "/families", validCreateFamilyBody())
 
 	if rec.Code != http.StatusCreated {
@@ -178,7 +245,7 @@ func TestCreateFamilyReturns201WithIDs(t *testing.T) {
 func TestCreateFamilyRejects400OnMalformedJSON(t *testing.T) {
 	t.Parallel()
 
-	server := newTestServer(&stubFamilyRepository{})
+	server := newTestServer(&stubFamilyRepository{}, &stubFamilyMemberRepository{})
 	req := httptest.NewRequest(http.MethodPost, "/families", bytes.NewBufferString("{bad json"))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+testSessionToken)
@@ -193,7 +260,7 @@ func TestCreateFamilyRejects400OnMalformedJSON(t *testing.T) {
 func TestCreateFamilyRejects401WhenUnauthenticated(t *testing.T) {
 	t.Parallel()
 
-	server := newTestServer(&stubFamilyRepository{})
+	server := newTestServer(&stubFamilyRepository{}, &stubFamilyMemberRepository{})
 	b, _ := json.Marshal(validCreateFamilyBody())
 	req := httptest.NewRequest(http.MethodPost, "/families", bytes.NewReader(b))
 	req.Header.Set("Content-Type", "application/json")
@@ -203,5 +270,125 @@ func TestCreateFamilyRejects401WhenUnauthenticated(t *testing.T) {
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestCreateFamilyInviteLinkReturns201WithURL(t *testing.T) {
+	t.Parallel()
+
+	aggregate, err := family.NewFamily(
+		family.FamilyID("family-1"),
+		"Smith Family",
+		[]family.FamilyMember{{
+			ID:              family.FamilyMemberID("member-1"),
+			FamilyID:        family.FamilyID("family-1"),
+			Name:            "Alice",
+			GoogleSubjectID: "google-subject-123",
+		}},
+		[]family.Baby{{ID: family.BabyID("baby-1"), FamilyID: family.FamilyID("family-1"), Name: "Emma"}},
+	)
+	if err != nil {
+		t.Fatalf("seed family: %v", err)
+	}
+
+	server := newTestServer(
+		&stubFamilyRepository{family: aggregate},
+		&stubFamilyMemberRepository{member: aggregate.Members()[0]},
+	)
+	rec := postJSON(t, server, "/families/invite-links", map[string]any{})
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp createFamilyInviteLinkResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if resp.Token == "" {
+		t.Fatal("expected non-empty token")
+	}
+	if resp.InviteURL == "" {
+		t.Fatal("expected non-empty invite URL")
+	}
+}
+
+func TestJoinFamilyByInviteLinkReturns201WithMembership(t *testing.T) {
+	t.Parallel()
+
+	aggregate, err := family.NewFamily(
+		family.FamilyID("family-1"),
+		"Smith Family",
+		[]family.FamilyMember{{
+			ID:              family.FamilyMemberID("member-1"),
+			FamilyID:        family.FamilyID("family-1"),
+			Name:            "Alice",
+			GoogleSubjectID: "google-owner",
+		}},
+		[]family.Baby{{ID: family.BabyID("baby-1"), FamilyID: family.FamilyID("family-1"), Name: "Emma"}},
+	)
+	if err != nil {
+		t.Fatalf("seed family: %v", err)
+	}
+	if err := aggregate.AddInviteLink(family.InviteLink{
+		Token:             family.InviteToken("invite-1"),
+		FamilyID:          aggregate.ID(),
+		CreatedByMemberID: family.FamilyMemberID("member-1"),
+		ExpiresAt:         time.Now().Add(time.Hour),
+	}); err != nil {
+		t.Fatalf("seed invite link: %v", err)
+	}
+
+	server := newTestServer(
+		&stubFamilyRepository{family: aggregate},
+		&stubFamilyMemberRepository{},
+	)
+	rec := postJSON(t, server, "/families/join-by-invite-link", map[string]any{
+		"token": "invite-1",
+	})
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp joinFamilyByInviteLinkResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if resp.FamilyID == "" || resp.MemberID == "" {
+		t.Fatalf("expected non-empty ids, got %+v", resp)
+	}
+}
+
+func TestJoinFamilyByInviteLinkRejectsInvalidToken(t *testing.T) {
+	t.Parallel()
+
+	aggregate, err := family.NewFamily(
+		family.FamilyID("family-1"),
+		"Smith Family",
+		[]family.FamilyMember{{
+			ID:              family.FamilyMemberID("member-1"),
+			FamilyID:        family.FamilyID("family-1"),
+			Name:            "Alice",
+			GoogleSubjectID: "google-owner",
+		}},
+		[]family.Baby{{ID: family.BabyID("baby-1"), FamilyID: family.FamilyID("family-1"), Name: "Emma"}},
+	)
+	if err != nil {
+		t.Fatalf("seed family: %v", err)
+	}
+
+	server := newTestServer(
+		&stubFamilyRepository{family: aggregate},
+		&stubFamilyMemberRepository{},
+	)
+	rec := postJSON(t, server, "/families/join-by-invite-link", map[string]any{
+		"token": "missing",
+	})
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
 }

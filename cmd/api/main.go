@@ -34,6 +34,7 @@ func main() {
 	}
 
 	familyRepo := infrastructure.NewPostgresFamilyRepository(db)
+	familyMemberRepo := infrastructure.NewPostgresFamilyMemberRepository(db)
 	accountRepo := infrastructure.NewPostgresAccountRepository(db)
 	sessionRepo := infrastructure.NewPostgresSessionRepository(db)
 	sleepProfileRepo := infrastructure.NewPostgresSleepProfileRepository(db)
@@ -41,9 +42,18 @@ func main() {
 	sleepCtxResolver := infrastructure.NewPostgresSleepContextResolver(db)
 
 	createFamily := family.NewCreateFamilyHandler(familyRepo)
+	createInviteLink := family.NewCreateFamilyInviteLinkHandler(
+		familyRepo,
+		familyMemberRepo,
+		config.App.BaseURL,
+		config.App.InviteLinkLifetime,
+	)
+	joinFamilyByInvite := family.NewJoinFamilyByInviteLinkHandler(familyRepo, familyMemberRepo)
 	createSleepProfile := sleep.NewCreateSleepProfileHandler(sleepProfileRepo)
 	startSleep := sleep.NewStartSleepHandler(sleepSessionRepo)
 	stopSleep := sleep.NewStopSleepHandler(sleepSessionRepo, sleepProfileRepo)
+	editSleepSession := sleep.NewEditSleepSessionHandler(sleepSessionRepo, sleepProfileRepo)
+	deleteSleepSession := sleep.NewDeleteSleepSessionHandler(sleepSessionRepo)
 	getSleepHistory := sleep.NewGetSleepHistoryHandler(sleepSessionRepo, sleepProfileRepo)
 	getElapsedTime := sleep.NewGetElapsedTimeHandler(sleepSessionRepo)
 	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, sessionRepo)
@@ -55,10 +65,14 @@ func main() {
 		OAuthCallback:      oauthCallback,
 		TestLogin:          testLogin,
 		CreateFamily:       createFamily,
+		CreateInviteLink:   createInviteLink,
+		JoinFamilyByInvite: joinFamilyByInvite,
 		SleepCtx:           sleepCtxResolver,
 		CreateSleepProfile: createSleepProfile,
 		StartSleep:         startSleep,
 		StopSleep:          stopSleep,
+		EditSleepSession:   editSleepSession,
+		DeleteSleepSession: deleteSleepSession,
 		GetSleepHistory:    getSleepHistory,
 		GetElapsedTime:     getElapsedTime,
 	})

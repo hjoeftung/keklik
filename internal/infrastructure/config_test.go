@@ -1,6 +1,9 @@
 package infrastructure
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestLoadConfigUsesDefaultHTTPPortAndLoadsRequiredEnvironment(t *testing.T) {
 	setRequiredEnv(t)
@@ -34,6 +37,10 @@ func TestLoadConfigUsesDefaultHTTPPortAndLoadsRequiredEnvironment(t *testing.T) 
 		t.Fatalf("unexpected app base url: %q", config.App.BaseURL)
 	}
 
+	if config.App.InviteLinkLifetime != defaultInviteLinkTTL {
+		t.Fatalf("unexpected invite link lifetime: %s", config.App.InviteLinkLifetime)
+	}
+
 	if config.Auth.EnableTestAuth {
 		t.Fatal("expected test auth to be disabled by default")
 	}
@@ -54,6 +61,20 @@ func TestLoadConfigEnablesTestAuthWhenConfigured(t *testing.T) {
 
 	if !config.Auth.EnableTestAuth {
 		t.Fatal("expected test auth to be enabled")
+	}
+}
+
+func TestLoadConfigUsesCustomInviteLinkLifetime(t *testing.T) {
+	setRequiredEnv(t)
+	t.Setenv("FAMILY_INVITE_LINK_EXPIRY", "48h")
+
+	config, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("LoadConfig returned error: %v", err)
+	}
+
+	if config.App.InviteLinkLifetime != 48*time.Hour {
+		t.Fatalf("expected 48h invite link lifetime, got %s", config.App.InviteLinkLifetime)
 	}
 }
 
@@ -110,6 +131,20 @@ func TestLoadConfigFailsOnInvalidEnableTestAuth(t *testing.T) {
 	}
 
 	if got := err.Error(); got != "invalid ENABLE_TEST_AUTH: must be a boolean" {
+		t.Fatalf("unexpected error: %q", got)
+	}
+}
+
+func TestLoadConfigFailsOnInvalidInviteLinkLifetime(t *testing.T) {
+	setRequiredEnv(t)
+	t.Setenv("FAMILY_INVITE_LINK_EXPIRY", "later")
+
+	_, err := LoadConfig()
+	if err == nil {
+		t.Fatal("expected error for invalid FAMILY_INVITE_LINK_EXPIRY")
+	}
+
+	if got := err.Error(); got != "invalid FAMILY_INVITE_LINK_EXPIRY: must be a positive duration" {
 		t.Fatalf("unexpected error: %q", got)
 	}
 }

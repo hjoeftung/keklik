@@ -60,8 +60,16 @@ func mapFamilyError(err error) apperror.AppError {
 	case errors.Is(err, family.ErrInvalidFamilyName),
 		errors.Is(err, family.ErrInvalidBabyName),
 		errors.Is(err, family.ErrInvalidFamilyMemberName),
-		errors.Is(err, family.ErrEmptyGoogleSubjectID):
+		errors.Is(err, family.ErrEmptyGoogleSubjectID),
+		errors.Is(err, family.ErrInvalidInviteToken):
 		return apperror.New(apperror.CodeInvalidArgument, err.Error())
+	case errors.Is(err, family.ErrInviteLinkCreatorNotMember):
+		return apperror.New(apperror.CodeForbidden, err.Error())
+	case errors.Is(err, family.ErrDuplicateFamilyMember),
+		errors.Is(err, family.ErrDuplicateInviteToken):
+		return apperror.New(apperror.CodeConflict, err.Error())
+	case errors.Is(err, family.ErrInviteLinkFamilyMismatch):
+		return apperror.New(apperror.CodeInvalidInviteLink, err.Error())
 	default:
 		var appErr apperror.AppError
 		if errors.As(err, &appErr) {

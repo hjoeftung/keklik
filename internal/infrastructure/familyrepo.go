@@ -70,6 +70,19 @@ func (r *PostgresFamilyRepository) Save(ctx context.Context, f family.Family) er
 		}
 	}
 
+	for _, l := range f.InviteLinks() {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO invite_links (token, family_id, created_by_member_id, expires_at)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (token) DO UPDATE SET
+				expires_at = EXCLUDED.expires_at`,
+			string(l.Token), string(l.FamilyID), string(l.CreatedByMemberID), l.ExpiresAt,
+		)
+		if err != nil {
+			return fmt.Errorf("upsert invite link %s: %w", l.Token, err)
+		}
+	}
+
 	return tx.Commit()
 }
 

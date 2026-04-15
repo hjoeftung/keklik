@@ -13,6 +13,7 @@ import (
 const (
 	defaultHTTPPort        = 8080
 	defaultShutdownTimeout = 10 * time.Second
+	defaultInviteLinkTTL   = 7 * 24 * time.Hour
 )
 
 // Config contains process-level settings used to boot the service and inject
@@ -50,7 +51,8 @@ type AuthConfig struct {
 
 // AppConfig contains application-level URLs and other cross-cutting settings.
 type AppConfig struct {
-	BaseURL string
+	BaseURL            string
+	InviteLinkLifetime time.Duration
 }
 
 // LoadConfig loads and validates the runtime environment contract.
@@ -61,6 +63,11 @@ func LoadConfig() (Config, error) {
 	}
 
 	enableTestAuth, err := readBoolEnv("ENABLE_TEST_AUTH", false)
+	if err != nil {
+		return Config{}, err
+	}
+
+	inviteLinkLifetime, err := readDurationEnv("FAMILY_INVITE_LINK_EXPIRY", defaultInviteLinkTTL)
 	if err != nil {
 		return Config{}, err
 	}
@@ -106,7 +113,8 @@ func LoadConfig() (Config, error) {
 			EnableTestAuth: enableTestAuth,
 		},
 		App: AppConfig{
-			BaseURL: appBaseURL,
+			BaseURL:            appBaseURL,
+			InviteLinkLifetime: inviteLinkLifetime,
 		},
 		ShutdownTimeout: defaultShutdownTimeout,
 	}, nil
@@ -140,6 +148,20 @@ func readBoolEnv(key string, fallback bool) (bool, error) {
 	parsed, err := strconv.ParseBool(value)
 	if err != nil {
 		return false, fmt.Errorf("invalid %s: must be a boolean", key)
+	}
+
+	return parsed, nil
+}
+
+func readDurationEnv(key string, fallback time.Duration) (time.Duration, error) {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback, nil
+	}
+
+	parsed, err := time.ParseDuration(value)
+	if err != nil || parsed <= 0 {
+		return 0, fmt.Errorf("invalid %s: must be a positive duration", key)
 	}
 
 	return parsed, nil

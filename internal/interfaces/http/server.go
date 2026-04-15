@@ -24,10 +24,14 @@ type Dependencies struct {
 	OAuthCallback      *auth.HandleOAuthCallbackHandler
 	TestLogin          *auth.HandleTestLoginHandler
 	CreateFamily       *family.CreateFamilyHandler
+	CreateInviteLink   *family.CreateFamilyInviteLinkHandler
+	JoinFamilyByInvite *family.JoinFamilyByInviteLinkHandler
 	SleepCtx           sleepContextResolver
 	CreateSleepProfile *sleep.CreateSleepProfileHandler
 	StartSleep         *sleep.StartSleepHandler
 	StopSleep          *sleep.StopSleepHandler
+	EditSleepSession   *sleep.EditSleepSessionHandler
+	DeleteSleepSession *sleep.DeleteSleepSessionHandler
 	GetSleepHistory    *sleep.GetSleepHistoryHandler
 	GetElapsedTime     *sleep.GetElapsedTimeHandler
 }
@@ -39,10 +43,14 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	oauthCallback := deps.OAuthCallback
 	testLogin := deps.TestLogin
 	createFamily := deps.CreateFamily
+	createInviteLink := deps.CreateInviteLink
+	joinFamilyByInvite := deps.JoinFamilyByInvite
 	sleepCtx := deps.SleepCtx
 	createSleepProfile := deps.CreateSleepProfile
 	startSleep := deps.StartSleep
 	stopSleep := deps.StopSleep
+	editSleepSession := deps.EditSleepSession
+	deleteSleepSession := deps.DeleteSleepSession
 	getSleepHistory := deps.GetSleepHistory
 	getElapsedTime := deps.GetElapsedTime
 	oauthCfg := &oauth2.Config{
@@ -73,6 +81,12 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	protected.HandleFunc("POST /families", func(w http.ResponseWriter, r *http.Request) {
 		createFamilyHandler(w, r, createFamily)
 	})
+	protected.HandleFunc("POST /families/invite-links", func(w http.ResponseWriter, r *http.Request) {
+		createFamilyInviteLinkHandler(w, r, createInviteLink)
+	})
+	protected.HandleFunc("POST /families/join-by-invite-link", func(w http.ResponseWriter, r *http.Request) {
+		joinFamilyByInviteLinkHandler(w, r, joinFamilyByInvite)
+	})
 	protected.HandleFunc("POST /sleep-profiles", func(w http.ResponseWriter, r *http.Request) {
 		createSleepProfileHandler(w, r, createSleepProfile)
 	})
@@ -81,6 +95,12 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	})
 	protected.HandleFunc("DELETE /sleep-sessions/active", func(w http.ResponseWriter, r *http.Request) {
 		stopSleepHandler(w, r, sleepCtx, stopSleep)
+	})
+	protected.HandleFunc("PATCH /sleep-sessions/{id}", func(w http.ResponseWriter, r *http.Request) {
+		editSleepSessionHandler(w, r, sleepCtx, editSleepSession)
+	})
+	protected.HandleFunc("DELETE /sleep-sessions/{id}", func(w http.ResponseWriter, r *http.Request) {
+		deleteSleepSessionHandler(w, r, sleepCtx, deleteSleepSession)
 	})
 	protected.HandleFunc("GET /sleep-sessions", func(w http.ResponseWriter, r *http.Request) {
 		getSleepHistoryHandler(w, r, sleepCtx, getSleepHistory)
