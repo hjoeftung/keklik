@@ -196,7 +196,6 @@ func (r *PostgresSleepSessionRepository) DeleteByIDForFamilyMember(ctx context.C
 	return nil
 }
 
-
 func scanSleepSession(row *sql.Row) (sleep.SleepSession, error) {
 	var (
 		id, babyID, memberID                               string
