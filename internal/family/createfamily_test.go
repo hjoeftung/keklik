@@ -34,7 +34,6 @@ func (r *inMemoryFamilyRepository) FindByInviteToken(_ context.Context, _ Invite
 
 func validCreateFamilyCommand() CreateFamilyCommand {
 	return CreateFamilyCommand{
-		FamilyName:             "Smith Family",
 		BabyName:               "Emma",
 		CreatorName:            "Alice",
 		CreatorGoogleSubjectID: "google-subject-123",
@@ -67,29 +66,11 @@ func TestCreateFamilyPersistsFamilyMemberAndBaby(t *testing.T) {
 	}
 
 	saved := repo.saved[0]
-	if saved.Name() != "Smith Family" {
-		t.Errorf("expected family name %q, got %q", "Smith Family", saved.Name())
-	}
 	if len(saved.Members()) != 1 {
 		t.Errorf("expected 1 member, got %d", len(saved.Members()))
 	}
 	if len(saved.Babies()) != 1 {
 		t.Errorf("expected 1 baby, got %d", len(saved.Babies()))
-	}
-}
-
-func TestCreateFamilyRejectsEmptyFamilyName(t *testing.T) {
-	t.Parallel()
-
-	repo := &inMemoryFamilyRepository{}
-	h := NewCreateFamilyHandler(repo)
-
-	cmd := validCreateFamilyCommand()
-	cmd.FamilyName = "  "
-
-	_, err := h.Handle(context.Background(), cmd)
-	if !errors.Is(err, ErrInvalidFamilyName) {
-		t.Errorf("expected ErrInvalidFamilyName, got %v", err)
 	}
 }
 

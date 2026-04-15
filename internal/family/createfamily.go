@@ -8,7 +8,6 @@ import (
 
 // CreateFamilyCommand holds the inputs for creating a new family.
 type CreateFamilyCommand struct {
-	FamilyName             string
 	BabyName               string
 	CreatorName            string
 	CreatorGoogleSubjectID string
@@ -50,7 +49,7 @@ func (h *CreateFamilyHandler) Handle(ctx context.Context, cmd CreateFamilyComman
 		Name:     cmd.BabyName,
 	}
 
-	f, err := NewFamily(familyID, cmd.FamilyName, []FamilyMember{member}, []Baby{baby})
+	f, err := NewFamily(familyID, []FamilyMember{member}, []Baby{baby})
 	if err != nil {
 		return CreateFamilyResult{}, err
 	}

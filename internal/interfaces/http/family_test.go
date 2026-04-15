@@ -194,7 +194,6 @@ func newTestServer(familyRepo family.FamilyRepository, memberRepo family.FamilyM
 
 func validCreateFamilyBody() map[string]any {
 	return map[string]any{
-		"family_name":  "Smith Family",
 		"baby_name":    "Emma",
 		"creator_name": "Alice",
 	}
@@ -278,7 +277,6 @@ func TestCreateFamilyInviteLinkReturns201WithURL(t *testing.T) {
 
 	aggregate, err := family.NewFamily(
 		family.FamilyID("family-1"),
-		"Smith Family",
 		[]family.FamilyMember{{
 			ID:              family.FamilyMemberID("member-1"),
 			FamilyID:        family.FamilyID("family-1"),
@@ -319,7 +317,6 @@ func TestJoinFamilyByInviteLinkReturns201WithMembership(t *testing.T) {
 
 	aggregate, err := family.NewFamily(
 		family.FamilyID("family-1"),
-		"Smith Family",
 		[]family.FamilyMember{{
 			ID:              family.FamilyMemberID("member-1"),
 			FamilyID:        family.FamilyID("family-1"),
@@ -367,7 +364,6 @@ func TestJoinFamilyByInviteLinkRejectsInvalidToken(t *testing.T) {
 
 	aggregate, err := family.NewFamily(
 		family.FamilyID("family-1"),
-		"Smith Family",
 		[]family.FamilyMember{{
 			ID:              family.FamilyMemberID("member-1"),
 			FamilyID:        family.FamilyID("family-1"),

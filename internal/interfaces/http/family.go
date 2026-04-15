@@ -11,7 +11,6 @@ import (
 )
 
 type createFamilyRequest struct {
-	FamilyName  string `json:"family_name"`
 	BabyName    string `json:"baby_name"`
 	CreatorName string `json:"creator_name"`
 }
@@ -22,6 +21,18 @@ type createFamilyResponse struct {
 	BabyID   string `json:"baby_id"`
 }
 
+// createFamilyHandler creates a new family and returns IDs for the family, first member, and baby.
+//
+// @Summary   Create family
+// @Tags      families
+// @Accept    json
+// @Produce   json
+// @Security  BearerAuth
+// @Param     body  body      createFamilyRequest   true  "Family creation payload"
+// @Success   201   {object}  createFamilyResponse
+// @Failure   400   {object}  errorResponse
+// @Failure   401   {object}  errorResponse
+// @Router    /families [post]
 func createFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.CreateFamilyHandler) {
 	account, ok := auth.AccountFromContext(r.Context())
 	if !ok {
@@ -36,7 +47,6 @@ func createFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.Creat
 	}
 
 	result, err := h.Handle(r.Context(), family.CreateFamilyCommand{
-		FamilyName:             req.FamilyName,
 		BabyName:               req.BabyName,
 		CreatorName:            req.CreatorName,
 		CreatorGoogleSubjectID: account.GoogleSubjectID,
@@ -57,8 +67,7 @@ func createFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.Creat
 
 func mapFamilyError(err error) apperror.AppError {
 	switch {
-	case errors.Is(err, family.ErrInvalidFamilyName),
-		errors.Is(err, family.ErrInvalidBabyName),
+	case errors.Is(err, family.ErrInvalidBabyName),
 		errors.Is(err, family.ErrInvalidFamilyMemberName),
 		errors.Is(err, family.ErrEmptyGoogleSubjectID),
 		errors.Is(err, family.ErrInvalidInviteToken):

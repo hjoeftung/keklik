@@ -1,0 +1,1 @@
+ALTER TABLE families DROP COLUMN name;

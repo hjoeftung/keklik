@@ -19,7 +19,6 @@ func TestNewFamilyRequiresExactlyOneBaby(t *testing.T) {
 
 	_, err := NewFamily(
 		familyID,
-		"The Owls",
 		[]FamilyMember{member},
 		nil,
 	)
@@ -29,7 +28,6 @@ func TestNewFamilyRequiresExactlyOneBaby(t *testing.T) {
 
 	_, err = NewFamily(
 		familyID,
-		"The Owls",
 		[]FamilyMember{member},
 		[]Baby{
 			{ID: BabyID("baby-1"), FamilyID: familyID, Name: "Mika"},
@@ -78,7 +76,6 @@ func mustFamily(t *testing.T) Family {
 
 	aggregate, err := NewFamily(
 		FamilyID("family-1"),
-		"The Owls",
 		[]FamilyMember{{
 			ID:              FamilyMemberID("member-1"),
 			FamilyID:        FamilyID("family-1"),

@@ -30,12 +30,11 @@ func (r *PostgresFamilyRepository) Save(ctx context.Context, f family.Family) er
 	defer tx.Rollback() //nolint:errcheck
 
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO families (id, name)
-		VALUES ($1, $2)
+		INSERT INTO families (id)
+		VALUES ($1)
 		ON CONFLICT (id) DO UPDATE SET
-			name       = EXCLUDED.name,
 			updated_at = now()`,
-		string(f.ID()), f.Name(),
+		string(f.ID()),
 	)
 	if err != nil {
 		return fmt.Errorf("upsert family: %w", err)
@@ -88,32 +87,31 @@ func (r *PostgresFamilyRepository) Save(ctx context.Context, f family.Family) er
 
 // FindByID loads a family aggregate by its ID.
 func (r *PostgresFamilyRepository) FindByID(ctx context.Context, id family.FamilyID) (family.Family, error) {
-	var name string
+	var exists bool
 
 	err := r.db.QueryRowContext(ctx, `
-		SELECT name FROM families WHERE id = $1`, string(id)).
-		Scan(&name)
-	if err == sql.ErrNoRows {
-		return family.Family{}, apperror.New(apperror.CodeNotFound, "family not found")
-	}
+		SELECT EXISTS(SELECT 1 FROM families WHERE id = $1)`, string(id)).
+		Scan(&exists)
 	if err != nil {
 		return family.Family{}, fmt.Errorf("query family: %w", err)
 	}
+	if !exists {
+		return family.Family{}, apperror.New(apperror.CodeNotFound, "family not found")
+	}
 
-	return r.reconstruct(ctx, id, name)
+	return r.reconstruct(ctx, id)
 }
 
 // FindByMemberID loads the family that contains the given member.
 func (r *PostgresFamilyRepository) FindByMemberID(ctx context.Context, memberID family.FamilyMemberID) (family.Family, error) {
 	var familyID family.FamilyID
-	var name string
 
 	err := r.db.QueryRowContext(ctx, `
-		SELECT f.id, f.name
+		SELECT f.id
 		FROM families f
 		JOIN family_members m ON m.family_id = f.id
 		WHERE m.id = $1`, string(memberID)).
-		Scan(&familyID, &name)
+		Scan(&familyID)
 	if err == sql.ErrNoRows {
 		return family.Family{}, apperror.New(apperror.CodeNotFound, "family not found")
 	}
@@ -121,20 +119,19 @@ func (r *PostgresFamilyRepository) FindByMemberID(ctx context.Context, memberID 
 		return family.Family{}, fmt.Errorf("query family by member: %w", err)
 	}
 
-	return r.reconstruct(ctx, familyID, name)
+	return r.reconstruct(ctx, familyID)
 }
 
 // FindByInviteToken loads the family associated with the given invite token.
 func (r *PostgresFamilyRepository) FindByInviteToken(ctx context.Context, token family.InviteToken) (family.Family, error) {
 	var familyID family.FamilyID
-	var name string
 
 	err := r.db.QueryRowContext(ctx, `
-		SELECT f.id, f.name
+		SELECT f.id
 		FROM families f
 		JOIN invite_links l ON l.family_id = f.id
 		WHERE l.token = $1`, string(token)).
-		Scan(&familyID, &name)
+		Scan(&familyID)
 	if err == sql.ErrNoRows {
 		return family.Family{}, apperror.New(apperror.CodeNotFound, "family not found")
 	}
@@ -142,13 +139,13 @@ func (r *PostgresFamilyRepository) FindByInviteToken(ctx context.Context, token 
 		return family.Family{}, fmt.Errorf("query family by invite token: %w", err)
 	}
 
-	return r.reconstruct(ctx, familyID, name)
+	return r.reconstruct(ctx, familyID)
 }
 
 // reconstruct builds a Family aggregate from raw DB columns, loading members, babies, and invite links.
 func (r *PostgresFamilyRepository) reconstruct(
 	ctx context.Context,
-	id family.FamilyID, name string,
+	id family.FamilyID,
 ) (family.Family, error) {
 	members, err := r.queryMembers(ctx, id)
 	if err != nil {
@@ -160,7 +157,7 @@ func (r *PostgresFamilyRepository) reconstruct(
 		return family.Family{}, err
 	}
 
-	f, err := family.NewFamily(id, name, members, babies)
+	f, err := family.NewFamily(id, members, babies)
 	if err != nil {
 		return family.Family{}, fmt.Errorf("reconstruct family aggregate: %w", err)
 	}

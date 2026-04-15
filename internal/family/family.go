@@ -8,7 +8,6 @@ import (
 )
 
 var (
-	ErrInvalidFamilyName              = errors.New("family name must not be empty")
 	ErrInvalidFamilyMemberName        = errors.New("family member name must not be empty")
 	ErrInvalidBabyName                = errors.New("baby name must not be empty")
 	ErrEmptyGoogleSubjectID           = errors.New("google subject id must not be empty")
@@ -33,7 +32,6 @@ type InviteToken string
 
 type Family struct {
 	id          FamilyID
-	name        string
 	members     []FamilyMember
 	babies      []Baby
 	inviteLinks []InviteLink
@@ -72,12 +70,7 @@ type FamilyMemberRepository interface {
 	FindByGoogleSubjectID(ctx context.Context, googleSubjectID string) (FamilyMember, error)
 }
 
-func NewFamily(id FamilyID, name string, members []FamilyMember, babies []Baby) (Family, error) {
-	trimmedName := strings.TrimSpace(name)
-	if trimmedName == "" {
-		return Family{}, ErrInvalidFamilyName
-	}
-
+func NewFamily(id FamilyID, members []FamilyMember, babies []Baby) (Family, error) {
 	if len(members) == 0 {
 		return Family{}, ErrFamilyMustHaveAtLeastOneMember
 	}
@@ -120,7 +113,6 @@ func NewFamily(id FamilyID, name string, members []FamilyMember, babies []Baby) 
 
 	return Family{
 		id:          id,
-		name:        trimmedName,
 		members:     validatedMembers,
 		babies:      validatedBabies,
 		inviteLinks: nil,
@@ -129,10 +121,6 @@ func NewFamily(id FamilyID, name string, members []FamilyMember, babies []Baby) 
 
 func (f Family) ID() FamilyID {
 	return f.id
-}
-
-func (f Family) Name() string {
-	return f.name
 }
 
 func (f Family) Members() []FamilyMember {
