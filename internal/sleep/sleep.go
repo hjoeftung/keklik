@@ -84,10 +84,6 @@ type SleepSessionHistoryRepository interface {
 	FindByBabyIDAndDateRange(ctx context.Context, babyID BabyID, dateRange DateRange) ([]SleepSession, error)
 }
 
-type SleepSessionQueryRepository interface {
-	FindMostRecentByBabyID(ctx context.Context, babyID BabyID) (SleepSession, bool, error)
-}
-
 type SleepProfileRepository interface {
 	Save(ctx context.Context, profile SleepProfile) error
 	FindByBabyID(ctx context.Context, babyID BabyID) (SleepProfile, error)

@@ -28,7 +28,6 @@ func NewServer(
 	createSleepProfile *sleep.CreateSleepProfileHandler,
 	startSleep *sleep.StartSleepHandler,
 	getSleepHistory *sleep.GetSleepHistoryHandler,
-	getElapsedTime *sleep.GetElapsedTimeHandler,
 ) *http.Server {
 	oauthCfg := &oauth2.Config{
 		ClientID:     config.GoogleOAuth.ClientID,
@@ -63,9 +62,6 @@ func NewServer(
 	})
 	protected.HandleFunc("GET /sleep-sessions", func(w http.ResponseWriter, r *http.Request) {
 		getSleepHistoryHandler(w, r, sleepCtx, getSleepHistory)
-	})
-	protected.HandleFunc("GET /sleep-sessions/elapsed", func(w http.ResponseWriter, r *http.Request) {
-		getElapsedTimeHandler(w, r, sleepCtx, getElapsedTime)
 	})
 	mux.Handle("/", requireAuth(accounts, sessions, protected))
 
