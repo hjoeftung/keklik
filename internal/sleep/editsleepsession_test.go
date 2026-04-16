@@ -74,7 +74,7 @@ func TestEditSleepSessionUpdatesActiveSessionStart(t *testing.T) {
 	h := NewEditSleepSessionHandler(repo, profiles)
 	updated, err := h.Handle(context.Background(), EditSleepSessionCommand{
 		SessionID:      SleepSessionID("session-1"),
-		FamilyMemberID: FamilyMemberID("member-2"),
+		FamilyMemberID: FamilyMemberID("member-1"),
 		StartedAt:      &editedStart,
 	})
 	if err != nil {

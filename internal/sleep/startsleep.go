@@ -23,11 +23,12 @@ type StartSleepResult struct {
 // StartSleepHandler executes the StartSleep use case.
 type StartSleepHandler struct {
 	sessions SleepSessionRepository
+	now      func() time.Time
 }
 
 // NewStartSleepHandler returns a StartSleepHandler backed by the given repository.
 func NewStartSleepHandler(sessions SleepSessionRepository) *StartSleepHandler {
-	return &StartSleepHandler{sessions: sessions}
+	return &StartSleepHandler{sessions: sessions, now: time.Now}
 }
 
 // Handle creates and persists a new active sleep session. Duplicate active sessions
@@ -36,7 +37,7 @@ func NewStartSleepHandler(sessions SleepSessionRepository) *StartSleepHandler {
 func (h *StartSleepHandler) Handle(ctx context.Context, cmd StartSleepCommand) (StartSleepResult, error) {
 	startedAt := cmd.StartedAt
 	if startedAt.IsZero() {
-		startedAt = time.Now().UTC()
+		startedAt = h.now().UTC()
 	}
 
 	id := SleepSessionID(uuid.New().String())

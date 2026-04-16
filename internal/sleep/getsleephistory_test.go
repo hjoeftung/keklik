@@ -41,13 +41,13 @@ func (r *stubSleepProfileRepository) FindByBabyID(_ context.Context, _ BabyID) (
 func TestPeriodToDateRangeToday(t *testing.T) {
 	t.Parallel()
 
-	dr, err := periodToDateRange("today", "UTC")
+	now := time.Date(2026, time.April, 16, 14, 30, 0, 0, time.UTC)
+	dr, err := periodToDateRange("today", "UTC", now)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	now := time.Now().UTC()
-	todayMidnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	todayMidnight := time.Date(2026, time.April, 16, 0, 0, 0, 0, time.UTC)
 	tomorrowMidnight := todayMidnight.AddDate(0, 0, 1)
 
 	if !dr.Start().Equal(todayMidnight) {
@@ -61,45 +61,44 @@ func TestPeriodToDateRangeToday(t *testing.T) {
 func TestPeriodToDateRange7d(t *testing.T) {
 	t.Parallel()
 
-	dr, err := periodToDateRange("7d", "UTC")
+	now := time.Date(2026, time.April, 16, 14, 30, 0, 0, time.UTC)
+	dr, err := periodToDateRange("7d", "UTC", now)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	now := time.Now().UTC()
-	sevenDaysAgo := now.AddDate(0, 0, -7)
-	expectedStart := time.Date(sevenDaysAgo.Year(), sevenDaysAgo.Month(), sevenDaysAgo.Day(), 0, 0, 0, 0, time.UTC)
-
+	expectedStart := time.Date(2026, time.April, 9, 0, 0, 0, 0, time.UTC)
 	if !dr.Start().Equal(expectedStart) {
 		t.Errorf("start: want %v, got %v", expectedStart, dr.Start())
 	}
-	// end should be approximately now (within a second)
-	if dr.End().Before(now.Add(-time.Second)) || dr.End().After(now.Add(time.Second)) {
-		t.Errorf("end: want approximately %v, got %v", now, dr.End())
+	if !dr.End().Equal(now) {
+		t.Errorf("end: want %v, got %v", now, dr.End())
 	}
 }
 
 func TestPeriodToDateRange14d(t *testing.T) {
 	t.Parallel()
 
-	dr, err := periodToDateRange("14d", "UTC")
+	now := time.Date(2026, time.April, 16, 14, 30, 0, 0, time.UTC)
+	dr, err := periodToDateRange("14d", "UTC", now)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	now := time.Now().UTC()
-	fourteenDaysAgo := now.AddDate(0, 0, -14)
-	expectedStart := time.Date(fourteenDaysAgo.Year(), fourteenDaysAgo.Month(), fourteenDaysAgo.Day(), 0, 0, 0, 0, time.UTC)
-
+	expectedStart := time.Date(2026, time.April, 2, 0, 0, 0, 0, time.UTC)
 	if !dr.Start().Equal(expectedStart) {
 		t.Errorf("start: want %v, got %v", expectedStart, dr.Start())
+	}
+	if !dr.End().Equal(now) {
+		t.Errorf("end: want %v, got %v", now, dr.End())
 	}
 }
 
 func TestPeriodToDateRangeInvalidPeriodReturnsError(t *testing.T) {
 	t.Parallel()
 
-	_, err := periodToDateRange("30d", "UTC")
+	now := time.Date(2026, time.April, 16, 14, 30, 0, 0, time.UTC)
+	_, err := periodToDateRange("30d", "UTC", now)
 	if !errors.Is(err, ErrInvalidSleepHistoryPeriod) {
 		t.Fatalf("expected ErrInvalidSleepHistoryPeriod, got %v", err)
 	}
@@ -108,7 +107,8 @@ func TestPeriodToDateRangeInvalidPeriodReturnsError(t *testing.T) {
 func TestPeriodToDateRangeInvalidTimezoneReturnsError(t *testing.T) {
 	t.Parallel()
 
-	_, err := periodToDateRange("7d", "Not/ATimezone")
+	now := time.Date(2026, time.April, 16, 14, 30, 0, 0, time.UTC)
+	_, err := periodToDateRange("7d", "Not/ATimezone", now)
 	if !errors.Is(err, ErrInvalidTimezone) {
 		t.Fatalf("expected ErrInvalidTimezone, got %v", err)
 	}
@@ -124,13 +124,14 @@ func TestPeriodToDateRangeTodayInEasternTimezone(t *testing.T) {
 		t.Fatalf("LoadLocation: %v", err)
 	}
 
-	dr, err := periodToDateRange("today", "America/New_York")
+	// 2026-04-16 14:30 UTC = 2026-04-16 10:30 America/New_York.
+	now := time.Date(2026, time.April, 16, 14, 30, 0, 0, time.UTC)
+	dr, err := periodToDateRange("today", "America/New_York", now)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	now := time.Now().In(loc)
-	expectedStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc).UTC()
+	expectedStart := time.Date(2026, time.April, 16, 0, 0, 0, 0, loc).UTC()
 	expectedEnd := expectedStart.AddDate(0, 0, 1)
 
 	if !dr.Start().Equal(expectedStart) {
@@ -141,9 +142,9 @@ func TestPeriodToDateRangeTodayInEasternTimezone(t *testing.T) {
 	}
 }
 
-// TestPeriodToDateRangeDSTSpringForwardToday verifies that "today" boundary
-// computation is correct on a DST spring-forward night (2026-03-08 in New York).
-// The local midnight-to-midnight span is 23 hours in UTC on that day.
+// TestPeriodToDateRangeDSTSpringForwardToday verifies that periodToDateRange
+// produces a 23-hour UTC window for "today" on the spring-forward night
+// (2026-03-08 in New York).
 func TestPeriodToDateRangeDSTSpringForwardToday(t *testing.T) {
 	t.Parallel()
 
@@ -152,21 +153,30 @@ func TestPeriodToDateRangeDSTSpringForwardToday(t *testing.T) {
 		t.Fatalf("LoadLocation: %v", err)
 	}
 
-	// 2026-03-08: spring-forward night. Midnight starts at UTC-5; after the
-	// transition the next midnight is at UTC-4, so the UTC window is 23h long.
-	startLocal := time.Date(2026, time.March, 8, 0, 0, 0, 0, loc)
-	endLocal := time.Date(2026, time.March, 9, 0, 0, 0, 0, loc)
-	expectedDuration := endLocal.UTC().Sub(startLocal.UTC())
+	// Noon local time on the spring-forward day.
+	now := time.Date(2026, time.March, 8, 12, 0, 0, 0, loc).UTC()
+	dr, err := periodToDateRange("today", "America/New_York", now)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
-	// 23 hours because clocks spring forward.
-	if expectedDuration != 23*time.Hour {
-		t.Fatalf("expected DST spring-forward day to be 23h in UTC, got %v", expectedDuration)
+	// Midnight starts at UTC-5; next midnight is at UTC-4 → 23h window.
+	expectedStart := time.Date(2026, time.March, 8, 0, 0, 0, 0, loc).UTC()
+	expectedEnd := time.Date(2026, time.March, 9, 0, 0, 0, 0, loc).UTC()
+	if !dr.Start().Equal(expectedStart) {
+		t.Errorf("start: want %v, got %v", expectedStart, dr.Start())
+	}
+	if !dr.End().Equal(expectedEnd) {
+		t.Errorf("end: want %v, got %v", expectedEnd, dr.End())
+	}
+	if dr.End().Sub(dr.Start()) != 23*time.Hour {
+		t.Errorf("expected 23h window, got %v", dr.End().Sub(dr.Start()))
 	}
 }
 
-// TestPeriodToDateRangeDSTFallBackToday verifies that "today" boundary
-// computation is correct on a DST fall-back night (2026-11-01 in New York).
-// The local midnight-to-midnight span is 25 hours in UTC on that day.
+// TestPeriodToDateRangeDSTFallBackToday verifies that periodToDateRange
+// produces a 25-hour UTC window for "today" on the fall-back night
+// (2026-11-01 in New York).
 func TestPeriodToDateRangeDSTFallBackToday(t *testing.T) {
 	t.Parallel()
 
@@ -175,15 +185,24 @@ func TestPeriodToDateRangeDSTFallBackToday(t *testing.T) {
 		t.Fatalf("LoadLocation: %v", err)
 	}
 
-	// 2026-11-01: fall-back night. Midnight starts at UTC-4; after the
-	// transition the next midnight is at UTC-5, so the UTC window is 25h long.
-	startLocal := time.Date(2026, time.November, 1, 0, 0, 0, 0, loc)
-	endLocal := time.Date(2026, time.November, 2, 0, 0, 0, 0, loc)
-	expectedDuration := endLocal.UTC().Sub(startLocal.UTC())
+	// Noon local time on the fall-back day.
+	now := time.Date(2026, time.November, 1, 12, 0, 0, 0, loc).UTC()
+	dr, err := periodToDateRange("today", "America/New_York", now)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
-	// 25 hours because clocks fall back.
-	if expectedDuration != 25*time.Hour {
-		t.Fatalf("expected DST fall-back day to be 25h in UTC, got %v", expectedDuration)
+	// Midnight starts at UTC-4; next midnight is at UTC-5 → 25h window.
+	expectedStart := time.Date(2026, time.November, 1, 0, 0, 0, 0, loc).UTC()
+	expectedEnd := time.Date(2026, time.November, 2, 0, 0, 0, 0, loc).UTC()
+	if !dr.Start().Equal(expectedStart) {
+		t.Errorf("start: want %v, got %v", expectedStart, dr.Start())
+	}
+	if !dr.End().Equal(expectedEnd) {
+		t.Errorf("end: want %v, got %v", expectedEnd, dr.End())
+	}
+	if dr.End().Sub(dr.Start()) != 25*time.Hour {
+		t.Errorf("expected 25h window, got %v", dr.End().Sub(dr.Start()))
 	}
 }
 

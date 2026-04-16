@@ -181,6 +181,93 @@ func newEditDeleteSleepTestServer(
 	)
 }
 
+// stubStartSleepSessionRepo implements SleepSessionRepository for start-sleep tests.
+type stubStartSleepSessionRepo struct {
+	saveErr error
+	saved   *sleep.SleepSession
+}
+
+func (r *stubStartSleepSessionRepo) Save(_ context.Context, s sleep.SleepSession) error {
+	if r.saveErr != nil {
+		return r.saveErr
+	}
+	r.saved = &s
+	return nil
+}
+
+func (r *stubStartSleepSessionRepo) FindByID(_ context.Context, _ sleep.SleepSessionID) (sleep.SleepSession, error) {
+	return sleep.SleepSession{}, nil
+}
+
+// stubSleepHistoryRepo implements SleepSessionHistoryRepository for history tests.
+type stubSleepHistoryRepo struct {
+	sessions []sleep.SleepSession
+	err      error
+}
+
+func (r *stubSleepHistoryRepo) FindByBabyIDAndDateRange(_ context.Context, _ sleep.BabyID, _ sleep.DateRange) ([]sleep.SleepSession, error) {
+	return r.sessions, r.err
+}
+
+func newStartSleepTestServer(
+	resolver sleepContextResolver,
+	sessRepo *stubStartSleepSessionRepo,
+) *http.Server {
+	account := auth.Account{ID: "test-account-id", GoogleSubjectID: "google-subject-123"}
+	session := auth.Session{
+		Token:     testSessionToken,
+		AccountID: "test-account-id",
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+
+	startSleep := sleep.NewStartSleepHandler(sessRepo)
+
+	return NewServer(
+		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
+		Dependencies{
+			Accounts:   &stubAccountRepository{account: account},
+			Sessions:   &stubSessionRepository{session: session},
+			SleepCtx:   resolver,
+			StartSleep: startSleep,
+		},
+	)
+}
+
+func newGetSleepHistoryTestServer(
+	resolver sleepContextResolver,
+	histRepo *stubSleepHistoryRepo,
+	profRepo *stubStopSleepProfileRepo,
+) *http.Server {
+	account := auth.Account{ID: "test-account-id", GoogleSubjectID: "google-subject-123"}
+	session := auth.Session{
+		Token:     testSessionToken,
+		AccountID: "test-account-id",
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+
+	getSleepHistory := sleep.NewGetSleepHistoryHandler(histRepo, profRepo)
+
+	return NewServer(
+		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
+		Dependencies{
+			Accounts:        &stubAccountRepository{account: account},
+			Sessions:        &stubSessionRepository{session: session},
+			SleepCtx:        resolver,
+			GetSleepHistory: getSleepHistory,
+		},
+	)
+}
+
+func getJSON(t *testing.T, server *http.Server, path string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	req.Header.Set("Authorization", "Bearer "+testSessionToken)
+	rec := httptest.NewRecorder()
+	server.Handler.ServeHTTP(rec, req)
+	return rec
+}
+
 func deleteJSON(t *testing.T, server *http.Server, path string, body any) *httptest.ResponseRecorder {
 	t.Helper()
 
@@ -384,5 +471,125 @@ func TestDeleteSleepSessionReturns404WhenMissing(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// --- startSleepHandler tests ---
+
+func TestStartSleepReturns201WithResult(t *testing.T) {
+	t.Parallel()
+
+	startedAt := time.Date(2026, time.April, 16, 10, 0, 0, 0, time.UTC)
+	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	sessRepo := &stubStartSleepSessionRepo{}
+
+	server := newStartSleepTestServer(resolver, sessRepo)
+	rec := postJSON(t, server, "/sleep-sessions/active", map[string]any{
+		"started_at": startedAt,
+	})
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp startSleepResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.ID == "" {
+		t.Error("expected non-empty id")
+	}
+}
+
+func TestStartSleepReturns401WhenUnauthenticated(t *testing.T) {
+	t.Parallel()
+
+	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	sessRepo := &stubStartSleepSessionRepo{}
+
+	server := newStartSleepTestServer(resolver, sessRepo)
+
+	req := httptest.NewRequest(http.MethodPost, "/sleep-sessions/active", nil)
+	// No Authorization header.
+	rec := httptest.NewRecorder()
+	server.Handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestStartSleepReturns409WhenActiveSessionExists(t *testing.T) {
+	t.Parallel()
+
+	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	sessRepo := &stubStartSleepSessionRepo{
+		saveErr: apperror.New(apperror.CodeActiveSleepExists, "active session exists"),
+	}
+
+	server := newStartSleepTestServer(resolver, sessRepo)
+	rec := postJSON(t, server, "/sleep-sessions/active", map[string]any{})
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected 409, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// --- getSleepHistoryHandler tests ---
+
+func TestGetSleepHistoryReturns200WithDefaultPeriod(t *testing.T) {
+	t.Parallel()
+
+	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	histRepo := &stubSleepHistoryRepo{sessions: []sleep.SleepSession{}}
+	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
+
+	server := newGetSleepHistoryTestServer(resolver, histRepo, profRepo)
+	rec := getJSON(t, server, "/sleep-sessions")
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp []sleepSessionResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("expected non-nil array")
+	}
+}
+
+func TestGetSleepHistoryReturns400ForInvalidPeriod(t *testing.T) {
+	t.Parallel()
+
+	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	histRepo := &stubSleepHistoryRepo{}
+	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
+
+	server := newGetSleepHistoryTestServer(resolver, histRepo, profRepo)
+	rec := getJSON(t, server, "/sleep-sessions?period=30d")
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestGetSleepHistoryReturns401WhenUnauthenticated(t *testing.T) {
+	t.Parallel()
+
+	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	histRepo := &stubSleepHistoryRepo{}
+	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
+
+	server := newGetSleepHistoryTestServer(resolver, histRepo, profRepo)
+
+	req := httptest.NewRequest(http.MethodGet, "/sleep-sessions", nil)
+	// No Authorization header.
+	rec := httptest.NewRecorder()
+	server.Handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
 	}
 }

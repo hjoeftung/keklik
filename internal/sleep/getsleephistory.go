@@ -37,7 +37,7 @@ func (h *GetSleepHistoryHandler) Handle(ctx context.Context, q GetSleepHistoryQu
 		tz = profile.Timezone()
 	}
 
-	dateRange, err := periodToDateRange(q.Period, tz)
+	dateRange, err := periodToDateRange(q.Period, tz, time.Now().UTC())
 	if err != nil {
 		return nil, err
 	}
@@ -60,13 +60,12 @@ func (h *GetSleepHistoryHandler) Handle(ctx context.Context, q GetSleepHistoryQu
 //   - "today" → local midnight today .. local midnight tomorrow
 //   - "7d"    → local midnight 7 days ago .. now (UTC)
 //   - "14d"   → local midnight 14 days ago .. now (UTC)
-func periodToDateRange(period, timezone string) (DateRange, error) {
+func periodToDateRange(period, timezone string, now time.Time) (DateRange, error) {
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
 		return DateRange{}, ErrInvalidTimezone
 	}
 
-	now := time.Now().UTC()
 	localNow := now.In(loc)
 
 	switch period {

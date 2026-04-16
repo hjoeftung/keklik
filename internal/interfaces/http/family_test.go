@@ -136,9 +136,12 @@ func (r *stubSessionRepository) Save(_ context.Context, session auth.Session) er
 	r.session = session
 	return nil
 }
-func (r *stubSessionRepository) FindByToken(_ context.Context, _ auth.SessionToken) (auth.Session, error) {
+func (r *stubSessionRepository) FindByToken(_ context.Context, token auth.SessionToken) (auth.Session, error) {
 	if r.err != nil {
 		return auth.Session{}, r.err
+	}
+	if r.session.Token != token {
+		return auth.Session{}, auth.ErrSessionNotFound
 	}
 	return r.session, nil
 }
@@ -280,6 +283,22 @@ func TestCreateFamilyRejects401WhenUnauthenticated(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/families", bytes.NewReader(b))
 	req.Header.Set("Content-Type", "application/json")
 	// No Authorization header.
+	rec := httptest.NewRecorder()
+	server.Handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestCreateFamilyRejects401WithWrongToken(t *testing.T) {
+	t.Parallel()
+
+	server := newTestServer(&stubFamilyRepository{}, &stubFamilyMemberRepository{})
+	b, _ := json.Marshal(validCreateFamilyBody())
+	req := httptest.NewRequest(http.MethodPost, "/families", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer wrong-token")
 	rec := httptest.NewRecorder()
 	server.Handler.ServeHTTP(rec, req)
 

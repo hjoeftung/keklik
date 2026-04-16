@@ -29,11 +29,12 @@ type stopSleepSessionRepository interface {
 type StopSleepHandler struct {
 	sessions stopSleepSessionRepository
 	profiles SleepProfileRepository
+	now      func() time.Time
 }
 
 // NewStopSleepHandler returns a StopSleepHandler backed by the given repositories.
 func NewStopSleepHandler(sessions stopSleepSessionRepository, profiles SleepProfileRepository) *StopSleepHandler {
-	return &StopSleepHandler{sessions: sessions, profiles: profiles}
+	return &StopSleepHandler{sessions: sessions, profiles: profiles, now: time.Now}
 }
 
 // Handle stops the active sleep session for the baby, classifies it, and
@@ -41,7 +42,7 @@ func NewStopSleepHandler(sessions stopSleepSessionRepository, profiles SleepProf
 func (h *StopSleepHandler) Handle(ctx context.Context, cmd StopSleepCommand) (StopSleepResult, error) {
 	stoppedAt := cmd.StoppedAt
 	if stoppedAt.IsZero() {
-		stoppedAt = time.Now().UTC()
+		stoppedAt = h.now().UTC()
 	}
 
 	session, err := h.sessions.FindActiveByBabyID(ctx, cmd.BabyID)

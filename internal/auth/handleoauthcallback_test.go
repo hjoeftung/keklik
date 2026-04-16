@@ -78,7 +78,9 @@ func validCallbackCommand() auth.HandleOAuthCallbackCommand {
 
 // --- tests ---
 
-func TestHandleOAuthCallback_NewAccount(t *testing.T) {
+func TestHandleOAuthCallbackNewAccount(t *testing.T) {
+	t.Parallel()
+
 	accounts := &inMemoryAccountRepository{}
 	sessions := &inMemorySessionRepository{}
 	h := auth.NewHandleOAuthCallbackHandler(accounts, sessions)
@@ -102,7 +104,9 @@ func TestHandleOAuthCallback_NewAccount(t *testing.T) {
 	}
 }
 
-func TestHandleOAuthCallback_ExistingAccount(t *testing.T) {
+func TestHandleOAuthCallbackExistingAccount(t *testing.T) {
+	t.Parallel()
+
 	existing := auth.Account{
 		ID:              auth.AccountID("existing-id"),
 		GoogleSubjectID: "google-sub-12345",
@@ -126,7 +130,9 @@ func TestHandleOAuthCallback_ExistingAccount(t *testing.T) {
 	}
 }
 
-func TestHandleOAuthCallback_SessionIssued(t *testing.T) {
+func TestHandleOAuthCallbackSessionIssued(t *testing.T) {
+	t.Parallel()
+
 	accounts := &inMemoryAccountRepository{}
 	sessions := &inMemorySessionRepository{}
 	h := auth.NewHandleOAuthCallbackHandler(accounts, sessions)
@@ -150,7 +156,8 @@ func TestHandleOAuthCallback_SessionIssued(t *testing.T) {
 	}
 }
 
-func TestHandleOAuthCallback_EmptySubjectID(t *testing.T) {
+func TestHandleOAuthCallbackEmptySubjectID(t *testing.T) {
+	t.Parallel()
 	h := auth.NewHandleOAuthCallbackHandler(&inMemoryAccountRepository{}, &inMemorySessionRepository{})
 	cmd := auth.HandleOAuthCallbackCommand{GoogleSubjectID: "", Email: "user@example.com"}
 
@@ -160,7 +167,9 @@ func TestHandleOAuthCallback_EmptySubjectID(t *testing.T) {
 	}
 }
 
-func TestHandleOAuthCallback_AccountLookupError(t *testing.T) {
+func TestHandleOAuthCallbackAccountLookupError(t *testing.T) {
+	t.Parallel()
+
 	lookupErr := errors.New("db failure")
 	accounts := &inMemoryAccountRepository{err: lookupErr}
 	h := auth.NewHandleOAuthCallbackHandler(accounts, &inMemorySessionRepository{})
@@ -171,7 +180,9 @@ func TestHandleOAuthCallback_AccountLookupError(t *testing.T) {
 	}
 }
 
-func TestHandleOAuthCallback_SessionSaveError(t *testing.T) {
+func TestHandleOAuthCallbackSessionSaveError(t *testing.T) {
+	t.Parallel()
+
 	accounts := &inMemoryAccountRepository{}
 	sessions := &inMemorySessionRepository{err: errors.New("db failure")}
 	h := auth.NewHandleOAuthCallbackHandler(accounts, sessions)
