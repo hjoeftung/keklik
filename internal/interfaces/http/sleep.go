@@ -130,9 +130,10 @@ type nightWindowRequest struct {
 }
 
 type createSleepProfileRequest struct {
-	BabyID      string             `json:"baby_id"`
-	Timezone    string             `json:"timezone"`
-	NightWindow nightWindowRequest `json:"night_window"`
+	BabyID        string             `json:"baby_id"`
+	Timezone      string             `json:"timezone"`
+	NightWindow   nightWindowRequest `json:"night_window"`
+	EffectiveFrom *time.Time         `json:"effective_from,omitempty"`
 }
 
 // createSleepProfileHandler creates or updates the sleep profile (timezone + night window) for a baby.
@@ -141,9 +142,9 @@ type createSleepProfileRequest struct {
 // @Tags      sleep
 // @Accept    json
 // @Security  BearerAuth
-// @Param     body  body  createSleepProfileRequest  true  "Sleep profile configuration"
+// @Param     body  body  createSleepProfileRequest  true  "Sleep profile configuration. Set effective_from to retroactively reclassify completed sessions whose started_at >= effective_from (max 30 days back)."
 // @Success   204
-// @Failure   400  {object}  errorResponse
+// @Failure   400  {object}  errorResponse  "Invalid input or effective_from earlier than 30 days ago"
 // @Failure   401  {object}  errorResponse
 // @Router    /sleep-profiles [post]
 func createSleepProfileHandler(w http.ResponseWriter, r *http.Request, h *sleep.CreateSleepProfileHandler) {
@@ -160,6 +161,7 @@ func createSleepProfileHandler(w http.ResponseWriter, r *http.Request, h *sleep.
 		NightWindowStartMinute: req.NightWindow.StartMinute,
 		NightWindowEndHour:     req.NightWindow.EndHour,
 		NightWindowEndMinute:   req.NightWindow.EndMinute,
+		EffectiveFrom:          req.EffectiveFrom,
 	})
 	if err != nil {
 		writeError(w, mapSleepProfileError(err))
@@ -451,7 +453,8 @@ func mapSleepProfileError(err error) apperror.AppError {
 		return apperror.New(apperror.CodeInvalidTimezone, err.Error())
 	case errors.Is(err, sleep.ErrInvalidNightWindow),
 		errors.Is(err, sleep.ErrInvalidLocalTime),
-		errors.Is(err, sleep.ErrEmptyBabyID):
+		errors.Is(err, sleep.ErrEmptyBabyID),
+		errors.Is(err, sleep.ErrEffectiveFromTooOld):
 		return apperror.New(apperror.CodeInvalidArgument, err.Error())
 	default:
 		var appErr apperror.AppError

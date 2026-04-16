@@ -19,6 +19,7 @@ var (
 	ErrInvalidSleepSessionDateRange = errors.New("sleep session date range is invalid")
 	ErrActiveSleepSessionExists     = errors.New("active sleep session already exists for this baby")
 	ErrInvalidSleepHistoryPeriod    = errors.New("period must be one of: today, 7d, 14d")
+	ErrEffectiveFromTooOld          = errors.New("effective_from must not be earlier than 30 days ago")
 
 	ErrInvalidTimezone    = errors.New("invalid timezone")
 	ErrInvalidLocalTime   = errors.New("invalid local time")
@@ -92,6 +93,11 @@ type SleepSessionHistoryRepository interface {
 type SleepProfileRepository interface {
 	Save(ctx context.Context, profile SleepProfile) error
 	FindByBabyID(ctx context.Context, babyID BabyID) (SleepProfile, error)
+}
+
+// CompletedSleepSessionsSinceRepository finds completed (stopped) sessions from a given point in time.
+type CompletedSleepSessionsSinceRepository interface {
+	FindCompletedByBabyIDSince(ctx context.Context, babyID BabyID, since time.Time) ([]SleepSession, error)
 }
 
 func NewSleepSession(id SleepSessionID, babyID BabyID, createdByMemberID FamilyMemberID, startedAt time.Time) (SleepSession, error) {

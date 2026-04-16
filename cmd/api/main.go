@@ -64,7 +64,7 @@ func main() {
 		config.App.InviteLinkLifetime,
 	)
 	joinFamilyByInvite := family.NewJoinFamilyByInviteLinkHandler(familyRepo, familyMemberRepo)
-	createSleepProfile := sleep.NewCreateSleepProfileHandler(sleepProfileRepo)
+	createSleepProfile := sleep.NewCreateSleepProfileHandler(sleepProfileRepo, sleepSessionRepo, sleepSessionRepo)
 	startSleep := sleep.NewStartSleepHandler(sleepSessionRepo)
 	stopSleep := sleep.NewStopSleepHandler(sleepSessionRepo, sleepProfileRepo)
 	editSleepSession := sleep.NewEditSleepSessionHandler(sleepSessionRepo, sleepProfileRepo)

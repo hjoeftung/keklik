@@ -196,6 +196,43 @@ func (r *PostgresSleepSessionRepository) DeleteByIDForFamilyMember(ctx context.C
 	return nil
 }
 
+// FindCompletedByBabyIDSince returns all completed (stopped_at IS NOT NULL) sessions
+// for a baby whose started_at is >= since, ordered by started_at ascending.
+func (r *PostgresSleepSessionRepository) FindCompletedByBabyIDSince(ctx context.Context, babyID sleep.BabyID, since time.Time) ([]sleep.SleepSession, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, baby_id, created_by_member_id,
+		       started_at, stopped_at,
+		       classification,
+		       classified_with_nw_start_hour, classified_with_nw_start_minute,
+		       classified_with_nw_end_hour,   classified_with_nw_end_minute
+		FROM sleep_sessions
+		WHERE baby_id = $1
+		  AND started_at >= $2
+		  AND stopped_at IS NOT NULL
+		ORDER BY started_at ASC`,
+		string(babyID),
+		since.UTC(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query completed sleep sessions since: %w", err)
+	}
+	defer rows.Close()
+
+	var sessions []sleep.SleepSession
+	for rows.Next() {
+		s, err := scanSleepSessionRows(rows)
+		if err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate completed sleep sessions: %w", err)
+	}
+
+	return sessions, nil
+}
+
 func scanSleepSession(row *sql.Row) (sleep.SleepSession, error) {
 	var (
 		id, babyID, memberID                               string

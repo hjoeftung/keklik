@@ -156,6 +156,22 @@ func (r *stubSleepProfileRepository) FindByBabyID(_ context.Context, _ sleep.Bab
 	return sleep.SleepProfile{}, errors.New("not implemented")
 }
 
+type stubCompletedSessionsRepo struct{}
+
+func (r *stubCompletedSessionsRepo) FindCompletedByBabyIDSince(_ context.Context, _ sleep.BabyID, _ time.Time) ([]sleep.SleepSession, error) {
+	return nil, nil
+}
+
+type stubSleepSessionWriter struct{}
+
+func (r *stubSleepSessionWriter) Save(_ context.Context, _ sleep.SleepSession) error {
+	return nil
+}
+
+func (r *stubSleepSessionWriter) FindByID(_ context.Context, _ sleep.SleepSessionID) (sleep.SleepSession, error) {
+	return sleep.SleepSession{}, errors.New("not implemented")
+}
+
 func newTestServer(familyRepo family.FamilyRepository, memberRepo family.FamilyMemberRepository) *http.Server {
 	createFamily := family.NewCreateFamilyHandler(familyRepo)
 	createInviteLink := family.NewCreateFamilyInviteLinkHandler(
@@ -165,7 +181,7 @@ func newTestServer(familyRepo family.FamilyRepository, memberRepo family.FamilyM
 		24*time.Hour,
 	)
 	joinByInvite := family.NewJoinFamilyByInviteLinkHandler(familyRepo, memberRepo)
-	createSleepProfile := sleep.NewCreateSleepProfileHandler(&stubSleepProfileRepository{})
+	createSleepProfile := sleep.NewCreateSleepProfileHandler(&stubSleepProfileRepository{}, &stubCompletedSessionsRepo{}, &stubSleepSessionWriter{})
 	account := auth.Account{
 		ID:              "test-account-id",
 		GoogleSubjectID: "google-subject-123",
