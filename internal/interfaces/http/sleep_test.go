@@ -37,6 +37,10 @@ func (r *stubStopSleepSessionRepo) Save(_ context.Context, _ sleep.SleepSession)
 	return r.saveErr
 }
 
+func (r *stubStopSleepSessionRepo) SaveAll(_ context.Context, _ []sleep.SleepSession) error {
+	return nil
+}
+
 func (r *stubStopSleepSessionRepo) FindByID(_ context.Context, _ sleep.SleepSessionID) (sleep.SleepSession, error) {
 	return sleep.SleepSession{}, nil
 }
@@ -58,6 +62,10 @@ func (r *stubEditableHTTPSleepSessionRepo) Save(_ context.Context, s sleep.Sleep
 		return r.saveErr
 	}
 	r.saved = &s
+	return nil
+}
+
+func (r *stubEditableHTTPSleepSessionRepo) SaveAll(_ context.Context, _ []sleep.SleepSession) error {
 	return nil
 }
 
@@ -192,6 +200,10 @@ func (r *stubStartSleepSessionRepo) Save(_ context.Context, s sleep.SleepSession
 		return r.saveErr
 	}
 	r.saved = &s
+	return nil
+}
+
+func (r *stubStartSleepSessionRepo) SaveAll(_ context.Context, _ []sleep.SleepSession) error {
 	return nil
 }
 

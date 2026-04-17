@@ -26,6 +26,10 @@ func (r *stubSleepSessionRepo) Save(_ context.Context, s SleepSession) error {
 	return nil
 }
 
+func (r *stubSleepSessionRepo) SaveAll(_ context.Context, _ []SleepSession) error {
+	return nil
+}
+
 func (r *stubSleepSessionRepo) FindByID(_ context.Context, _ SleepSessionID) (SleepSession, error) {
 	return SleepSession{}, errors.New("not implemented")
 }

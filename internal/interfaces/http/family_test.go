@@ -171,8 +171,18 @@ func (r *stubSleepSessionWriter) Save(_ context.Context, _ sleep.SleepSession) e
 	return nil
 }
 
+func (r *stubSleepSessionWriter) SaveAll(_ context.Context, _ []sleep.SleepSession) error {
+	return nil
+}
+
 func (r *stubSleepSessionWriter) FindByID(_ context.Context, _ sleep.SleepSessionID) (sleep.SleepSession, error) {
 	return sleep.SleepSession{}, errors.New("not implemented")
+}
+
+type stubTransactor struct{}
+
+func (t *stubTransactor) WithTransaction(ctx context.Context, fn func(context.Context) error) error {
+	return fn(ctx)
 }
 
 func newTestServer(familyRepo family.FamilyRepository, memberRepo family.FamilyMemberRepository) *http.Server {
@@ -184,7 +194,7 @@ func newTestServer(familyRepo family.FamilyRepository, memberRepo family.FamilyM
 		24*time.Hour,
 	)
 	joinByInvite := family.NewJoinFamilyByInviteLinkHandler(familyRepo, memberRepo)
-	createSleepProfile := sleep.NewCreateSleepProfileHandler(&stubSleepProfileRepository{}, &stubCompletedSessionsRepo{}, &stubSleepSessionWriter{})
+	createSleepProfile := sleep.NewCreateSleepProfileHandler(&stubSleepProfileRepository{}, &stubCompletedSessionsRepo{}, &stubSleepSessionWriter{}, &stubTransactor{})
 	account := auth.Account{
 		ID:              "test-account-id",
 		GoogleSubjectID: "google-subject-123",

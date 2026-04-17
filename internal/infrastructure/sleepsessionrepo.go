@@ -48,7 +48,7 @@ func (r *PostgresSleepSessionRepository) Save(ctx context.Context, s sleep.Sleep
 		nwEndHour, nwEndMinute = &eh, &em
 	}
 
-	_, err := r.db.ExecContext(ctx, `
+	_, err := querierFromContext(ctx, r.db).ExecContext(ctx, `
 		INSERT INTO sleep_sessions (
 			id, baby_id, created_by_member_id,
 			started_at, stopped_at,
@@ -84,9 +84,86 @@ func (r *PostgresSleepSessionRepository) Save(ctx context.Context, s sleep.Sleep
 	return nil
 }
 
+// SaveAll persists multiple SleepSessions in a single batch upsert.
+func (r *PostgresSleepSessionRepository) SaveAll(ctx context.Context, sessions []sleep.SleepSession) error {
+	if len(sessions) == 0 {
+		return nil
+	}
+
+	n := len(sessions)
+	ids := make([]string, n)
+	babyIDs := make([]string, n)
+	memberIDs := make([]string, n)
+	startedAts := make([]time.Time, n)
+	stoppedAts := make([]*time.Time, n)
+	classifications := make([]string, n)
+	nwStartHours := make([]*int, n)
+	nwStartMinutes := make([]*int, n)
+	nwEndHours := make([]*int, n)
+	nwEndMinutes := make([]*int, n)
+
+	for i, s := range sessions {
+		ids[i] = string(s.ID())
+		babyIDs[i] = string(s.BabyID())
+		memberIDs[i] = string(s.CreatedByMemberID())
+		startedAts[i] = s.StartedAt().UTC()
+
+		if t, ok := s.StoppedAt(); ok {
+			ts := t.UTC()
+			stoppedAts[i] = &ts
+		}
+
+		if c := s.Classification(); c != sleep.SleepClassificationUnknown {
+			classifications[i] = string(c)
+		}
+
+		if nw := s.ClassifiedWithNightWindow(); nw != nil {
+			sh, sm := nw.Start().Hour(), nw.Start().Minute()
+			eh, em := nw.End().Hour(), nw.End().Minute()
+			nwStartHours[i], nwStartMinutes[i] = &sh, &sm
+			nwEndHours[i], nwEndMinutes[i] = &eh, &em
+		}
+	}
+
+	_, err := querierFromContext(ctx, r.db).ExecContext(ctx, `
+		INSERT INTO sleep_sessions (
+			id, baby_id, created_by_member_id,
+			started_at, stopped_at,
+			classification,
+			classified_with_nw_start_hour, classified_with_nw_start_minute,
+			classified_with_nw_end_hour,   classified_with_nw_end_minute
+		)
+		SELECT * FROM unnest(
+			$1::text[], $2::text[], $3::text[],
+			$4::timestamptz[], $5::timestamptz[],
+			$6::text[],
+			$7::int[], $8::int[], $9::int[], $10::int[]
+		)
+		ON CONFLICT (id) DO UPDATE SET
+			started_at                      = EXCLUDED.started_at,
+			stopped_at                      = EXCLUDED.stopped_at,
+			classification                  = EXCLUDED.classification,
+			classified_with_nw_start_hour   = EXCLUDED.classified_with_nw_start_hour,
+			classified_with_nw_start_minute = EXCLUDED.classified_with_nw_start_minute,
+			classified_with_nw_end_hour     = EXCLUDED.classified_with_nw_end_hour,
+			classified_with_nw_end_minute   = EXCLUDED.classified_with_nw_end_minute,
+			updated_by_member_id            = EXCLUDED.created_by_member_id,
+			updated_at                      = now()`,
+		pq.Array(ids), pq.Array(babyIDs), pq.Array(memberIDs),
+		pq.Array(startedAts), pq.Array(stoppedAts),
+		pq.Array(classifications),
+		pq.Array(nwStartHours), pq.Array(nwStartMinutes),
+		pq.Array(nwEndHours), pq.Array(nwEndMinutes),
+	)
+	if err != nil {
+		return fmt.Errorf("batch upsert sleep sessions: %w", err)
+	}
+	return nil
+}
+
 // FindByID loads a SleepSession by its ID.
 func (r *PostgresSleepSessionRepository) FindByID(ctx context.Context, id sleep.SleepSessionID) (sleep.SleepSession, error) {
-	row := r.db.QueryRowContext(ctx, `
+	row := querierFromContext(ctx, r.db).QueryRowContext(ctx, `
 		SELECT id, baby_id, created_by_member_id,
 		       started_at, stopped_at,
 		       classification,
@@ -100,7 +177,7 @@ func (r *PostgresSleepSessionRepository) FindByID(ctx context.Context, id sleep.
 // FindByIDForFamilyMember loads a sleep session by ID after verifying the
 // given family member belongs to the same family as the session's baby.
 func (r *PostgresSleepSessionRepository) FindByIDForFamilyMember(ctx context.Context, id sleep.SleepSessionID, memberID sleep.FamilyMemberID) (sleep.SleepSession, error) {
-	row := r.db.QueryRowContext(ctx, `
+	row := querierFromContext(ctx, r.db).QueryRowContext(ctx, `
 		SELECT s.id, s.baby_id, s.created_by_member_id,
 		       s.started_at, s.stopped_at,
 		       s.classification,
@@ -120,7 +197,7 @@ func (r *PostgresSleepSessionRepository) FindByIDForFamilyMember(ctx context.Con
 // FindActiveByBabyID loads the active (not yet stopped) sleep session for a baby.
 // Returns apperror with CodeNotFound when no active session exists.
 func (r *PostgresSleepSessionRepository) FindActiveByBabyID(ctx context.Context, babyID sleep.BabyID) (sleep.SleepSession, error) {
-	row := r.db.QueryRowContext(ctx, `
+	row := querierFromContext(ctx, r.db).QueryRowContext(ctx, `
 		SELECT id, baby_id, created_by_member_id,
 		       started_at, stopped_at,
 		       classification,
@@ -135,7 +212,7 @@ func (r *PostgresSleepSessionRepository) FindActiveByBabyID(ctx context.Context,
 // FindByBabyIDAndDateRange returns all sessions for a baby whose started_at falls
 // within [dateRange.Start, dateRange.End), ordered by started_at descending.
 func (r *PostgresSleepSessionRepository) FindByBabyIDAndDateRange(ctx context.Context, babyID sleep.BabyID, dateRange sleep.DateRange) ([]sleep.SleepSession, error) {
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := querierFromContext(ctx, r.db).QueryContext(ctx, `
 		SELECT id, baby_id, created_by_member_id,
 		       started_at, stopped_at,
 		       classification,
@@ -171,7 +248,7 @@ func (r *PostgresSleepSessionRepository) FindByBabyIDAndDateRange(ctx context.Co
 // DeleteByIDForFamilyMember hard-deletes a sleep session after verifying the
 // given family member belongs to the same family as the session's baby.
 func (r *PostgresSleepSessionRepository) DeleteByIDForFamilyMember(ctx context.Context, id sleep.SleepSessionID, memberID sleep.FamilyMemberID) error {
-	result, err := r.db.ExecContext(ctx, `
+	result, err := querierFromContext(ctx, r.db).ExecContext(ctx, `
 		DELETE FROM sleep_sessions s
 		USING babies b, family_members fm
 		WHERE s.id = $1
@@ -199,7 +276,7 @@ func (r *PostgresSleepSessionRepository) DeleteByIDForFamilyMember(ctx context.C
 // FindCompletedByBabyIDSince returns all completed (stopped_at IS NOT NULL) sessions
 // for a baby whose started_at is >= since, ordered by started_at ascending.
 func (r *PostgresSleepSessionRepository) FindCompletedByBabyIDSince(ctx context.Context, babyID sleep.BabyID, since time.Time) ([]sleep.SleepSession, error) {
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := querierFromContext(ctx, r.db).QueryContext(ctx, `
 		SELECT id, baby_id, created_by_member_id,
 		       started_at, stopped_at,
 		       classification,

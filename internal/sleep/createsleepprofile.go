@@ -24,6 +24,7 @@ type CreateSleepProfileHandler struct {
 	profiles      SleepProfileRepository
 	sessions      CompletedSleepSessionsSinceRepository
 	sessionWriter SleepSessionRepository
+	transactor    Transactor
 	now           func() time.Time
 }
 
@@ -32,11 +33,13 @@ func NewCreateSleepProfileHandler(
 	profiles SleepProfileRepository,
 	sessions CompletedSleepSessionsSinceRepository,
 	sessionWriter SleepSessionRepository,
+	transactor Transactor,
 ) *CreateSleepProfileHandler {
 	return &CreateSleepProfileHandler{
 		profiles:      profiles,
 		sessions:      sessions,
 		sessionWriter: sessionWriter,
+		transactor:    transactor,
 		now:           time.Now,
 	}
 }
@@ -71,48 +74,49 @@ func (h *CreateSleepProfileHandler) Handle(ctx context.Context, cmd CreateSleepP
 		}
 	}
 
-	if err := h.profiles.Save(ctx, profile); err != nil {
-		return err
-	}
-
-	if cmd.EffectiveFrom == nil {
-		return nil
-	}
-
-	toReclassify, err := h.sessions.FindCompletedByBabyIDSince(ctx, cmd.BabyID, *cmd.EffectiveFrom)
-	if err != nil {
-		return err
-	}
-
-	for _, session := range toReclassify {
-		stoppedAt, ok := session.StoppedAt()
-		if !ok {
-			continue
+	return h.transactor.WithTransaction(ctx, func(ctx context.Context) error {
+		if err := h.profiles.Save(ctx, profile); err != nil {
+			return err
 		}
 
-		classification, err := Classify(session, profile.Timezone(), profile.NightWindow())
+		if cmd.EffectiveFrom == nil {
+			return nil
+		}
+
+		toReclassify, err := h.sessions.FindCompletedByBabyIDSince(ctx, cmd.BabyID, *cmd.EffectiveFrom)
 		if err != nil {
 			return err
 		}
 
-		nw := profile.NightWindow()
-		rebuilt, err := NewCompletedSleepSession(
-			session.ID(),
-			session.BabyID(),
-			session.CreatedByMemberID(),
-			session.StartedAt(),
-			stoppedAt,
-			classification,
-			&nw,
-		)
-		if err != nil {
-			return err
+		rebuilt := make([]SleepSession, 0, len(toReclassify))
+		for _, session := range toReclassify {
+			stoppedAt, ok := session.StoppedAt()
+			if !ok {
+				continue
+			}
+
+			classification, err := Classify(session, profile.Timezone(), profile.NightWindow())
+			if err != nil {
+				return err
+			}
+
+			nw := profile.NightWindow()
+			s, err := NewCompletedSleepSession(
+				session.ID(),
+				session.BabyID(),
+				session.CreatedByMemberID(),
+				session.StartedAt(),
+				stoppedAt,
+				classification,
+				&nw,
+			)
+			if err != nil {
+				return err
+			}
+
+			rebuilt = append(rebuilt, s)
 		}
 
-		if err := h.sessionWriter.Save(ctx, rebuilt); err != nil {
-			return err
-		}
-	}
-
-	return nil
+		return h.sessionWriter.SaveAll(ctx, rebuilt)
+	})
 }

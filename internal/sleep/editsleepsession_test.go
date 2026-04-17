@@ -26,6 +26,10 @@ func (r *stubEditableSleepSessionRepo) Save(_ context.Context, s SleepSession) e
 	return nil
 }
 
+func (r *stubEditableSleepSessionRepo) SaveAll(_ context.Context, _ []SleepSession) error {
+	return nil
+}
+
 func (r *stubEditableSleepSessionRepo) FindByID(_ context.Context, _ SleepSessionID) (SleepSession, error) {
 	return r.session, r.findErr
 }

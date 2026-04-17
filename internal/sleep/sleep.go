@@ -73,7 +73,14 @@ type SleepProfile struct {
 
 type SleepSessionRepository interface {
 	Save(ctx context.Context, session SleepSession) error
+	SaveAll(ctx context.Context, sessions []SleepSession) error
 	FindByID(ctx context.Context, id SleepSessionID) (SleepSession, error)
+}
+
+// Transactor executes a function within a database transaction, committing on
+// success and rolling back on any error.
+type Transactor interface {
+	WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error
 }
 
 type EditableSleepSessionRepository interface {

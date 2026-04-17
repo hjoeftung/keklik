@@ -23,7 +23,7 @@ func NewPostgresSleepProfileRepository(db *sql.DB) *PostgresSleepProfileReposito
 func (r *PostgresSleepProfileRepository) Save(ctx context.Context, p sleep.SleepProfile) error {
 	nw := p.NightWindow()
 
-	_, err := r.db.ExecContext(ctx, `
+	_, err := querierFromContext(ctx, r.db).ExecContext(ctx, `
 		INSERT INTO sleep_profiles (
 			baby_id, timezone,
 			night_window_start_hour, night_window_start_minute,
@@ -51,7 +51,7 @@ func (r *PostgresSleepProfileRepository) FindByBabyID(ctx context.Context, babyI
 	var timezone string
 	var startHour, startMinute, endHour, endMinute int
 
-	err := r.db.QueryRowContext(ctx, `
+	err := querierFromContext(ctx, r.db).QueryRowContext(ctx, `
 		SELECT timezone,
 			night_window_start_hour, night_window_start_minute,
 			night_window_end_hour,   night_window_end_minute

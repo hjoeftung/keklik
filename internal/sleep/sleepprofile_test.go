@@ -48,8 +48,22 @@ func (r *inMemorySleepSessionWriter) Save(_ context.Context, s SleepSession) err
 	return nil
 }
 
+func (r *inMemorySleepSessionWriter) SaveAll(_ context.Context, sessions []SleepSession) error {
+	if r.err != nil {
+		return r.err
+	}
+	r.saved = append(r.saved, sessions...)
+	return nil
+}
+
 func (r *inMemorySleepSessionWriter) FindByID(_ context.Context, _ SleepSessionID) (SleepSession, error) {
 	return SleepSession{}, errors.New("not implemented")
+}
+
+type noopTransactor struct{}
+
+func (t *noopTransactor) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
+	return fn(ctx)
 }
 
 // --- helpers ---
@@ -76,7 +90,7 @@ func mustNightWindow(t *testing.T, startHour, startMinute, endHour, endMinute in
 }
 
 func newTestHandler(profiles *inMemorySleepProfileRepository, sessions *inMemoryCompletedSessionsRepo, writer *inMemorySleepSessionWriter) *CreateSleepProfileHandler {
-	h := NewCreateSleepProfileHandler(profiles, sessions, writer)
+	h := NewCreateSleepProfileHandler(profiles, sessions, writer, &noopTransactor{})
 	return h
 }
 
