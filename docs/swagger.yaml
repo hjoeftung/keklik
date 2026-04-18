@@ -34,8 +34,6 @@ definitions:
     type: object
   httpapi.createSleepProfileRequest:
     properties:
-      baby_id:
-        type: string
       effective_from:
         type: string
       night_window:
@@ -56,6 +54,31 @@ definitions:
         type: string
       message:
         type: string
+    type: object
+  httpapi.getFamilyBabyResponse:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  httpapi.getFamilyMemberResponse:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  httpapi.getFamilyResponse:
+    properties:
+      baby:
+        $ref: '#/definitions/httpapi.getFamilyBabyResponse'
+      family_id:
+        type: string
+      members:
+        items:
+          $ref: '#/definitions/httpapi.getFamilyMemberResponse'
+        type: array
     type: object
   httpapi.healthResponse:
     properties:
@@ -204,6 +227,48 @@ paths:
       summary: Test login (dev/staging only)
       tags:
       - auth
+  /babies/{baby_id}/sleep-profiles:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Baby ID
+        in: path
+        name: baby_id
+        required: true
+        type: string
+      - description: Sleep profile configuration. Set effective_from to retroactively
+          reclassify completed sessions whose started_at >= effective_from (max 30
+          days back).
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.createSleepProfileRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Invalid input or effective_from earlier than 30 days ago
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create sleep profile
+      tags:
+      - sleep
   /babies/{baby_id}/sleep-sessions:
     get:
       parameters:
@@ -500,6 +565,28 @@ paths:
       summary: Join family by invite link
       tags:
       - families
+  /family:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.getFamilyResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get family
+      tags:
+      - families
   /healthz:
     get:
       produces:
@@ -512,35 +599,6 @@ paths:
       summary: Health check
       tags:
       - system
-  /sleep-profiles:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Sleep profile configuration. Set effective_from to retroactively
-          reclassify completed sessions whose started_at >= effective_from (max 30
-          days back).
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/httpapi.createSleepProfileRequest'
-      responses:
-        "204":
-          description: No Content
-        "400":
-          description: Invalid input or effective_from earlier than 30 days ago
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-      security:
-      - BearerAuth: []
-      summary: Create sleep profile
-      tags:
-      - sleep
 securityDefinitions:
   BearerAuth:
     description: Session token obtained from the auth endpoints.

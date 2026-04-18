@@ -57,6 +57,7 @@ func main() {
 	babyAccessChecker := infrastructure.NewPostgresBabyAccessChecker(db)
 
 	createFamily := family.NewCreateFamilyHandler(familyRepo)
+	getFamily := family.NewGetFamilyHandler(familyRepo, familyMemberRepo)
 	createInviteLink := family.NewCreateFamilyInviteLinkHandler(
 		familyRepo,
 		familyMemberRepo,
@@ -80,6 +81,7 @@ func main() {
 		OAuthCallback:      oauthCallback,
 		TestLogin:          testLogin,
 		CreateFamily:       createFamily,
+		GetFamily:          getFamily,
 		CreateInviteLink:   createInviteLink,
 		JoinFamilyByInvite: joinFamilyByInvite,
 		BabyAccess:         babyAccessChecker,

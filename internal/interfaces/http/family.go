@@ -65,6 +65,61 @@ func createFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.Creat
 	})
 }
 
+type getFamilyMemberResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type getFamilyBabyResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type getFamilyResponse struct {
+	FamilyID string                   `json:"family_id"`
+	Members  []getFamilyMemberResponse `json:"members"`
+	Baby     getFamilyBabyResponse    `json:"baby"`
+}
+
+// getFamilyHandler returns the authenticated member's family with its members and baby.
+//
+// @Summary   Get family
+// @Tags      families
+// @Produce   json
+// @Security  BearerAuth
+// @Success   200  {object}  getFamilyResponse
+// @Failure   401  {object}  errorResponse
+// @Failure   404  {object}  errorResponse
+// @Router    /family [get]
+func getFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.GetFamilyHandler) {
+	account, ok := auth.AccountFromContext(r.Context())
+	if !ok {
+		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		return
+	}
+
+	result, err := h.Handle(r.Context(), family.GetFamilyQuery{
+		GoogleSubjectID: account.GoogleSubjectID,
+	})
+	if err != nil {
+		writeError(w, mapFamilyError(err))
+		return
+	}
+
+	members := make([]getFamilyMemberResponse, 0, len(result.Members))
+	for _, m := range result.Members {
+		members = append(members, getFamilyMemberResponse{ID: string(m.ID), Name: m.Name})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(getFamilyResponse{
+		FamilyID: string(result.FamilyID),
+		Members:  members,
+		Baby:     getFamilyBabyResponse{ID: string(result.Baby.ID), Name: result.Baby.Name},
+	})
+}
+
 func mapFamilyError(err error) apperror.AppError {
 	switch {
 	case errors.Is(err, family.ErrInvalidBabyName),

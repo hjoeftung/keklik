@@ -24,6 +24,7 @@ type Dependencies struct {
 	OAuthCallback      *auth.HandleOAuthCallbackHandler
 	TestLogin          *auth.HandleTestLoginHandler
 	CreateFamily       *family.CreateFamilyHandler
+	GetFamily          *family.GetFamilyHandler
 	CreateInviteLink   *family.CreateFamilyInviteLinkHandler
 	JoinFamilyByInvite *family.JoinFamilyByInviteLinkHandler
 	BabyAccess         babyAccessChecker
@@ -42,6 +43,7 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	oauthCallback := deps.OAuthCallback
 	testLogin := deps.TestLogin
 	createFamily := deps.CreateFamily
+	getFamily := deps.GetFamily
 	createInviteLink := deps.CreateInviteLink
 	joinFamilyByInvite := deps.JoinFamilyByInvite
 	babyAccess := deps.BabyAccess
@@ -84,6 +86,9 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	protected := http.NewServeMux()
 	protected.HandleFunc("POST /families", func(w http.ResponseWriter, r *http.Request) {
 		createFamilyHandler(w, r, createFamily)
+	})
+	protected.HandleFunc("GET /family", func(w http.ResponseWriter, r *http.Request) {
+		getFamilyHandler(w, r, getFamily)
 	})
 	protected.HandleFunc("POST /families/invite-links", func(w http.ResponseWriter, r *http.Request) {
 		createFamilyInviteLinkHandler(w, r, createInviteLink)
