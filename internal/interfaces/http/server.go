@@ -73,6 +73,12 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	mux.HandleFunc("/auth/test/login", func(w http.ResponseWriter, r *http.Request) {
 		testLoginHandler(w, r, config.Auth.EnableTestAuth, testLogin)
 	})
+	mux.HandleFunc("GET /swagger/index.html", func(w http.ResponseWriter, r *http.Request) {
+		swaggerUIHandler(w, r, config.App.EnableSwaggerUI)
+	})
+	mux.HandleFunc("GET /swagger/swagger.yaml", func(w http.ResponseWriter, r *http.Request) {
+		swaggerYAMLHandler(w, r, config.App.EnableSwaggerUI)
+	})
 
 	// Protected endpoints — wrapped with requireAuth middleware.
 	protected := http.NewServeMux()

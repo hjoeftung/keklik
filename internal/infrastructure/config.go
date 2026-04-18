@@ -53,6 +53,7 @@ type AuthConfig struct {
 type AppConfig struct {
 	BaseURL            string
 	InviteLinkLifetime time.Duration
+	EnableSwaggerUI    bool
 }
 
 // LoadConfig loads and validates the runtime environment contract.
@@ -68,6 +69,11 @@ func LoadConfig() (Config, error) {
 	}
 
 	inviteLinkLifetime, err := readDurationEnv("FAMILY_INVITE_LINK_EXPIRY", defaultInviteLinkTTL)
+	if err != nil {
+		return Config{}, err
+	}
+
+	enableSwaggerUI, err := readBoolEnv("ENABLE_SWAGGER_UI", false)
 	if err != nil {
 		return Config{}, err
 	}
@@ -115,6 +121,7 @@ func LoadConfig() (Config, error) {
 		App: AppConfig{
 			BaseURL:            appBaseURL,
 			InviteLinkLifetime: inviteLinkLifetime,
+			EnableSwaggerUI:    enableSwaggerUI,
 		},
 		ShutdownTimeout: defaultShutdownTimeout,
 	}, nil
