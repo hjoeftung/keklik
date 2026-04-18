@@ -15,7 +15,6 @@ coverage.out
 
 # Local environment files
 .env
-.env.*
 
 # Dependency directories
 vendor/

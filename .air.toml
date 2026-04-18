@@ -1,0 +1,6 @@
+[build]
+  cmd = "go build -o ./tmp/keklik-api ./cmd/api"
+  bin = "./tmp/keklik-api"
+  include_ext = ["go"]
+  exclude_dir = ["tmp", "vendor"]
+  envfile = ".env"
