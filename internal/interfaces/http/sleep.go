@@ -158,7 +158,12 @@ func createSleepProfileHandler(w http.ResponseWriter, r *http.Request, h *sleep.
 
 	var req createSleepProfileRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
+		var timeErr *time.ParseError
+		if errors.As(err, &timeErr) {
+			writeError(w, apperror.New(apperror.CodeInvalidArgument, "effective_from must be a valid RFC3339 timestamp (e.g. 2006-01-02T15:04:05Z)"))
+		} else {
+			writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
+		}
 		return
 	}
 
@@ -437,6 +442,6 @@ func mapSleepProfileError(err error) apperror.AppError {
 		if errors.As(err, &appErr) {
 			return appErr
 		}
-		return apperror.New(apperror.CodeInvalidArgument, "unexpected error")
+		return apperror.New(apperror.CodeInternalError, "unexpected error")
 	}
 }

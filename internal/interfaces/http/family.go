@@ -130,7 +130,8 @@ func mapFamilyError(err error) apperror.AppError {
 	case errors.Is(err, family.ErrInviteLinkCreatorNotMember):
 		return apperror.New(apperror.CodeForbidden, err.Error())
 	case errors.Is(err, family.ErrDuplicateFamilyMember),
-		errors.Is(err, family.ErrDuplicateInviteToken):
+		errors.Is(err, family.ErrDuplicateInviteToken),
+		errors.Is(err, family.ErrMemberAlreadyHasFamily):
 		return apperror.New(apperror.CodeConflict, err.Error())
 	case errors.Is(err, family.ErrInviteLinkFamilyMismatch):
 		return apperror.New(apperror.CodeInvalidInviteLink, err.Error())
@@ -139,6 +140,6 @@ func mapFamilyError(err error) apperror.AppError {
 		if errors.As(err, &appErr) {
 			return appErr
 		}
-		return apperror.New(apperror.CodeInvalidArgument, "unexpected error")
+		return apperror.New(apperror.CodeInternalError, "unexpected error")
 	}
 }

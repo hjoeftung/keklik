@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/lib/pq"
+
 	"github.com/hjoeftung/keklik/internal/apperror"
 	"github.com/hjoeftung/keklik/internal/family"
 )
@@ -51,6 +53,9 @@ func (r *PostgresFamilyRepository) Save(ctx context.Context, f family.Family) er
 			string(m.ID), string(m.FamilyID), m.Name, m.GoogleSubjectID,
 		)
 		if err != nil {
+			if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" && pqErr.Constraint == "idx_family_members_google_subject_id" {
+				return family.ErrMemberAlreadyHasFamily
+			}
 			return fmt.Errorf("upsert family member %s: %w", m.ID, err)
 		}
 	}

@@ -13,6 +13,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
+const pgUniqueViolation = "23505"
+
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 

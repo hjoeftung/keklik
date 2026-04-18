@@ -18,6 +18,7 @@ var (
 	ErrDuplicateFamilyMember          = errors.New("family member already belongs to family")
 	ErrInviteLinkFamilyMismatch       = errors.New("invite link belongs to another family")
 	ErrDuplicateInviteToken           = errors.New("invite token already exists")
+	ErrMemberAlreadyHasFamily         = errors.New("account already belongs to a family")
 	ErrInviteLinkCreatorNotMember     = errors.New("invite link creator must belong to family")
 	ErrInvalidInviteToken             = errors.New("invite token must not be empty")
 )

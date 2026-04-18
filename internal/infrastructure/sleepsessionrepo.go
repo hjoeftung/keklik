@@ -76,7 +76,7 @@ func (r *PostgresSleepSessionRepository) Save(ctx context.Context, s sleep.Sleep
 		nwEndHour, nwEndMinute,
 	)
 	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == pgUniqueViolation {
 			return apperror.New(apperror.CodeActiveSleepExists, sleep.ErrActiveSleepSessionExists.Error())
 		}
 		return fmt.Errorf("upsert sleep session: %w", err)
@@ -156,6 +156,9 @@ func (r *PostgresSleepSessionRepository) SaveAll(ctx context.Context, sessions [
 		pq.Array(nwEndHours), pq.Array(nwEndMinutes),
 	)
 	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == pgUniqueViolation {
+			return apperror.New(apperror.CodeActiveSleepExists, sleep.ErrActiveSleepSessionExists.Error())
+		}
 		return fmt.Errorf("batch upsert sleep sessions: %w", err)
 	}
 	return nil
