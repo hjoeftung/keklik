@@ -18,7 +18,13 @@ import (
 
 	"github.com/hjoeftung/keklik/internal/apperror"
 	"github.com/hjoeftung/keklik/internal/auth"
+	"github.com/hjoeftung/keklik/internal/sleep"
 )
+
+// babyAccessChecker verifies the caller is a family member of a given baby.
+type babyAccessChecker interface {
+	CheckBabyAccess(ctx context.Context, googleSubjectID string, babyID sleep.BabyID) (sleep.FamilyMemberID, error)
+}
 
 const oauthStateCookieName = "oauth_state"
 const oauthStateCookieMaxAge = 300 // 5 minutes
@@ -175,6 +181,36 @@ func testLoginHandler(w http.ResponseWriter, r *http.Request, enabled bool, h *a
 	}
 
 	writeAuthSessionResponse(w, result)
+}
+
+// requireBabyAccess is middleware that extracts {baby_id} from the request path, verifies
+// the authenticated caller is a family member of that baby, and stores (baby_id, member_id)
+// in the request context. Must be applied after requireAuth.
+func requireBabyAccess(checker babyAccessChecker, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		account, ok := auth.AccountFromContext(r.Context())
+		if !ok {
+			writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+			return
+		}
+
+		babyID := sleep.BabyID(r.PathValue("baby_id"))
+
+		memberID, err := checker.CheckBabyAccess(r.Context(), account.GoogleSubjectID, babyID)
+		if err != nil {
+			var appErr apperror.AppError
+			if asErr, ok2 := err.(apperror.AppError); ok2 {
+				appErr = asErr
+			} else {
+				appErr = apperror.New(apperror.CodeInternalError, "unexpected error")
+			}
+			writeError(w, appErr)
+			return
+		}
+
+		ctx := withBabyContext(r.Context(), babyID, memberID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 // requireAuth is middleware that validates the Bearer session token in the Authorization

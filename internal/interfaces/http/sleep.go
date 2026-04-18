@@ -8,9 +8,24 @@ import (
 	"time"
 
 	"github.com/hjoeftung/keklik/internal/apperror"
-	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/sleep"
 )
+
+type babyContextKey struct{}
+
+type babyCtx struct {
+	BabyID   sleep.BabyID
+	MemberID sleep.FamilyMemberID
+}
+
+func withBabyContext(ctx context.Context, babyID sleep.BabyID, memberID sleep.FamilyMemberID) context.Context {
+	return context.WithValue(ctx, babyContextKey{}, babyCtx{BabyID: babyID, MemberID: memberID})
+}
+
+func babyContextFromContext(ctx context.Context) (babyCtx, bool) {
+	v, ok := ctx.Value(babyContextKey{}).(babyCtx)
+	return v, ok
+}
 
 // sleepSessionResponse is the JSON shape for a single sleep session.
 type sleepSessionResponse struct {
@@ -46,26 +61,18 @@ func toSleepSessionResponse(s sleep.SleepSession) sleepSessionResponse {
 // @Tags      sleep
 // @Produce   json
 // @Security  BearerAuth
-// @Param     period  query     string  false  "History window: today, 7d (default), or 14d"
-// @Success   200     {array}   sleepSessionResponse
-// @Failure   400     {object}  errorResponse
-// @Failure   401     {object}  errorResponse
-// @Router    /sleep-sessions [get]
-func getSleepHistoryHandler(
-	w http.ResponseWriter,
-	r *http.Request,
-	resolver sleepContextResolver,
-	h *sleep.GetSleepHistoryHandler,
-) {
-	account, ok := auth.AccountFromContext(r.Context())
+// @Param     baby_id  path      string  true   "Baby ID"
+// @Param     period   query     string  false  "History window: today, 7d (default), or 14d"
+// @Success   200      {array}   sleepSessionResponse
+// @Failure   400      {object}  errorResponse
+// @Failure   401      {object}  errorResponse
+// @Failure   403      {object}  errorResponse
+// @Failure   404      {object}  errorResponse
+// @Router    /babies/{baby_id}/sleep-sessions [get]
+func getSleepHistoryHandler(w http.ResponseWriter, r *http.Request, h *sleep.GetSleepHistoryHandler) {
+	bc, ok := babyContextFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
-		return
-	}
-
-	babyID, _, err := resolver.ResolveSleepContext(r.Context(), account.GoogleSubjectID)
-	if err != nil {
-		writeError(w, mapStartSleepError(err))
+		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
 
@@ -81,9 +88,8 @@ func getSleepHistoryHandler(
 		return
 	}
 
-	// Timezone is resolved from the sleep profile inside the handler.
 	sessions, err := h.Handle(r.Context(), sleep.GetSleepHistoryQuery{
-		BabyID: babyID,
+		BabyID: bc.BabyID,
 		Period: period,
 	})
 	if err != nil {
@@ -114,12 +120,6 @@ func mapSleepHistoryError(err error) apperror.AppError {
 		}
 		return apperror.New(apperror.CodeInternalError, "unexpected error")
 	}
-}
-
-// sleepContextResolver resolves the baby and member IDs from the caller's Google subject ID
-// in a single database round-trip.
-type sleepContextResolver interface {
-	ResolveSleepContext(ctx context.Context, googleSubjectID string) (sleep.BabyID, sleep.FamilyMemberID, error)
 }
 
 type nightWindowRequest struct {
@@ -187,27 +187,19 @@ type startSleepResponse struct {
 // @Accept    json
 // @Produce   json
 // @Security  BearerAuth
-// @Param     body  body      startSleepRequest  false  "Optional explicit start time (defaults to now)"
-// @Success   201   {object}  startSleepResponse
-// @Failure   400   {object}  errorResponse
-// @Failure   401   {object}  errorResponse
-// @Failure   409   {object}  errorResponse  "Active sleep session already exists"
-// @Router    /sleep-sessions/active [post]
-func startSleepHandler(
-	w http.ResponseWriter,
-	r *http.Request,
-	resolver sleepContextResolver,
-	h *sleep.StartSleepHandler,
-) {
-	account, ok := auth.AccountFromContext(r.Context())
+// @Param     baby_id  path      string             true   "Baby ID"
+// @Param     body     body      startSleepRequest  false  "Optional explicit start time (defaults to now)"
+// @Success   201      {object}  startSleepResponse
+// @Failure   400      {object}  errorResponse
+// @Failure   401      {object}  errorResponse
+// @Failure   403      {object}  errorResponse
+// @Failure   404      {object}  errorResponse
+// @Failure   409      {object}  errorResponse  "Active sleep session already exists"
+// @Router    /babies/{baby_id}/sleep-sessions/active [post]
+func startSleepHandler(w http.ResponseWriter, r *http.Request, h *sleep.StartSleepHandler) {
+	bc, ok := babyContextFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
-		return
-	}
-
-	babyID, memberID, err := resolver.ResolveSleepContext(r.Context(), account.GoogleSubjectID)
-	if err != nil {
-		writeError(w, mapStartSleepError(err))
+		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
 
@@ -215,8 +207,8 @@ func startSleepHandler(
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
 	result, err := h.Handle(r.Context(), sleep.StartSleepCommand{
-		BabyID:            babyID,
-		CreatedByMemberID: memberID,
+		BabyID:            bc.BabyID,
+		CreatedByMemberID: bc.MemberID,
 		StartedAt:         req.StartedAt,
 	})
 	if err != nil {
@@ -272,26 +264,18 @@ type editSleepSessionRequest struct {
 // @Accept    json
 // @Produce   json
 // @Security  BearerAuth
-// @Param     body  body      stopSleepRequest  false  "Optional explicit stop time (defaults to now)"
-// @Success   200   {object}  stopSleepResponse
-// @Failure   400   {object}  errorResponse
-// @Failure   401   {object}  errorResponse
-// @Router    /sleep-sessions/active [delete]
-func stopSleepHandler(
-	w http.ResponseWriter,
-	r *http.Request,
-	resolver sleepContextResolver,
-	h *sleep.StopSleepHandler,
-) {
-	account, ok := auth.AccountFromContext(r.Context())
+// @Param     baby_id  path      string            true   "Baby ID"
+// @Param     body     body      stopSleepRequest  false  "Optional explicit stop time (defaults to now)"
+// @Success   200      {object}  stopSleepResponse
+// @Failure   400      {object}  errorResponse
+// @Failure   401      {object}  errorResponse
+// @Failure   403      {object}  errorResponse
+// @Failure   404      {object}  errorResponse
+// @Router    /babies/{baby_id}/sleep-sessions/active [delete]
+func stopSleepHandler(w http.ResponseWriter, r *http.Request, h *sleep.StopSleepHandler) {
+	bc, ok := babyContextFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
-		return
-	}
-
-	babyID, _, err := resolver.ResolveSleepContext(r.Context(), account.GoogleSubjectID)
-	if err != nil {
-		writeError(w, mapStopSleepError(err))
+		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
 
@@ -299,7 +283,7 @@ func stopSleepHandler(
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
 	result, err := h.Handle(r.Context(), sleep.StopSleepCommand{
-		BabyID:    babyID,
+		BabyID:    bc.BabyID,
 		StoppedAt: req.StoppedAt,
 	})
 	if err != nil {
@@ -338,27 +322,19 @@ func mapStopSleepError(err error) apperror.AppError {
 // @Accept    json
 // @Produce   json
 // @Security  BearerAuth
-// @Param     id    path      string                   true  "Sleep session UUID"
-// @Param     body  body      editSleepSessionRequest  true  "Fields to update (at least one required)"
-// @Success   200   {object}  sleepSessionResponse
-// @Failure   400   {object}  errorResponse
-// @Failure   401   {object}  errorResponse
-// @Router    /sleep-sessions/{id} [patch]
-func editSleepSessionHandler(
-	w http.ResponseWriter,
-	r *http.Request,
-	resolver sleepContextResolver,
-	h *sleep.EditSleepSessionHandler,
-) {
-	account, ok := auth.AccountFromContext(r.Context())
+// @Param     baby_id  path      string                   true  "Baby ID"
+// @Param     id       path      string                   true  "Sleep session UUID"
+// @Param     body     body      editSleepSessionRequest  true  "Fields to update (at least one required)"
+// @Success   200      {object}  sleepSessionResponse
+// @Failure   400      {object}  errorResponse
+// @Failure   401      {object}  errorResponse
+// @Failure   403      {object}  errorResponse
+// @Failure   404      {object}  errorResponse
+// @Router    /babies/{baby_id}/sleep-sessions/{id} [patch]
+func editSleepSessionHandler(w http.ResponseWriter, r *http.Request, h *sleep.EditSleepSessionHandler) {
+	bc, ok := babyContextFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
-		return
-	}
-
-	_, memberID, err := resolver.ResolveSleepContext(r.Context(), account.GoogleSubjectID)
-	if err != nil {
-		writeError(w, mapStartSleepError(err))
+		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
 
@@ -370,7 +346,7 @@ func editSleepSessionHandler(
 
 	session, err := h.Handle(r.Context(), sleep.EditSleepSessionCommand{
 		SessionID:      sleep.SleepSessionID(r.PathValue("id")),
-		FamilyMemberID: memberID,
+		FamilyMemberID: bc.MemberID,
 		StartedAt:      req.StartedAt,
 		StoppedAt:      req.StoppedAt,
 	})
@@ -389,31 +365,23 @@ func editSleepSessionHandler(
 // @Summary   Delete sleep session
 // @Tags      sleep
 // @Security  BearerAuth
-// @Param     id   path  string  true  "Sleep session UUID"
+// @Param     baby_id  path  string  true  "Baby ID"
+// @Param     id       path  string  true  "Sleep session UUID"
 // @Success   204
 // @Failure   401  {object}  errorResponse
-// @Router    /sleep-sessions/{id} [delete]
-func deleteSleepSessionHandler(
-	w http.ResponseWriter,
-	r *http.Request,
-	resolver sleepContextResolver,
-	h *sleep.DeleteSleepSessionHandler,
-) {
-	account, ok := auth.AccountFromContext(r.Context())
+// @Failure   403  {object}  errorResponse
+// @Failure   404  {object}  errorResponse
+// @Router    /babies/{baby_id}/sleep-sessions/{id} [delete]
+func deleteSleepSessionHandler(w http.ResponseWriter, r *http.Request, h *sleep.DeleteSleepSessionHandler) {
+	bc, ok := babyContextFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
-		return
-	}
-
-	_, memberID, err := resolver.ResolveSleepContext(r.Context(), account.GoogleSubjectID)
-	if err != nil {
-		writeError(w, mapStartSleepError(err))
+		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
 
 	if err := h.Handle(r.Context(), sleep.DeleteSleepSessionCommand{
 		SessionID:      sleep.SleepSessionID(r.PathValue("id")),
-		FamilyMemberID: memberID,
+		FamilyMemberID: bc.MemberID,
 	}); err != nil {
 		writeError(w, mapDeleteSleepSessionError(err))
 		return

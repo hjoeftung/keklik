@@ -26,7 +26,7 @@ type Dependencies struct {
 	CreateFamily       *family.CreateFamilyHandler
 	CreateInviteLink   *family.CreateFamilyInviteLinkHandler
 	JoinFamilyByInvite *family.JoinFamilyByInviteLinkHandler
-	SleepCtx           sleepContextResolver
+	BabyAccess         babyAccessChecker
 	CreateSleepProfile *sleep.CreateSleepProfileHandler
 	StartSleep         *sleep.StartSleepHandler
 	StopSleep          *sleep.StopSleepHandler
@@ -44,7 +44,7 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	createFamily := deps.CreateFamily
 	createInviteLink := deps.CreateInviteLink
 	joinFamilyByInvite := deps.JoinFamilyByInvite
-	sleepCtx := deps.SleepCtx
+	babyAccess := deps.BabyAccess
 	createSleepProfile := deps.CreateSleepProfile
 	startSleep := deps.StartSleep
 	stopSleep := deps.StopSleep
@@ -88,21 +88,26 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	protected.HandleFunc("POST /sleep-profiles", func(w http.ResponseWriter, r *http.Request) {
 		createSleepProfileHandler(w, r, createSleepProfile)
 	})
-	protected.HandleFunc("POST /sleep-sessions/active", func(w http.ResponseWriter, r *http.Request) {
-		startSleepHandler(w, r, sleepCtx, startSleep)
-	})
-	protected.HandleFunc("DELETE /sleep-sessions/active", func(w http.ResponseWriter, r *http.Request) {
-		stopSleepHandler(w, r, sleepCtx, stopSleep)
-	})
-	protected.HandleFunc("PATCH /sleep-sessions/{id}", func(w http.ResponseWriter, r *http.Request) {
-		editSleepSessionHandler(w, r, sleepCtx, editSleepSession)
-	})
-	protected.HandleFunc("DELETE /sleep-sessions/{id}", func(w http.ResponseWriter, r *http.Request) {
-		deleteSleepSessionHandler(w, r, sleepCtx, deleteSleepSession)
-	})
-	protected.HandleFunc("GET /sleep-sessions", func(w http.ResponseWriter, r *http.Request) {
-		getSleepHistoryHandler(w, r, sleepCtx, getSleepHistory)
-	})
+
+	// Sleep-session endpoints — additionally wrapped with requireBabyAccess middleware.
+	withBaby := func(h http.HandlerFunc) http.Handler {
+		return requireBabyAccess(babyAccess, h)
+	}
+	protected.Handle("POST /babies/{baby_id}/sleep-sessions/active", withBaby(func(w http.ResponseWriter, r *http.Request) {
+		startSleepHandler(w, r, startSleep)
+	}))
+	protected.Handle("DELETE /babies/{baby_id}/sleep-sessions/active", withBaby(func(w http.ResponseWriter, r *http.Request) {
+		stopSleepHandler(w, r, stopSleep)
+	}))
+	protected.Handle("PATCH /babies/{baby_id}/sleep-sessions/{id}", withBaby(func(w http.ResponseWriter, r *http.Request) {
+		editSleepSessionHandler(w, r, editSleepSession)
+	}))
+	protected.Handle("DELETE /babies/{baby_id}/sleep-sessions/{id}", withBaby(func(w http.ResponseWriter, r *http.Request) {
+		deleteSleepSessionHandler(w, r, deleteSleepSession)
+	}))
+	protected.Handle("GET /babies/{baby_id}/sleep-sessions", withBaby(func(w http.ResponseWriter, r *http.Request) {
+		getSleepHistoryHandler(w, r, getSleepHistory)
+	}))
 	mux.Handle("/", requireAuth(accounts, sessions, protected))
 
 	return &http.Server{

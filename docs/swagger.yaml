@@ -36,6 +36,8 @@ definitions:
     properties:
       baby_id:
         type: string
+      effective_from:
+        type: string
       night_window:
         $ref: '#/definitions/httpapi.nightWindowRequest'
       timezone:
@@ -202,6 +204,218 @@ paths:
       summary: Test login (dev/staging only)
       tags:
       - auth
+  /babies/{baby_id}/sleep-sessions:
+    get:
+      parameters:
+      - description: Baby ID
+        in: path
+        name: baby_id
+        required: true
+        type: string
+      - description: 'History window: today, 7d (default), or 14d'
+        in: query
+        name: period
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/httpapi.sleepSessionResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get sleep history
+      tags:
+      - sleep
+  /babies/{baby_id}/sleep-sessions/{id}:
+    delete:
+      parameters:
+      - description: Baby ID
+        in: path
+        name: baby_id
+        required: true
+        type: string
+      - description: Sleep session UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete sleep session
+      tags:
+      - sleep
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Baby ID
+        in: path
+        name: baby_id
+        required: true
+        type: string
+      - description: Sleep session UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update (at least one required)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.editSleepSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.sleepSessionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Edit sleep session
+      tags:
+      - sleep
+  /babies/{baby_id}/sleep-sessions/active:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Baby ID
+        in: path
+        name: baby_id
+        required: true
+        type: string
+      - description: Optional explicit stop time (defaults to now)
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/httpapi.stopSleepRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.stopSleepResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Stop active sleep session
+      tags:
+      - sleep
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Baby ID
+        in: path
+        name: baby_id
+        required: true
+        type: string
+      - description: Optional explicit start time (defaults to now)
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/httpapi.startSleepRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/httpapi.startSleepResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "409":
+          description: Active sleep session already exists
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Start sleep session
+      tags:
+      - sleep
   /families:
     post:
       consumes:
@@ -303,7 +517,9 @@ paths:
       consumes:
       - application/json
       parameters:
-      - description: Sleep profile configuration
+      - description: Sleep profile configuration. Set effective_from to retroactively
+          reclassify completed sessions whose started_at >= effective_from (max 30
+          days back).
         in: body
         name: body
         required: true
@@ -313,7 +529,7 @@ paths:
         "204":
           description: No Content
         "400":
-          description: Bad Request
+          description: Invalid input or effective_from earlier than 30 days ago
           schema:
             $ref: '#/definitions/httpapi.errorResponse'
         "401":
@@ -323,153 +539,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Create sleep profile
-      tags:
-      - sleep
-  /sleep-sessions:
-    get:
-      parameters:
-      - description: 'History window: today, 7d (default), or 14d'
-        in: query
-        name: period
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/httpapi.sleepSessionResponse'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get sleep history
-      tags:
-      - sleep
-  /sleep-sessions/{id}:
-    delete:
-      parameters:
-      - description: Sleep session UUID
-        in: path
-        name: id
-        required: true
-        type: string
-      responses:
-        "204":
-          description: No Content
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-      security:
-      - BearerAuth: []
-      summary: Delete sleep session
-      tags:
-      - sleep
-    patch:
-      consumes:
-      - application/json
-      parameters:
-      - description: Sleep session UUID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Fields to update (at least one required)
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/httpapi.editSleepSessionRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/httpapi.sleepSessionResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-      security:
-      - BearerAuth: []
-      summary: Edit sleep session
-      tags:
-      - sleep
-  /sleep-sessions/active:
-    delete:
-      consumes:
-      - application/json
-      parameters:
-      - description: Optional explicit stop time (defaults to now)
-        in: body
-        name: body
-        schema:
-          $ref: '#/definitions/httpapi.stopSleepRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/httpapi.stopSleepResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-      security:
-      - BearerAuth: []
-      summary: Stop active sleep session
-      tags:
-      - sleep
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Optional explicit start time (defaults to now)
-        in: body
-        name: body
-        schema:
-          $ref: '#/definitions/httpapi.startSleepRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/httpapi.startSleepResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-        "409":
-          description: Active sleep session already exists
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-      security:
-      - BearerAuth: []
-      summary: Start sleep session
       tags:
       - sleep
 securityDefinitions:

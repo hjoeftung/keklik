@@ -54,7 +54,7 @@ func main() {
 	sessionRepo := infrastructure.NewPostgresSessionRepository(db)
 	sleepProfileRepo := infrastructure.NewPostgresSleepProfileRepository(db)
 	sleepSessionRepo := infrastructure.NewPostgresSleepSessionRepository(db)
-	sleepCtxResolver := infrastructure.NewPostgresSleepContextResolver(db)
+	babyAccessChecker := infrastructure.NewPostgresBabyAccessChecker(db)
 
 	createFamily := family.NewCreateFamilyHandler(familyRepo)
 	createInviteLink := family.NewCreateFamilyInviteLinkHandler(
@@ -82,7 +82,7 @@ func main() {
 		CreateFamily:       createFamily,
 		CreateInviteLink:   createInviteLink,
 		JoinFamilyByInvite: joinFamilyByInvite,
-		SleepCtx:           sleepCtxResolver,
+		BabyAccess:         babyAccessChecker,
 		CreateSleepProfile: createSleepProfile,
 		StartSleep:         startSleep,
 		StopSleep:          stopSleep,

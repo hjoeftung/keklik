@@ -15,15 +15,14 @@ import (
 	"github.com/hjoeftung/keklik/internal/sleep"
 )
 
-// stubSleepContextResolver is a sleepContextResolver test double.
-type stubSleepContextResolver struct {
-	babyID   sleep.BabyID
+// stubBabyAccessChecker is a babyAccessChecker test double.
+type stubBabyAccessChecker struct {
 	memberID sleep.FamilyMemberID
 	err      error
 }
 
-func (r *stubSleepContextResolver) ResolveSleepContext(_ context.Context, _ string) (sleep.BabyID, sleep.FamilyMemberID, error) {
-	return r.babyID, r.memberID, r.err
+func (c *stubBabyAccessChecker) CheckBabyAccess(_ context.Context, _ string, _ sleep.BabyID) (sleep.FamilyMemberID, error) {
+	return c.memberID, c.err
 }
 
 // stubStopSleepSessionRepo implements stopSleepSessionRepository for tests.
@@ -138,7 +137,7 @@ func mustActiveSleepSession(t *testing.T, startedAt time.Time) sleep.SleepSessio
 }
 
 func newStopSleepTestServer(
-	resolver sleepContextResolver,
+	checker babyAccessChecker,
 	sessRepo *stubStopSleepSessionRepo,
 	profRepo *stubStopSleepProfileRepo,
 ) *http.Server {
@@ -154,16 +153,16 @@ func newStopSleepTestServer(
 	return NewServer(
 		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
 		Dependencies{
-			Accounts:  &stubAccountRepository{account: account},
-			Sessions:  &stubSessionRepository{session: session},
-			SleepCtx:  resolver,
-			StopSleep: stopSleep,
+			Accounts:   &stubAccountRepository{account: account},
+			Sessions:   &stubSessionRepository{session: session},
+			BabyAccess: checker,
+			StopSleep:  stopSleep,
 		},
 	)
 }
 
 func newEditDeleteSleepTestServer(
-	resolver sleepContextResolver,
+	checker babyAccessChecker,
 	sessRepo *stubEditableHTTPSleepSessionRepo,
 	profRepo *stubStopSleepProfileRepo,
 ) *http.Server {
@@ -182,7 +181,7 @@ func newEditDeleteSleepTestServer(
 		Dependencies{
 			Accounts:           &stubAccountRepository{account: account},
 			Sessions:           &stubSessionRepository{session: session},
-			SleepCtx:           resolver,
+			BabyAccess:         checker,
 			EditSleepSession:   editSleep,
 			DeleteSleepSession: deleteSleep,
 		},
@@ -222,7 +221,7 @@ func (r *stubSleepHistoryRepo) FindByBabyIDAndDateRange(_ context.Context, _ sle
 }
 
 func newStartSleepTestServer(
-	resolver sleepContextResolver,
+	checker babyAccessChecker,
 	sessRepo *stubStartSleepSessionRepo,
 ) *http.Server {
 	account := auth.Account{ID: "test-account-id", GoogleSubjectID: "google-subject-123"}
@@ -239,14 +238,14 @@ func newStartSleepTestServer(
 		Dependencies{
 			Accounts:   &stubAccountRepository{account: account},
 			Sessions:   &stubSessionRepository{session: session},
-			SleepCtx:   resolver,
+			BabyAccess: checker,
 			StartSleep: startSleep,
 		},
 	)
 }
 
 func newGetSleepHistoryTestServer(
-	resolver sleepContextResolver,
+	checker babyAccessChecker,
 	histRepo *stubSleepHistoryRepo,
 	profRepo *stubStopSleepProfileRepo,
 ) *http.Server {
@@ -264,7 +263,7 @@ func newGetSleepHistoryTestServer(
 		Dependencies{
 			Accounts:        &stubAccountRepository{account: account},
 			Sessions:        &stubSessionRepository{session: session},
-			SleepCtx:        resolver,
+			BabyAccess:      checker,
 			GetSleepHistory: getSleepHistory,
 		},
 	)
@@ -318,12 +317,12 @@ func TestStopSleepReturns200WithResult(t *testing.T) {
 	startedAt := time.Date(2026, time.April, 14, 22, 0, 0, 0, time.UTC)
 	stoppedAt := startedAt.Add(8 * time.Hour)
 
-	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	checker := &stubBabyAccessChecker{memberID: "member-1"}
 	sessRepo := &stubStopSleepSessionRepo{active: mustActiveSleepSession(t, startedAt)}
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
-	server := newStopSleepTestServer(resolver, sessRepo, profRepo)
-	rec := deleteJSON(t, server, "/sleep-sessions/active", map[string]any{
+	server := newStopSleepTestServer(checker, sessRepo, profRepo)
+	rec := deleteJSON(t, server, "/babies/baby-1/sleep-sessions/active", map[string]any{
 		"stopped_at": stoppedAt,
 	})
 
@@ -349,13 +348,13 @@ func TestStopSleepReturns401WhenUnauthenticated(t *testing.T) {
 	t.Parallel()
 
 	startedAt := time.Date(2026, time.April, 14, 10, 0, 0, 0, time.UTC)
-	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	checker := &stubBabyAccessChecker{memberID: "member-1"}
 	sessRepo := &stubStopSleepSessionRepo{active: mustActiveSleepSession(t, startedAt)}
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
-	server := newStopSleepTestServer(resolver, sessRepo, profRepo)
+	server := newStopSleepTestServer(checker, sessRepo, profRepo)
 
-	req := httptest.NewRequest(http.MethodDelete, "/sleep-sessions/active", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/babies/baby-1/sleep-sessions/active", nil)
 	// No Authorization header.
 	rec := httptest.NewRecorder()
 	server.Handler.ServeHTTP(rec, req)
@@ -368,14 +367,14 @@ func TestStopSleepReturns401WhenUnauthenticated(t *testing.T) {
 func TestStopSleepReturns404WhenNoActiveSession(t *testing.T) {
 	t.Parallel()
 
-	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	checker := &stubBabyAccessChecker{memberID: "member-1"}
 	sessRepo := &stubStopSleepSessionRepo{
 		findErr: apperror.New(apperror.CodeNotFound, "sleep session not found"),
 	}
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
-	server := newStopSleepTestServer(resolver, sessRepo, profRepo)
-	rec := deleteJSON(t, server, "/sleep-sessions/active", map[string]any{})
+	server := newStopSleepTestServer(checker, sessRepo, profRepo)
+	rec := deleteJSON(t, server, "/babies/baby-1/sleep-sessions/active", map[string]any{})
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
@@ -388,17 +387,49 @@ func TestStopSleepReturns400WhenStopBeforeStart(t *testing.T) {
 	startedAt := time.Date(2026, time.April, 14, 10, 0, 0, 0, time.UTC)
 	stoppedAt := startedAt.Add(-time.Minute)
 
-	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	checker := &stubBabyAccessChecker{memberID: "member-1"}
 	sessRepo := &stubStopSleepSessionRepo{active: mustActiveSleepSession(t, startedAt)}
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
-	server := newStopSleepTestServer(resolver, sessRepo, profRepo)
-	rec := deleteJSON(t, server, "/sleep-sessions/active", map[string]any{
+	server := newStopSleepTestServer(checker, sessRepo, profRepo)
+	rec := deleteJSON(t, server, "/babies/baby-1/sleep-sessions/active", map[string]any{
 		"stopped_at": stoppedAt,
 	})
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestStopSleepReturns403WhenNotFamilyMember(t *testing.T) {
+	t.Parallel()
+
+	startedAt := time.Date(2026, time.April, 14, 10, 0, 0, 0, time.UTC)
+	checker := &stubBabyAccessChecker{err: apperror.New(apperror.CodeForbidden, "access to this baby is not allowed")}
+	sessRepo := &stubStopSleepSessionRepo{active: mustActiveSleepSession(t, startedAt)}
+	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
+
+	server := newStopSleepTestServer(checker, sessRepo, profRepo)
+	rec := deleteJSON(t, server, "/babies/baby-1/sleep-sessions/active", map[string]any{})
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestStopSleepReturns404WhenBabyNotFound(t *testing.T) {
+	t.Parallel()
+
+	startedAt := time.Date(2026, time.April, 14, 10, 0, 0, 0, time.UTC)
+	checker := &stubBabyAccessChecker{err: apperror.New(apperror.CodeNotFound, "baby not found")}
+	sessRepo := &stubStopSleepSessionRepo{active: mustActiveSleepSession(t, startedAt)}
+	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
+
+	server := newStopSleepTestServer(checker, sessRepo, profRepo)
+	rec := deleteJSON(t, server, "/babies/unknown-baby/sleep-sessions/active", map[string]any{})
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
 	}
 }
 
@@ -408,12 +439,12 @@ func TestEditSleepSessionReturns200WithUpdatedSession(t *testing.T) {
 	startedAt := time.Date(2026, time.April, 14, 10, 0, 0, 0, time.UTC)
 	editedStart := startedAt.Add(-15 * time.Minute)
 
-	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	checker := &stubBabyAccessChecker{memberID: "member-1"}
 	sessRepo := &stubEditableHTTPSleepSessionRepo{session: mustActiveSleepSession(t, startedAt)}
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
-	server := newEditDeleteSleepTestServer(resolver, sessRepo, profRepo)
-	rec := patchJSON(t, server, "/sleep-sessions/session-1", map[string]any{
+	server := newEditDeleteSleepTestServer(checker, sessRepo, profRepo)
+	rec := patchJSON(t, server, "/babies/baby-1/sleep-sessions/session-1", map[string]any{
 		"started_at": editedStart,
 	})
 
@@ -440,12 +471,12 @@ func TestEditSleepSessionReturns400ForInvalidInterval(t *testing.T) {
 	startedAt := time.Date(2026, time.April, 14, 10, 0, 0, 0, time.UTC)
 	stoppedAt := startedAt.Add(-time.Minute)
 
-	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	checker := &stubBabyAccessChecker{memberID: "member-1"}
 	sessRepo := &stubEditableHTTPSleepSessionRepo{session: mustActiveSleepSession(t, startedAt)}
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
-	server := newEditDeleteSleepTestServer(resolver, sessRepo, profRepo)
-	rec := patchJSON(t, server, "/sleep-sessions/session-1", map[string]any{
+	server := newEditDeleteSleepTestServer(checker, sessRepo, profRepo)
+	rec := patchJSON(t, server, "/babies/baby-1/sleep-sessions/session-1", map[string]any{
 		"stopped_at": stoppedAt,
 	})
 
@@ -457,12 +488,12 @@ func TestEditSleepSessionReturns400ForInvalidInterval(t *testing.T) {
 func TestDeleteSleepSessionReturns204(t *testing.T) {
 	t.Parallel()
 
-	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	checker := &stubBabyAccessChecker{memberID: "member-1"}
 	sessRepo := &stubEditableHTTPSleepSessionRepo{}
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
-	server := newEditDeleteSleepTestServer(resolver, sessRepo, profRepo)
-	rec := deleteJSON(t, server, "/sleep-sessions/session-1", map[string]any{})
+	server := newEditDeleteSleepTestServer(checker, sessRepo, profRepo)
+	rec := deleteJSON(t, server, "/babies/baby-1/sleep-sessions/session-1", map[string]any{})
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("expected 204, got %d: %s", rec.Code, rec.Body.String())
@@ -472,14 +503,14 @@ func TestDeleteSleepSessionReturns204(t *testing.T) {
 func TestDeleteSleepSessionReturns404WhenMissing(t *testing.T) {
 	t.Parallel()
 
-	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	checker := &stubBabyAccessChecker{memberID: "member-1"}
 	sessRepo := &stubEditableHTTPSleepSessionRepo{
 		deleteErr: apperror.New(apperror.CodeNotFound, "sleep session not found"),
 	}
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
-	server := newEditDeleteSleepTestServer(resolver, sessRepo, profRepo)
-	rec := deleteJSON(t, server, "/sleep-sessions/missing", map[string]any{})
+	server := newEditDeleteSleepTestServer(checker, sessRepo, profRepo)
+	rec := deleteJSON(t, server, "/babies/baby-1/sleep-sessions/missing", map[string]any{})
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
@@ -492,11 +523,11 @@ func TestStartSleepReturns201WithResult(t *testing.T) {
 	t.Parallel()
 
 	startedAt := time.Date(2026, time.April, 16, 10, 0, 0, 0, time.UTC)
-	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	checker := &stubBabyAccessChecker{memberID: "member-1"}
 	sessRepo := &stubStartSleepSessionRepo{}
 
-	server := newStartSleepTestServer(resolver, sessRepo)
-	rec := postJSON(t, server, "/sleep-sessions/active", map[string]any{
+	server := newStartSleepTestServer(checker, sessRepo)
+	rec := postJSON(t, server, "/babies/baby-1/sleep-sessions/active", map[string]any{
 		"started_at": startedAt,
 	})
 
@@ -516,12 +547,12 @@ func TestStartSleepReturns201WithResult(t *testing.T) {
 func TestStartSleepReturns401WhenUnauthenticated(t *testing.T) {
 	t.Parallel()
 
-	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	checker := &stubBabyAccessChecker{memberID: "member-1"}
 	sessRepo := &stubStartSleepSessionRepo{}
 
-	server := newStartSleepTestServer(resolver, sessRepo)
+	server := newStartSleepTestServer(checker, sessRepo)
 
-	req := httptest.NewRequest(http.MethodPost, "/sleep-sessions/active", nil)
+	req := httptest.NewRequest(http.MethodPost, "/babies/baby-1/sleep-sessions/active", nil)
 	// No Authorization header.
 	rec := httptest.NewRecorder()
 	server.Handler.ServeHTTP(rec, req)
@@ -534,13 +565,13 @@ func TestStartSleepReturns401WhenUnauthenticated(t *testing.T) {
 func TestStartSleepReturns409WhenActiveSessionExists(t *testing.T) {
 	t.Parallel()
 
-	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	checker := &stubBabyAccessChecker{memberID: "member-1"}
 	sessRepo := &stubStartSleepSessionRepo{
 		saveErr: apperror.New(apperror.CodeActiveSleepExists, "active session exists"),
 	}
 
-	server := newStartSleepTestServer(resolver, sessRepo)
-	rec := postJSON(t, server, "/sleep-sessions/active", map[string]any{})
+	server := newStartSleepTestServer(checker, sessRepo)
+	rec := postJSON(t, server, "/babies/baby-1/sleep-sessions/active", map[string]any{})
 
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("expected 409, got %d: %s", rec.Code, rec.Body.String())
@@ -552,12 +583,12 @@ func TestStartSleepReturns409WhenActiveSessionExists(t *testing.T) {
 func TestGetSleepHistoryReturns200WithDefaultPeriod(t *testing.T) {
 	t.Parallel()
 
-	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	checker := &stubBabyAccessChecker{memberID: "member-1"}
 	histRepo := &stubSleepHistoryRepo{sessions: []sleep.SleepSession{}}
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
-	server := newGetSleepHistoryTestServer(resolver, histRepo, profRepo)
-	rec := getJSON(t, server, "/sleep-sessions")
+	server := newGetSleepHistoryTestServer(checker, histRepo, profRepo)
+	rec := getJSON(t, server, "/babies/baby-1/sleep-sessions")
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -575,12 +606,12 @@ func TestGetSleepHistoryReturns200WithDefaultPeriod(t *testing.T) {
 func TestGetSleepHistoryReturns400ForInvalidPeriod(t *testing.T) {
 	t.Parallel()
 
-	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	checker := &stubBabyAccessChecker{memberID: "member-1"}
 	histRepo := &stubSleepHistoryRepo{}
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
-	server := newGetSleepHistoryTestServer(resolver, histRepo, profRepo)
-	rec := getJSON(t, server, "/sleep-sessions?period=30d")
+	server := newGetSleepHistoryTestServer(checker, histRepo, profRepo)
+	rec := getJSON(t, server, "/babies/baby-1/sleep-sessions?period=30d")
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
@@ -590,13 +621,13 @@ func TestGetSleepHistoryReturns400ForInvalidPeriod(t *testing.T) {
 func TestGetSleepHistoryReturns401WhenUnauthenticated(t *testing.T) {
 	t.Parallel()
 
-	resolver := &stubSleepContextResolver{babyID: "baby-1", memberID: "member-1"}
+	checker := &stubBabyAccessChecker{memberID: "member-1"}
 	histRepo := &stubSleepHistoryRepo{}
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
-	server := newGetSleepHistoryTestServer(resolver, histRepo, profRepo)
+	server := newGetSleepHistoryTestServer(checker, histRepo, profRepo)
 
-	req := httptest.NewRequest(http.MethodGet, "/sleep-sessions", nil)
+	req := httptest.NewRequest(http.MethodGet, "/babies/baby-1/sleep-sessions", nil)
 	// No Authorization header.
 	rec := httptest.NewRecorder()
 	server.Handler.ServeHTTP(rec, req)
