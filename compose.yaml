@@ -13,6 +13,10 @@ services:
       GOOGLE_OAUTH_CLIENT_SECRET: local-dev-client-secret
       GOOGLE_OAUTH_REDIRECT_URL: http://localhost:8080/auth/google/callback
       APP_BASE_URL: http://localhost:8080
+      ENABLE_TEST_AUTH: true
+      ENABLE_SWAGGER_UI: true
+    volumes:
+      - ./docs/swagger.yaml:/docs/swagger.yaml:ro
     ports:
       - "8080:8080"
 
