@@ -91,14 +91,13 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	protected.HandleFunc("POST /families/join-by-invite-link", func(w http.ResponseWriter, r *http.Request) {
 		joinFamilyByInviteLinkHandler(w, r, joinFamilyByInvite)
 	})
-	protected.HandleFunc("POST /sleep-profiles", func(w http.ResponseWriter, r *http.Request) {
-		createSleepProfileHandler(w, r, createSleepProfile)
-	})
-
-	// Sleep-session endpoints — additionally wrapped with requireBabyAccess middleware.
+	// Sleep endpoints — additionally wrapped with requireBabyAccess middleware.
 	withBaby := func(h http.HandlerFunc) http.Handler {
 		return requireBabyAccess(babyAccess, h)
 	}
+	protected.Handle("POST /babies/{baby_id}/sleep-profiles", withBaby(func(w http.ResponseWriter, r *http.Request) {
+		createSleepProfileHandler(w, r, createSleepProfile)
+	}))
 	protected.Handle("POST /babies/{baby_id}/sleep-sessions/active", withBaby(func(w http.ResponseWriter, r *http.Request) {
 		startSleepHandler(w, r, startSleep)
 	}))

@@ -16,6 +16,7 @@ import (
 
 	"golang.org/x/oauth2"
 
+	"github.com/google/uuid"
 	"github.com/hjoeftung/keklik/internal/apperror"
 	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/sleep"
@@ -194,7 +195,12 @@ func requireBabyAccess(checker babyAccessChecker, next http.Handler) http.Handle
 			return
 		}
 
-		babyID := sleep.BabyID(r.PathValue("baby_id"))
+		rawBabyID := r.PathValue("baby_id")
+		if _, err := uuid.Parse(rawBabyID); err != nil {
+			writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid baby_id"))
+			return
+		}
+		babyID := sleep.BabyID(rawBabyID)
 
 		memberID, err := checker.CheckBabyAccess(r.Context(), account.GoogleSubjectID, babyID)
 		if err != nil {

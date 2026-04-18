@@ -130,7 +130,6 @@ type nightWindowRequest struct {
 }
 
 type createSleepProfileRequest struct {
-	BabyID        string             `json:"baby_id"`
 	Timezone      string             `json:"timezone"`
 	NightWindow   nightWindowRequest `json:"night_window"`
 	EffectiveFrom *time.Time         `json:"effective_from,omitempty"`
@@ -142,12 +141,21 @@ type createSleepProfileRequest struct {
 // @Tags      sleep
 // @Accept    json
 // @Security  BearerAuth
-// @Param     body  body  createSleepProfileRequest  true  "Sleep profile configuration. Set effective_from to retroactively reclassify completed sessions whose started_at >= effective_from (max 30 days back)."
+// @Param     baby_id  path  string                     true  "Baby ID"
+// @Param     body     body  createSleepProfileRequest  true  "Sleep profile configuration. Set effective_from to retroactively reclassify completed sessions whose started_at >= effective_from (max 30 days back)."
 // @Success   204
 // @Failure   400  {object}  errorResponse  "Invalid input or effective_from earlier than 30 days ago"
 // @Failure   401  {object}  errorResponse
-// @Router    /sleep-profiles [post]
+// @Failure   403  {object}  errorResponse
+// @Failure   404  {object}  errorResponse
+// @Router    /babies/{baby_id}/sleep-profiles [post]
 func createSleepProfileHandler(w http.ResponseWriter, r *http.Request, h *sleep.CreateSleepProfileHandler) {
+	bc, ok := babyContextFromContext(r.Context())
+	if !ok {
+		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
+		return
+	}
+
 	var req createSleepProfileRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
@@ -155,7 +163,7 @@ func createSleepProfileHandler(w http.ResponseWriter, r *http.Request, h *sleep.
 	}
 
 	err := h.Handle(r.Context(), sleep.CreateSleepProfileCommand{
-		BabyID:                 sleep.BabyID(req.BabyID),
+		BabyID:                 bc.BabyID,
 		Timezone:               req.Timezone,
 		NightWindowStartHour:   req.NightWindow.StartHour,
 		NightWindowStartMinute: req.NightWindow.StartMinute,
