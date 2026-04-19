@@ -43,43 +43,58 @@ func NewGetDailySummaryHandler(sessions SleepSessionHistoryRepository) *GetDaily
 // contains q.Date in q.Timezone.
 //
 // The method queries sessions whose started_at falls in [dayStart−24h, dayEnd)
-// so that naps beginning just before midnight are captured, then filters them
-// with includeInDay before computing totals.
+// so that naps beginning just before midnight are captured, then delegates to
+// ComputeDailySummary for the actual calculation.
 func (h *GetDailySummaryHandler) Handle(ctx context.Context, q GetDailySummaryQuery) (DailySummary, error) {
 	loc, err := time.LoadLocation(q.Timezone)
 	if err != nil {
 		return DailySummary{}, ErrInvalidTimezone
 	}
 
+	now := h.now().UTC()
 	localDate := q.Date.In(loc)
 	dayStart := time.Date(localDate.Year(), localDate.Month(), localDate.Day(), 0, 0, 0, 0, loc).UTC()
-	// AddDate(0,0,1) handles DST correctly: Go resolves the new wall-clock date
-	// in the given location, yielding a 23h or 25h window on transition days.
 	dayEnd := time.Date(localDate.Year(), localDate.Month(), localDate.Day()+1, 0, 0, 0, 0, loc).UTC()
 
-	now := h.now().UTC()
 	if !now.After(dayStart) {
 		return DailySummary{}, nil
+	}
+
+	// Look back 24 hours before dayStart to capture naps that started just before
+	// the day boundary and overlap it (e.g. a nap starting at 23:30 the prior day).
+	dr, err := NewDateRange(dayStart.Add(-24*time.Hour), dayEnd)
+	if err != nil {
+		return DailySummary{}, err
+	}
+	sessions, err := h.sessions.FindByBabyIDAndDateRange(ctx, q.BabyID, dr)
+	if err != nil {
+		return DailySummary{}, err
+	}
+
+	return ComputeDailySummary(sessions, dayStart, dayEnd, now), nil
+}
+
+// ComputeDailySummary calculates sleep and active totals for the calendar day
+// [dayStart, dayEnd) from an already-fetched slice of sessions.
+//
+// Callers that need summaries for multiple days (e.g. rolling averages) should
+// fetch all sessions for the full window once and call this function per day,
+// rather than issuing one database query per day.
+//
+// sessions must contain all sessions that could be relevant: at minimum those
+// whose started_at falls in [dayStart−24h, dayEnd). They need not be pre-sorted.
+// now is used to cap active-session durations and the active-time window.
+func ComputeDailySummary(sessions []SleepSession, dayStart, dayEnd, now time.Time) DailySummary {
+	if !now.After(dayStart) {
+		return DailySummary{}
 	}
 	effectiveEnd := dayEnd
 	if now.Before(dayEnd) {
 		effectiveEnd = now
 	}
 
-	// Look back 24 hours before dayStart to capture naps that started just before
-	// the day boundary and overlap it (e.g. a nap starting at 23:30 the prior day).
-	lookback := dayStart.Add(-24 * time.Hour)
-	dr, err := NewDateRange(lookback, dayEnd)
-	if err != nil {
-		return DailySummary{}, err
-	}
-	all, err := h.sessions.FindByBabyIDAndDateRange(ctx, q.BabyID, dr)
-	if err != nil {
-		return DailySummary{}, err
-	}
-
-	included := make([]SleepSession, 0, len(all))
-	for _, s := range all {
+	included := make([]SleepSession, 0, len(sessions))
+	for _, s := range sessions {
 		if includeInDay(s, dayStart, dayEnd) {
 			included = append(included, s)
 		}
@@ -93,12 +108,10 @@ func (h *GetDailySummaryHandler) Handle(ctx context.Context, q GetDailySummaryQu
 		totalSleep += attributedDuration(s, now)
 	}
 
-	totalActive := activeTimeInWindow(included, dayStart, effectiveEnd, now)
-
 	return DailySummary{
 		TotalSleep:  totalSleep,
-		TotalActive: totalActive,
-	}, nil
+		TotalActive: activeTimeInWindow(included, dayStart, effectiveEnd, now),
+	}
 }
 
 // includeInDay reports whether s contributes to the daily summary for [dayStart, dayEnd).
@@ -157,7 +170,6 @@ func activeTimeInWindow(sessions []SleepSession, windowStart, windowEnd, now tim
 		} else {
 			end = now
 		}
-		// Clip to window.
 		if start.Before(windowStart) {
 			start = windowStart
 		}
