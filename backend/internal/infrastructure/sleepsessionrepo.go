@@ -276,6 +276,42 @@ func (r *PostgresSleepSessionRepository) DeleteByIDForFamilyMember(ctx context.C
 	return nil
 }
 
+// FindMostRecentByBabyID returns the most recently started sleep session for a
+// baby, regardless of whether it is active or completed.
+// Returns apperror with CodeNotFound when no sessions exist.
+func (r *PostgresSleepSessionRepository) FindMostRecentByBabyID(ctx context.Context, babyID sleep.BabyID) (sleep.SleepSession, error) {
+	row := querierFromContext(ctx, r.db).QueryRowContext(ctx, `
+		SELECT id, baby_id, created_by_member_id,
+		       started_at, stopped_at,
+		       classification,
+		       classified_with_nw_start_hour, classified_with_nw_start_minute,
+		       classified_with_nw_end_hour,   classified_with_nw_end_minute
+		FROM sleep_sessions
+		WHERE baby_id = $1
+		ORDER BY started_at DESC
+		LIMIT 1`, string(babyID))
+
+	return scanSleepSession(row)
+}
+
+// FindMostRecentCompletedByBabyID returns the most recently ended sleep session
+// for a baby (the one with the latest stopped_at).
+// Returns apperror with CodeNotFound when no completed sessions exist.
+func (r *PostgresSleepSessionRepository) FindMostRecentCompletedByBabyID(ctx context.Context, babyID sleep.BabyID) (sleep.SleepSession, error) {
+	row := querierFromContext(ctx, r.db).QueryRowContext(ctx, `
+		SELECT id, baby_id, created_by_member_id,
+		       started_at, stopped_at,
+		       classification,
+		       classified_with_nw_start_hour, classified_with_nw_start_minute,
+		       classified_with_nw_end_hour,   classified_with_nw_end_minute
+		FROM sleep_sessions
+		WHERE baby_id = $1 AND stopped_at IS NOT NULL
+		ORDER BY stopped_at DESC
+		LIMIT 1`, string(babyID))
+
+	return scanSleepSession(row)
+}
+
 // FindCompletedByBabyIDSince returns all completed (stopped_at IS NOT NULL) sessions
 // for a baby whose started_at is >= since, ordered by started_at ascending.
 func (r *PostgresSleepSessionRepository) FindCompletedByBabyIDSince(ctx context.Context, babyID sleep.BabyID, since time.Time) ([]sleep.SleepSession, error) {

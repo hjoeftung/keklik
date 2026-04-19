@@ -1,7 +1,7 @@
 services:
   api:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     depends_on:
       postgres:
@@ -16,7 +16,7 @@ services:
       ENABLE_TEST_AUTH: true
       ENABLE_SWAGGER_UI: true
     volumes:
-      - ./docs/swagger.yaml:/docs/swagger.yaml:ro
+      - ./backend/docs/swagger.yaml:/docs/swagger.yaml:ro
     ports:
       - "8080:8080"
 

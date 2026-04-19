@@ -107,6 +107,13 @@ type CompletedSleepSessionsSinceRepository interface {
 	FindCompletedByBabyIDSince(ctx context.Context, babyID BabyID, since time.Time) ([]SleepSession, error)
 }
 
+// SleepElapsedTimeRepository finds the most recent sessions for elapsed-time calculations.
+// Both methods return an AppError with CodeNotFound when no matching session exists.
+type SleepElapsedTimeRepository interface {
+	FindMostRecentByBabyID(ctx context.Context, babyID BabyID) (SleepSession, error)
+	FindMostRecentCompletedByBabyID(ctx context.Context, babyID BabyID) (SleepSession, error)
+}
+
 func NewSleepSession(id SleepSessionID, babyID BabyID, createdByMemberID FamilyMemberID, startedAt time.Time) (SleepSession, error) {
 	return newSleepSession(id, babyID, createdByMemberID, startedAt, nil, SleepClassificationUnknown, nil)
 }
