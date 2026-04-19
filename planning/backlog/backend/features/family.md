@@ -1,6 +1,5 @@
 ## Story 2: Family Onboarding
 
-
 ### TASK-008: Implement edit family use case and API
 - Size: `S`
 - Goal: Allow family settings updates after creation.

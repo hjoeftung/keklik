@@ -144,7 +144,7 @@ The sleep timeline is a visual chart showing sleep blocks across a horizontal 24
 2. The Start/Stop sleep button must be large enough to tap comfortably on a phone screen.
 3. The dashboard must display the most important information (current state, elapsed time, today's totals) without scrolling on a typical phone.
 4. Duration values must be formatted as hours and minutes (e.g. 2 h 15 min), never as raw seconds or ISO durations.
-5. Times must always be displayed in the family's configured timezone, not the browser's local time.
+5. Times must be displayed in the device's local timezone (detected via the browser). The family's configured timezone is used only for day-boundary calculations (today's totals) and night window classification.
 6. The application must give the user clear feedback for all async actions (loading state, success, and error).
 7. Error messages returned by the API must be surfaced to the user in plain language rather than raw codes.
 
@@ -233,10 +233,14 @@ Suggested top-level layout:
 
 ### 9.3 Time and timezone handling
 
-1. The frontend must not use the browser's local timezone for any displayed timestamps; use the family timezone returned by the API.
-2. Duration formatting must be client-side only (convert seconds to h/min display).
-3. The real-time elapsed timer on the dashboard must be driven by a `setInterval` using the session's start time from the API, not a server-pushed clock.
-4. Timezone-aware formatting should use the Intl API (`Intl.DateTimeFormat`) rather than a heavyweight date library.
+The application separates two timezone concerns:
+
+- **Display timezone** — the device's local timezone, detected via `Intl.DateTimeFormat().resolvedOptions().timeZone`. All clock times shown to the user (session start/end, elapsed timer) use this timezone. This means a traveling parent automatically sees times in the local timezone without any settings change.
+- **Calculation timezone** — the family's configured timezone, returned by the API. Used exclusively for day-boundary calculations (what counts as "today" for totals) and night window classification (nap vs night sleep). This keeps metrics consistent across all family members regardless of where they are.
+
+1. Duration formatting must be client-side only (convert seconds to h/min display).
+2. The real-time elapsed timer on the dashboard must be driven by a `setInterval` using the session's start time from the API, not a server-pushed clock.
+3. Timezone-aware formatting should use the Intl API (`Intl.DateTimeFormat`) rather than a heavyweight date library.
 
 ## 10. Non-Functional Requirements
 
@@ -272,7 +276,7 @@ The first frontend version is acceptable when:
 9. A family member can copy an invite link from the settings screen.
 6. A new user can follow an invite link, sign in with Google, and land on the dashboard as a member of that family.
 7. A family member can update the baby name, timezone, and night window from the settings screen.
-13. All times are displayed in the family's configured timezone.
+13. All clock times are displayed in the device's local timezone; today's totals and sleep classification reflect the family's configured timezone.
 14. Duration values are displayed in a human-readable h/min format.
 15. The application redirects unauthenticated users to the sign-in screen.
 16. API errors are surfaced to the user with a legible message.
