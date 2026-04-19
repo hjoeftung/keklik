@@ -1,25 +1,5 @@
 ## Story 4: Reporting and Summaries
 
-### TASK-019: Implement daily summary calculation service
-- Size: `S`
-- Goal: Produce correct daily totals for sleep and active time.
-- Scope:
-  - Implement local-day calculation in family timezone
-  - Include naps overlapping the day
-  - Include the night sleep that started on that day
-  - Calculate active time strictly as gaps between sleep sessions
-- Important edge cases:
-  - Daylight saving transition days
-  - Cross-midnight sleep sessions
-  - Active session overlapping current day
-- Dependencies:
-  - [TASK-012](#task-012-implement-timezone-aware-sleep-classification-service)
-  - [TASK-017](#task-017-implement-sleep-history-query-and-api)
-- Acceptance criteria:
-  - Daily sleep totals follow the nap and night-sleep rule from [requirements.md](requirements.md)
-  - Active time is derived strictly from gaps between sessions
-  - Tests cover DST forward and backward days
-
 ### TASK-020: Implement GetDashboardSummary query and API
 - Size: `M`
 - Goal: Expose a single dashboard endpoint returning all metrics needed for one screen load.

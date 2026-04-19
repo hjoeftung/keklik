@@ -1,32 +1,5 @@
 ## Story 1: Project Foundation
 
-### TASK-047: Initialize Vite + React + TypeScript project with folder structure and routing skeleton
-- Size: `S`
-- Goal: Establish a working project with the agreed folder structure, dev server, and empty route placeholders.
-- Scope:
-  - Scaffold with `npm create vite` using the `react-ts` template
-  - Install React Router and configure client-side routing with placeholder screens: `/`, `/onboarding`, `/invite/:token`, `/timeline`, `/settings`
-  - Create top-level directories: `src/api/`, `src/components/`, `src/screens/`, `src/hooks/`, `src/utils/`
-  - Configure path aliases if needed for clean imports
-  - Verify `npm run dev` starts without errors
-- Acceptance criteria:
-  - Dev server starts and navigating to each route renders a placeholder without crashing
-  - Folder structure matches the layout from requirements section 9.2
-
-### TASK-048: Implement API client with auth header, error normalization, and 401 redirect
-- Size: `S`
-- Goal: Provide a single thin `fetch` wrapper that all screens use to call the backend.
-- Scope:
-  - `src/api/client.ts` — wrapper around `fetch` that attaches the session credential (cookie or Authorization header per backend design)
-  - Normalize error responses: extract machine-readable code from 400/422 bodies, surface conflict message for 409
-  - On 401, clear session state and redirect to sign-in
-  - On network failure, throw a typed error that screens can catch and show a retry message
-  - Export typed request helpers for each endpoint listed in requirements section 8.2
-- Acceptance criteria:
-  - All API calls go through the single client
-  - A 401 response clears session and redirects to `/`
-  - Error objects carry a human-readable `message` field ready for display
-
 ### TASK-049: Implement duration and timezone formatting utilities
 - Size: `S`
 - Goal: Centralize all time and duration formatting so no screen does ad-hoc conversion.

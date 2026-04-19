@@ -5,9 +5,9 @@
 - Goal: Show the baby's current sleep state and let the user toggle it with a prominent button.
 - Scope:
   - `src/screens/Dashboard/SleepControl.tsx`
-  - Fetch dashboard summary from `GET /sleep-sessions/summary` on mount and after each toggle
-  - Awake state: show large "Start sleep" button → calls `POST /sleep-sessions`
-  - Sleeping state: show large "Stop sleep" button → calls `DELETE /sleep-sessions/active`
+  - Fetch dashboard summary from `GET /babies/{baby_id}/sleep-sessions/summary` on mount and after each toggle
+  - Awake state: show large "Start sleep" button → calls `POST /babies/{baby_id}/sleep-sessions`
+  - Sleeping state: show large "Stop sleep" button → calls `DELETE /babies/{baby_id}/sleep-sessions/active`
   - Show loading state during the API call; disable button to prevent double-submit
   - Surface API errors inline
 - Dependencies:
