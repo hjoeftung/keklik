@@ -21,3 +21,6 @@ vendor/
 
 # Worktrees
 .claude/Worktrees
+
+# Temporary dir
+backend/tmp
