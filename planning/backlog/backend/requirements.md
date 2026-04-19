@@ -245,11 +245,9 @@ The backend should expose application use cases aligned with the stories.
 
 ### Required queries
 - GetSleepSessionsByPeriod
-- GetTimeSinceLastSleepStart
-- GetTimeSinceLastAwakening
-- GetTodaySleepSummary
-- GetTodayActiveSummary
-- GetRollingAverageSummary
+- GetDashboardSummary
+
+`GetDashboardSummary` returns all metrics needed by the dashboard in a single call: the active session (if any), time since last sleep start and last awakening, today's sleep and active totals, and 7-day and 14-day rolling averages. This avoids multiple round-trips for a single screen load.
 
 CreateFamily must include:
 - Initial baby data
@@ -271,7 +269,7 @@ The first version should provide a simple client-agnostic API suitable for Teleg
 - Family editing for timezone, night-window, and baby details
 - Start, stop, and edit sleep sessions
 - Retrieve sleep sessions by date range
-- Retrieve summaries and elapsed time metrics
+- Retrieve a single dashboard summary response covering active session state, time-since-last metrics, today's totals, and rolling averages
 
 ### API behavior requirements
 - All timestamps must be stored in UTC.
