@@ -24,3 +24,7 @@ vendor/
 
 # Temporary dir
 backend/tmp
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
