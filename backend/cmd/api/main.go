@@ -72,6 +72,7 @@ func main() {
 	editSleepSession := sleep.NewEditSleepSessionHandler(sleepSessionRepo, sleepProfileRepo)
 	deleteSleepSession := sleep.NewDeleteSleepSessionHandler(sleepSessionRepo)
 	getSleepHistory := sleep.NewGetSleepHistoryHandler(sleepSessionRepo, sleepProfileRepo)
+	getDashboardSummary := sleep.NewGetDashboardSummaryHandler(sleepProfileRepo, sleepSessionRepo, sleepSessionRepo, sleepSessionRepo)
 	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, sessionRepo)
 	testLogin := auth.NewHandleTestLoginHandler(accountRepo, sessionRepo)
 
@@ -90,7 +91,8 @@ func main() {
 		StopSleep:          stopSleep,
 		EditSleepSession:   editSleepSession,
 		DeleteSleepSession: deleteSleepSession,
-		GetSleepHistory:    getSleepHistory,
+		GetSleepHistory:     getSleepHistory,
+		GetDashboardSummary: getDashboardSummary,
 	})
 
 	log.Printf("starting HTTP server on %s", config.Address())

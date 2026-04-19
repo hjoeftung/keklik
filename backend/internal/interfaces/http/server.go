@@ -33,7 +33,8 @@ type Dependencies struct {
 	StopSleep          *sleep.StopSleepHandler
 	EditSleepSession   *sleep.EditSleepSessionHandler
 	DeleteSleepSession *sleep.DeleteSleepSessionHandler
-	GetSleepHistory    *sleep.GetSleepHistoryHandler
+	GetSleepHistory      *sleep.GetSleepHistoryHandler
+	GetDashboardSummary  *sleep.GetDashboardSummaryHandler
 }
 
 // NewServer wires the HTTP transport and returns a ready-to-start server.
@@ -53,6 +54,7 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	editSleepSession := deps.EditSleepSession
 	deleteSleepSession := deps.DeleteSleepSession
 	getSleepHistory := deps.GetSleepHistory
+	getDashboardSummary := deps.GetDashboardSummary
 	oauthCfg := &oauth2.Config{
 		ClientID:     config.GoogleOAuth.ClientID,
 		ClientSecret: config.GoogleOAuth.ClientSecret,
@@ -117,6 +119,9 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	}))
 	protected.Handle("GET /babies/{baby_id}/sleep-sessions", withBaby(func(w http.ResponseWriter, r *http.Request) {
 		getSleepHistoryHandler(w, r, getSleepHistory)
+	}))
+	protected.Handle("GET /babies/{baby_id}/dashboard", withBaby(func(w http.ResponseWriter, r *http.Request) {
+		getDashboardSummaryHandler(w, r, getDashboardSummary)
 	}))
 	mux.Handle("/", requireAuth(accounts, sessions, protected))
 
