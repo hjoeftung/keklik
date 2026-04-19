@@ -1,6 +1,22 @@
-# Keklik Backend
+# Keklik
 
-Initial Go service skeleton for the Keklik backend, structured as a modular monolith with DDD-inspired package boundaries.
+Baby sleep tracker. Go backend + React/TypeScript frontend.
+
+## Run the frontend locally
+
+Requires Node 20+. If you use nvm: `nvm use 22`.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The dev server starts at `http://localhost:5173`.
+
+---
+
+## Backend
 
 ## CI and image publishing
 
