@@ -134,34 +134,9 @@ func (v *stubTokenValidator) Validate(_ context.Context, token string) (auth.Ide
 		return auth.Identity{}, v.err
 	}
 	if v.validToken != "" && token != v.validToken {
-		return auth.Identity{}, auth.ErrSessionNotFound
+		return auth.Identity{}, auth.ErrInvalidToken
 	}
 	return v.identity, nil
-}
-
-// stubSessionRepository is a minimal SessionRepository test double.
-type stubSessionRepository struct {
-	session auth.Session
-	saved   []auth.Session
-	err     error
-}
-
-func (r *stubSessionRepository) Save(_ context.Context, session auth.Session) error {
-	if r.err != nil {
-		return r.err
-	}
-	r.saved = append(r.saved, session)
-	r.session = session
-	return nil
-}
-func (r *stubSessionRepository) FindByToken(_ context.Context, token auth.SessionToken) (auth.Session, error) {
-	if r.err != nil {
-		return auth.Session{}, r.err
-	}
-	if r.session.Token != token {
-		return auth.Session{}, auth.ErrSessionNotFound
-	}
-	return r.session, nil
 }
 
 // stubSleepProfileRepository is a minimal SleepProfileRepository test double.
@@ -218,11 +193,6 @@ func newTestServer(familyRepo family.FamilyRepository, memberRepo family.FamilyM
 		GoogleSubjectID: "google-subject-123",
 		Email:           "alice@example.com",
 	}
-	session := auth.Session{
-		Token:     testSessionToken,
-		AccountID: "test-account-id",
-		ExpiresAt: time.Now().Add(time.Hour),
-	}
 	return NewServer(
 		infrastructure.Config{
 			HTTP: infrastructure.HTTPConfig{Port: 8080},
@@ -230,7 +200,7 @@ func newTestServer(familyRepo family.FamilyRepository, memberRepo family.FamilyM
 		},
 		Dependencies{
 			Accounts:           &stubAccountRepository{account: account},
-			Validator:          &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: session.AccountID}},
+			Validator:          &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: account.ID}},
 			CreateFamily:       createFamily,
 			CreateInviteLink:   createInviteLink,
 			JoinFamilyByInvite: joinByInvite,

@@ -41,7 +41,7 @@ func NewJWTValidator(signingKey string) *JWTValidator {
 }
 
 // Validate parses and verifies the token, returning the embedded Identity.
-// Returns ErrSessionNotFound for malformed, expired, or incorrectly signed tokens.
+// Returns ErrInvalidToken for malformed, expired, or incorrectly signed tokens.
 func (v *JWTValidator) Validate(_ context.Context, raw string) (Identity, error) {
 	var claims jwtClaims
 	_, err := jwt.ParseWithClaims(raw, &claims, func(t *jwt.Token) (any, error) {
@@ -51,11 +51,11 @@ func (v *JWTValidator) Validate(_ context.Context, raw string) (Identity, error)
 		return []byte(v.signingKey), nil
 	}, jwt.WithExpirationRequired())
 	if err != nil {
-		return Identity{}, ErrSessionNotFound
+		return Identity{}, ErrInvalidToken
 	}
 
 	if claims.AccountID == "" {
-		return Identity{}, ErrSessionNotFound
+		return Identity{}, ErrInvalidToken
 	}
 
 	return Identity{

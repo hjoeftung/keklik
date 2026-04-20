@@ -140,19 +140,13 @@ func newStopSleepTestServer(
 	profRepo *stubStopSleepProfileRepo,
 ) *http.Server {
 	account := auth.Account{ID: "test-account-id", GoogleSubjectID: "google-subject-123"}
-	session := auth.Session{
-		Token:     testSessionToken,
-		AccountID: "test-account-id",
-		ExpiresAt: time.Now().Add(time.Hour),
-	}
-
 	stopSleep := sleep.NewStopSleepHandler(sessRepo, profRepo)
 
 	return NewServer(
 		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
 		Dependencies{
 			Accounts:   &stubAccountRepository{account: account},
-			Validator: &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: session.AccountID}},
+			Validator:  &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: account.ID}},
 			BabyAccess: checker,
 			StopSleep:  stopSleep,
 		},
@@ -165,12 +159,6 @@ func newEditDeleteSleepTestServer(
 	profRepo *stubStopSleepProfileRepo,
 ) *http.Server {
 	account := auth.Account{ID: "test-account-id", GoogleSubjectID: "google-subject-123"}
-	session := auth.Session{
-		Token:     testSessionToken,
-		AccountID: "test-account-id",
-		ExpiresAt: time.Now().Add(time.Hour),
-	}
-
 	editSleep := sleep.NewEditSleepSessionHandler(sessRepo, profRepo)
 	deleteSleep := sleep.NewDeleteSleepSessionHandler(sessRepo)
 
@@ -178,7 +166,7 @@ func newEditDeleteSleepTestServer(
 		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
 		Dependencies{
 			Accounts:           &stubAccountRepository{account: account},
-			Validator: &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: session.AccountID}},
+			Validator:          &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: account.ID}},
 			BabyAccess:         checker,
 			EditSleepSession:   editSleep,
 			DeleteSleepSession: deleteSleep,
@@ -223,19 +211,13 @@ func newStartSleepTestServer(
 	sessRepo *stubStartSleepSessionRepo,
 ) *http.Server {
 	account := auth.Account{ID: "test-account-id", GoogleSubjectID: "google-subject-123"}
-	session := auth.Session{
-		Token:     testSessionToken,
-		AccountID: "test-account-id",
-		ExpiresAt: time.Now().Add(time.Hour),
-	}
-
 	startSleep := sleep.NewStartSleepHandler(sessRepo)
 
 	return NewServer(
 		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
 		Dependencies{
 			Accounts:   &stubAccountRepository{account: account},
-			Validator: &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: session.AccountID}},
+			Validator:  &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: account.ID}},
 			BabyAccess: checker,
 			StartSleep: startSleep,
 		},
@@ -248,19 +230,13 @@ func newGetSleepHistoryTestServer(
 	profRepo *stubStopSleepProfileRepo,
 ) *http.Server {
 	account := auth.Account{ID: "test-account-id", GoogleSubjectID: "google-subject-123"}
-	session := auth.Session{
-		Token:     testSessionToken,
-		AccountID: "test-account-id",
-		ExpiresAt: time.Now().Add(time.Hour),
-	}
-
 	getSleepHistory := sleep.NewGetSleepHistoryHandler(histRepo, profRepo)
 
 	return NewServer(
 		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
 		Dependencies{
 			Accounts:        &stubAccountRepository{account: account},
-			Validator: &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: session.AccountID}},
+			Validator:       &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: account.ID}},
 			BabyAccess:      checker,
 			GetSleepHistory: getSleepHistory,
 		},

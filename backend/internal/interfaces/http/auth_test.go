@@ -49,7 +49,7 @@ func TestRequireAuth_WrongScheme(t *testing.T) {
 func TestRequireAuth_InvalidToken(t *testing.T) {
 	t.Parallel()
 
-	validator := &stubTokenValidator{err: auth.ErrSessionNotFound}
+	validator := &stubTokenValidator{err: auth.ErrInvalidToken}
 	handler := requireAuth(&stubAccountRepository{}, validator, okHandler())
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Authorization", "Bearer unknown-token")
@@ -64,7 +64,7 @@ func TestRequireAuth_InvalidToken(t *testing.T) {
 func TestRequireAuth_ExpiredSession(t *testing.T) {
 	t.Parallel()
 
-	validator := &stubTokenValidator{err: auth.ErrSessionNotFound}
+	validator := &stubTokenValidator{err: auth.ErrInvalidToken}
 	handler := requireAuth(&stubAccountRepository{}, validator, okHandler())
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Authorization", "Bearer tok")
