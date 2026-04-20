@@ -239,6 +239,9 @@ func TestJoinFamilyByInviteLinkRejectsDuplicateMembership(t *testing.T) {
 	families := newInviteFamilyRepository(f)
 	members := &inviteMemberRepository{families: families}
 	handler := NewJoinFamilyByInviteLinkHandler(families, members)
+	handler.now = func() time.Time {
+		return time.Date(2026, time.April, 20, 7, 0, 0, 0, time.UTC)
+	}
 
 	_, err := handler.Handle(context.Background(), JoinFamilyByInviteLinkCommand{
 		InviteToken:     InviteToken("invite-1"),

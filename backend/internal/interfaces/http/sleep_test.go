@@ -15,6 +15,8 @@ import (
 	"github.com/hjoeftung/keklik/internal/sleep"
 )
 
+const testBabyID = "00000000-0000-0000-0000-000000000001"
+
 // stubBabyAccessChecker is a babyAccessChecker test double.
 type stubBabyAccessChecker struct {
 	memberID sleep.FamilyMemberID
@@ -318,7 +320,7 @@ func TestStopSleepReturns200WithResult(t *testing.T) {
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
 	server := newStopSleepTestServer(checker, sessRepo, profRepo)
-	rec := deleteJSON(t, server, "/babies/baby-1/sleep-sessions/active", map[string]any{
+	rec := deleteJSON(t, server, "/babies/"+testBabyID+"/sleep-sessions/active", map[string]any{
 		"stopped_at": stoppedAt,
 	})
 
@@ -350,7 +352,7 @@ func TestStopSleepReturns401WhenUnauthenticated(t *testing.T) {
 
 	server := newStopSleepTestServer(checker, sessRepo, profRepo)
 
-	req := httptest.NewRequest(http.MethodDelete, "/babies/baby-1/sleep-sessions/active", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/babies/"+testBabyID+"/sleep-sessions/active", nil)
 	// No Authorization header.
 	rec := httptest.NewRecorder()
 	server.Handler.ServeHTTP(rec, req)
@@ -370,7 +372,7 @@ func TestStopSleepReturns404WhenNoActiveSession(t *testing.T) {
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
 	server := newStopSleepTestServer(checker, sessRepo, profRepo)
-	rec := deleteJSON(t, server, "/babies/baby-1/sleep-sessions/active", map[string]any{})
+	rec := deleteJSON(t, server, "/babies/"+testBabyID+"/sleep-sessions/active", map[string]any{})
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
@@ -388,7 +390,7 @@ func TestStopSleepReturns400WhenStopBeforeStart(t *testing.T) {
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
 	server := newStopSleepTestServer(checker, sessRepo, profRepo)
-	rec := deleteJSON(t, server, "/babies/baby-1/sleep-sessions/active", map[string]any{
+	rec := deleteJSON(t, server, "/babies/"+testBabyID+"/sleep-sessions/active", map[string]any{
 		"stopped_at": stoppedAt,
 	})
 
@@ -406,7 +408,7 @@ func TestStopSleepReturns403WhenNotFamilyMember(t *testing.T) {
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
 	server := newStopSleepTestServer(checker, sessRepo, profRepo)
-	rec := deleteJSON(t, server, "/babies/baby-1/sleep-sessions/active", map[string]any{})
+	rec := deleteJSON(t, server, "/babies/"+testBabyID+"/sleep-sessions/active", map[string]any{})
 
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d: %s", rec.Code, rec.Body.String())
@@ -422,7 +424,7 @@ func TestStopSleepReturns404WhenBabyNotFound(t *testing.T) {
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
 	server := newStopSleepTestServer(checker, sessRepo, profRepo)
-	rec := deleteJSON(t, server, "/babies/unknown-baby/sleep-sessions/active", map[string]any{})
+	rec := deleteJSON(t, server, "/babies/"+testBabyID+"/sleep-sessions/active", map[string]any{})
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
@@ -440,7 +442,7 @@ func TestEditSleepSessionReturns200WithUpdatedSession(t *testing.T) {
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
 	server := newEditDeleteSleepTestServer(checker, sessRepo, profRepo)
-	rec := patchJSON(t, server, "/babies/baby-1/sleep-sessions/session-1", map[string]any{
+	rec := patchJSON(t, server, "/babies/"+testBabyID+"/sleep-sessions/session-1", map[string]any{
 		"started_at": editedStart,
 	})
 
@@ -472,7 +474,7 @@ func TestEditSleepSessionReturns400ForInvalidInterval(t *testing.T) {
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
 	server := newEditDeleteSleepTestServer(checker, sessRepo, profRepo)
-	rec := patchJSON(t, server, "/babies/baby-1/sleep-sessions/session-1", map[string]any{
+	rec := patchJSON(t, server, "/babies/"+testBabyID+"/sleep-sessions/session-1", map[string]any{
 		"stopped_at": stoppedAt,
 	})
 
@@ -489,7 +491,7 @@ func TestDeleteSleepSessionReturns204(t *testing.T) {
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
 	server := newEditDeleteSleepTestServer(checker, sessRepo, profRepo)
-	rec := deleteJSON(t, server, "/babies/baby-1/sleep-sessions/session-1", map[string]any{})
+	rec := deleteJSON(t, server, "/babies/"+testBabyID+"/sleep-sessions/session-1", map[string]any{})
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("expected 204, got %d: %s", rec.Code, rec.Body.String())
@@ -506,7 +508,7 @@ func TestDeleteSleepSessionReturns404WhenMissing(t *testing.T) {
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
 	server := newEditDeleteSleepTestServer(checker, sessRepo, profRepo)
-	rec := deleteJSON(t, server, "/babies/baby-1/sleep-sessions/missing", map[string]any{})
+	rec := deleteJSON(t, server, "/babies/"+testBabyID+"/sleep-sessions/missing", map[string]any{})
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
@@ -523,7 +525,7 @@ func TestStartSleepReturns201WithResult(t *testing.T) {
 	sessRepo := &stubStartSleepSessionRepo{}
 
 	server := newStartSleepTestServer(checker, sessRepo)
-	rec := postJSON(t, server, "/babies/baby-1/sleep-sessions/active", map[string]any{
+	rec := postJSON(t, server, "/babies/"+testBabyID+"/sleep-sessions/active", map[string]any{
 		"started_at": startedAt,
 	})
 
@@ -548,7 +550,7 @@ func TestStartSleepReturns401WhenUnauthenticated(t *testing.T) {
 
 	server := newStartSleepTestServer(checker, sessRepo)
 
-	req := httptest.NewRequest(http.MethodPost, "/babies/baby-1/sleep-sessions/active", nil)
+	req := httptest.NewRequest(http.MethodPost, "/babies/"+testBabyID+"/sleep-sessions/active", nil)
 	// No Authorization header.
 	rec := httptest.NewRecorder()
 	server.Handler.ServeHTTP(rec, req)
@@ -567,7 +569,7 @@ func TestStartSleepReturns409WhenActiveSessionExists(t *testing.T) {
 	}
 
 	server := newStartSleepTestServer(checker, sessRepo)
-	rec := postJSON(t, server, "/babies/baby-1/sleep-sessions/active", map[string]any{})
+	rec := postJSON(t, server, "/babies/"+testBabyID+"/sleep-sessions/active", map[string]any{})
 
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("expected 409, got %d: %s", rec.Code, rec.Body.String())
@@ -584,7 +586,7 @@ func TestGetSleepHistoryReturns200WithDefaultPeriod(t *testing.T) {
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
 	server := newGetSleepHistoryTestServer(checker, histRepo, profRepo)
-	rec := getJSON(t, server, "/babies/baby-1/sleep-sessions")
+	rec := getJSON(t, server, "/babies/"+testBabyID+"/sleep-sessions")
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -607,7 +609,7 @@ func TestGetSleepHistoryReturns400ForInvalidPeriod(t *testing.T) {
 	profRepo := &stubStopSleepProfileRepo{profile: mustSleepProfile(t)}
 
 	server := newGetSleepHistoryTestServer(checker, histRepo, profRepo)
-	rec := getJSON(t, server, "/babies/baby-1/sleep-sessions?period=30d")
+	rec := getJSON(t, server, "/babies/"+testBabyID+"/sleep-sessions?period=30d")
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
@@ -623,7 +625,7 @@ func TestGetSleepHistoryReturns401WhenUnauthenticated(t *testing.T) {
 
 	server := newGetSleepHistoryTestServer(checker, histRepo, profRepo)
 
-	req := httptest.NewRequest(http.MethodGet, "/babies/baby-1/sleep-sessions", nil)
+	req := httptest.NewRequest(http.MethodGet, "/babies/"+testBabyID+"/sleep-sessions", nil)
 	// No Authorization header.
 	rec := httptest.NewRecorder()
 	server.Handler.ServeHTTP(rec, req)
