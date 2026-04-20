@@ -23,7 +23,7 @@ import (
 
 // babyAccessChecker verifies the caller is a family member of a given baby.
 type babyAccessChecker interface {
-	CheckBabyAccess(ctx context.Context, googleSubjectID string, babyID sleep.BabyID) (sleep.FamilyMemberID, error)
+	CheckBabyAccess(ctx context.Context, accountID auth.AccountID, babyID sleep.BabyID) (sleep.FamilyMemberID, error)
 }
 
 const oauthStateCookieName = "oauth_state"
@@ -201,7 +201,7 @@ func requireBabyAccess(checker babyAccessChecker, next http.Handler) http.Handle
 		}
 		babyID := sleep.BabyID(rawBabyID)
 
-		memberID, err := checker.CheckBabyAccess(r.Context(), account.GoogleSubjectID, babyID)
+		memberID, err := checker.CheckBabyAccess(r.Context(), account.ID, babyID)
 		if err != nil {
 			var appErr apperror.AppError
 			if asErr, ok2 := err.(apperror.AppError); ok2 {

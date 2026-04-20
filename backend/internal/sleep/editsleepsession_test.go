@@ -73,9 +73,9 @@ func TestEditSleepSessionUpdatesActiveSessionStart(t *testing.T) {
 
 	h := NewEditSleepSessionHandler(repo, profiles)
 	updated, err := h.Handle(context.Background(), EditSleepSessionCommand{
-		SessionID:      SleepSessionID("session-1"),
+		SessionID: SleepSessionID("session-1"),
 
-		StartedAt:      &editedStart,
+		StartedAt: &editedStart,
 	})
 	if err != nil {
 		t.Fatalf("Handle returned error: %v", err)
@@ -103,9 +103,9 @@ func TestEditSleepSessionReclassifiesCompletedSession(t *testing.T) {
 
 	h := NewEditSleepSessionHandler(repo, profiles)
 	updated, err := h.Handle(context.Background(), EditSleepSessionCommand{
-		SessionID:      SleepSessionID("session-1"),
+		SessionID: SleepSessionID("session-1"),
 
-		StoppedAt:      &stoppedAt,
+		StoppedAt: &stoppedAt,
 	})
 	if err != nil {
 		t.Fatalf("Handle returned error: %v", err)
@@ -127,8 +127,7 @@ func TestEditSleepSessionRejectsMissingChanges(t *testing.T) {
 
 	h := NewEditSleepSessionHandler(repo, profiles)
 	_, err := h.Handle(context.Background(), EditSleepSessionCommand{
-		SessionID:      SleepSessionID("session-1"),
-
+		SessionID: SleepSessionID("session-1"),
 	})
 
 	if !errors.Is(err, ErrMissingSleepSessionEdit) {
@@ -147,9 +146,9 @@ func TestEditSleepSessionRejectsInvalidInterval(t *testing.T) {
 
 	h := NewEditSleepSessionHandler(repo, profiles)
 	_, err := h.Handle(context.Background(), EditSleepSessionCommand{
-		SessionID:      SleepSessionID("session-1"),
+		SessionID: SleepSessionID("session-1"),
 
-		StoppedAt:      &stoppedAt,
+		StoppedAt: &stoppedAt,
 	})
 
 	if !errors.Is(err, ErrInvalidSleepSessionStop) {

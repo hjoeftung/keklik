@@ -34,9 +34,9 @@ func (r *inMemoryFamilyRepository) FindByInviteToken(_ context.Context, _ Invite
 
 func validCreateFamilyCommand() CreateFamilyCommand {
 	return CreateFamilyCommand{
-		BabyName:               "Emma",
-		CreatorName:            "Alice",
-		CreatorGoogleSubjectID: "google-subject-123",
+		BabyName:         "Emma",
+		CreatorName:      "Alice",
+		CreatorAccountID: "google-subject-123",
 	}
 }
 

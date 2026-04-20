@@ -1,7 +1,5 @@
 // Package main is the entry point for the Keklik HTTP API server.
 //
-//go:generate go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g cmd/api/main.go --dir ../.. --output ../../docs --outputTypes yaml
-//
 // @title       Keklik API
 // @version     1.0
 // @description Baby sleep tracking API for families.
@@ -13,6 +11,8 @@
 // @in                          header
 // @name                        Authorization
 // @description                 Session token obtained from the auth endpoints.
+//
+//go:generate go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g cmd/api/main.go --dir ../.. --output ../../docs --outputTypes yaml
 package main
 
 import (
@@ -79,20 +79,20 @@ func main() {
 	testLogin := auth.NewHandleTestLoginHandler(accountRepo, config.Auth.JWTSigningKey, tokenDuration)
 
 	server := httpapi.NewServer(config, httpapi.Dependencies{
-		Accounts:           accountRepo,
-		Validator:          jwtValidator,
-		OAuthCallback:      oauthCallback,
-		TestLogin:          testLogin,
-		CreateFamily:       createFamily,
-		GetFamily:          getFamily,
-		CreateInviteLink:   createInviteLink,
-		JoinFamilyByInvite: joinFamilyByInvite,
-		BabyAccess:         babyAccessChecker,
-		CreateSleepProfile: createSleepProfile,
-		StartSleep:         startSleep,
-		StopSleep:          stopSleep,
-		EditSleepSession:   editSleepSession,
-		DeleteSleepSession: deleteSleepSession,
+		Accounts:            accountRepo,
+		Validator:           jwtValidator,
+		OAuthCallback:       oauthCallback,
+		TestLogin:           testLogin,
+		CreateFamily:        createFamily,
+		GetFamily:           getFamily,
+		CreateInviteLink:    createInviteLink,
+		JoinFamilyByInvite:  joinFamilyByInvite,
+		BabyAccess:          babyAccessChecker,
+		CreateSleepProfile:  createSleepProfile,
+		StartSleep:          startSleep,
+		StopSleep:           stopSleep,
+		EditSleepSession:    editSleepSession,
+		DeleteSleepSession:  deleteSleepSession,
 		GetSleepHistory:     getSleepHistory,
 		GetDashboardSummary: getDashboardSummary,
 	})

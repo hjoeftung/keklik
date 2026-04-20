@@ -5,12 +5,14 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"github.com/hjoeftung/keklik/internal/auth"
 )
 
 var (
 	ErrInvalidFamilyMemberName        = errors.New("family member name must not be empty")
 	ErrInvalidBabyName                = errors.New("baby name must not be empty")
-	ErrEmptyGoogleSubjectID           = errors.New("google subject id must not be empty")
+	ErrEmptyAccountID                 = errors.New("account id must not be empty")
 	ErrFamilyMustHaveAtLeastOneMember = errors.New("family must have at least one member")
 	ErrFamilyMustHaveExactlyOneBaby   = errors.New("family must have exactly one baby in the mvp")
 	ErrFamilyMemberFamilyMismatch     = errors.New("family member belongs to another family")
@@ -39,10 +41,10 @@ type Family struct {
 }
 
 type FamilyMember struct {
-	ID              FamilyMemberID
-	FamilyID        FamilyID
-	Name            string
-	GoogleSubjectID string
+	ID        FamilyMemberID
+	FamilyID  FamilyID
+	Name      string
+	AccountID auth.AccountID
 }
 
 type Baby struct {
@@ -68,7 +70,7 @@ type FamilyRepository interface {
 type FamilyMemberRepository interface {
 	Save(ctx context.Context, member FamilyMember) error
 	FindByID(ctx context.Context, id FamilyMemberID) (FamilyMember, error)
-	FindByGoogleSubjectID(ctx context.Context, googleSubjectID string) (FamilyMember, error)
+	FindByAccountID(ctx context.Context, accountID auth.AccountID) (FamilyMember, error)
 }
 
 func NewFamily(id FamilyID, members []FamilyMember, babies []Baby) (Family, error) {
@@ -82,8 +84,8 @@ func NewFamily(id FamilyID, members []FamilyMember, babies []Baby) (Family, erro
 		if strings.TrimSpace(member.Name) == "" {
 			return Family{}, ErrInvalidFamilyMemberName
 		}
-		if strings.TrimSpace(member.GoogleSubjectID) == "" {
-			return Family{}, ErrEmptyGoogleSubjectID
+		if strings.TrimSpace(string(member.AccountID)) == "" {
+			return Family{}, ErrEmptyAccountID
 		}
 		if member.FamilyID != id {
 			return Family{}, ErrFamilyMemberFamilyMismatch
@@ -150,8 +152,8 @@ func (f *Family) AddMember(member FamilyMember) error {
 	if strings.TrimSpace(member.Name) == "" {
 		return ErrInvalidFamilyMemberName
 	}
-	if strings.TrimSpace(member.GoogleSubjectID) == "" {
-		return ErrEmptyGoogleSubjectID
+	if strings.TrimSpace(string(member.AccountID)) == "" {
+		return ErrEmptyAccountID
 	}
 	if member.FamilyID != f.id {
 		return ErrFamilyMemberFamilyMismatch

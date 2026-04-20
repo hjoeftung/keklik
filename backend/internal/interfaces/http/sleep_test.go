@@ -23,7 +23,7 @@ type stubBabyAccessChecker struct {
 	err      error
 }
 
-func (c *stubBabyAccessChecker) CheckBabyAccess(_ context.Context, _ string, _ sleep.BabyID) (sleep.FamilyMemberID, error) {
+func (c *stubBabyAccessChecker) CheckBabyAccess(_ context.Context, _ auth.AccountID, _ sleep.BabyID) (sleep.FamilyMemberID, error) {
 	return c.memberID, c.err
 }
 

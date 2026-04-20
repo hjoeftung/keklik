@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/hjoeftung/keklik/internal/apperror"
+	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/sleep"
 )
 
@@ -20,10 +21,10 @@ func NewPostgresBabyAccessChecker(db *sql.DB) *PostgresBabyAccessChecker {
 	return &PostgresBabyAccessChecker{db: db}
 }
 
-// CheckBabyAccess verifies the caller (identified by googleSubjectID) belongs to the family
+// CheckBabyAccess verifies the caller (identified by accountID) belongs to the family
 // of babyID. Returns CodeNotFound if the baby does not exist, CodeForbidden if the caller
 // is not a member.
-func (c *PostgresBabyAccessChecker) CheckBabyAccess(ctx context.Context, googleSubjectID string, babyID sleep.BabyID) (sleep.FamilyMemberID, error) {
+func (c *PostgresBabyAccessChecker) CheckBabyAccess(ctx context.Context, accountID auth.AccountID, babyID sleep.BabyID) (sleep.FamilyMemberID, error) {
 	var babyRowID string
 	var memberID sql.NullString
 
@@ -32,7 +33,7 @@ func (c *PostgresBabyAccessChecker) CheckBabyAccess(ctx context.Context, googleS
 		FROM babies b
 		LEFT JOIN family_members fm ON fm.family_id = b.family_id AND fm.google_subject_id = $1
 		WHERE b.id = $2`,
-		googleSubjectID, string(babyID)).
+		string(accountID), string(babyID)).
 		Scan(&babyRowID, &memberID)
 	if err == sql.ErrNoRows {
 		return "", apperror.New(apperror.CodeNotFound, "baby not found")

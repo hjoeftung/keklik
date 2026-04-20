@@ -9,6 +9,7 @@ import (
 	"github.com/lib/pq"
 
 	"github.com/hjoeftung/keklik/internal/apperror"
+	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/family"
 )
 
@@ -44,16 +45,16 @@ func (r *PostgresFamilyRepository) Save(ctx context.Context, f family.Family) er
 
 	for _, m := range f.Members() {
 		_, err = tx.ExecContext(ctx, `
-			INSERT INTO family_members (id, family_id, name, google_subject_id)
+			INSERT INTO family_members (id, family_id, name, account_id)
 			VALUES ($1, $2, $3, $4)
 			ON CONFLICT (id) DO UPDATE SET
 				name             = EXCLUDED.name,
-				google_subject_id = EXCLUDED.google_subject_id,
+				account_id = EXCLUDED.account_id,
 				updated_at       = now()`,
-			string(m.ID), string(m.FamilyID), m.Name, m.GoogleSubjectID,
+			string(m.ID), string(m.FamilyID), m.Name, m.AccountID,
 		)
 		if err != nil {
-			if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" && pqErr.Constraint == "idx_family_members_google_subject_id" {
+			if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" && pqErr.Constraint == "idx_family_members_account_id" {
 				return family.ErrMemberAlreadyHasFamily
 			}
 			return fmt.Errorf("upsert family member %s: %w", m.ID, err)
@@ -183,7 +184,7 @@ func (r *PostgresFamilyRepository) reconstruct(
 
 func (r *PostgresFamilyRepository) queryMembers(ctx context.Context, familyID family.FamilyID) ([]family.FamilyMember, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, family_id, name, google_subject_id
+		SELECT id, family_id, name, account_id
 		FROM family_members WHERE family_id = $1`, string(familyID))
 	if err != nil {
 		return nil, fmt.Errorf("query family members: %w", err)
@@ -194,7 +195,7 @@ func (r *PostgresFamilyRepository) queryMembers(ctx context.Context, familyID fa
 	for rows.Next() {
 		var m family.FamilyMember
 		var id, fid string
-		if err := rows.Scan(&id, &fid, &m.Name, &m.GoogleSubjectID); err != nil {
+		if err := rows.Scan(&id, &fid, &m.Name, &m.AccountID); err != nil {
 			return nil, fmt.Errorf("scan family member: %w", err)
 		}
 		m.ID = family.FamilyMemberID(id)
@@ -242,13 +243,13 @@ func NewPostgresFamilyMemberRepository(db *sql.DB) *PostgresFamilyMemberReposito
 // Save persists a FamilyMember record.
 func (r *PostgresFamilyMemberRepository) Save(ctx context.Context, m family.FamilyMember) error {
 	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO family_members (id, family_id, name, google_subject_id)
+		INSERT INTO family_members (id, family_id, name, account_id)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (id) DO UPDATE SET
 			name              = EXCLUDED.name,
-			google_subject_id = EXCLUDED.google_subject_id,
+			account_id = EXCLUDED.account_id,
 			updated_at        = now()`,
-		string(m.ID), string(m.FamilyID), m.Name, m.GoogleSubjectID,
+		string(m.ID), string(m.FamilyID), m.Name, m.AccountID,
 	)
 	if err != nil {
 		return fmt.Errorf("upsert family member: %w", err)
@@ -262,9 +263,9 @@ func (r *PostgresFamilyMemberRepository) FindByID(ctx context.Context, id family
 	var rawID, rawFamilyID string
 
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id, family_id, name, google_subject_id
+		SELECT id, family_id, name, account_id
 		FROM family_members WHERE id = $1`, string(id)).
-		Scan(&rawID, &rawFamilyID, &m.Name, &m.GoogleSubjectID)
+		Scan(&rawID, &rawFamilyID, &m.Name, &m.AccountID)
 	if err == sql.ErrNoRows {
 		return family.FamilyMember{}, apperror.New(apperror.CodeNotFound, "family member not found")
 	}
@@ -277,16 +278,16 @@ func (r *PostgresFamilyMemberRepository) FindByID(ctx context.Context, id family
 	return m, nil
 }
 
-// FindByGoogleSubjectID loads the FamilyMember associated with the given Google subject ID.
+// FindByAccountID loads the FamilyMember associated with the given Google subject ID.
 // This is the explicit link between an auth.Account and a family-domain FamilyMember.
-func (r *PostgresFamilyMemberRepository) FindByGoogleSubjectID(ctx context.Context, googleSubjectID string) (family.FamilyMember, error) {
+func (r *PostgresFamilyMemberRepository) FindByAccountID(ctx context.Context, accountID auth.AccountID) (family.FamilyMember, error) {
 	var m family.FamilyMember
 	var rawID, rawFamilyID string
 
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id, family_id, name, google_subject_id
-		FROM family_members WHERE google_subject_id = $1`, googleSubjectID).
-		Scan(&rawID, &rawFamilyID, &m.Name, &m.GoogleSubjectID)
+		SELECT id, family_id, name, account_id
+		FROM family_members WHERE account_id = $1`, accountID).
+		Scan(&rawID, &rawFamilyID, &m.Name, &m.AccountID)
 	if err == sql.ErrNoRows {
 		return family.FamilyMember{}, apperror.New(apperror.CodeNotFound, "family member not found")
 	}

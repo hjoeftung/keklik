@@ -75,4 +75,3 @@ func (r *PostgresAccountRepository) FindByGoogleSubjectID(ctx context.Context, g
 	a.CreatedAt = createdAt
 	return a, nil
 }
-

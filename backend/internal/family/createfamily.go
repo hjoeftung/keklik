@@ -4,13 +4,15 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+
+	"github.com/hjoeftung/keklik/internal/auth"
 )
 
 // CreateFamilyCommand holds the inputs for creating a new family.
 type CreateFamilyCommand struct {
-	BabyName               string
-	CreatorName            string
-	CreatorGoogleSubjectID string
+	BabyName         string
+	CreatorName      string
+	CreatorAccountID auth.AccountID
 }
 
 // CreateFamilyResult holds the identifiers returned after successful family creation.
@@ -37,10 +39,10 @@ func (h *CreateFamilyHandler) Handle(ctx context.Context, cmd CreateFamilyComman
 	babyID := BabyID(uuid.New().String())
 
 	member := FamilyMember{
-		ID:              memberID,
-		FamilyID:        familyID,
-		Name:            cmd.CreatorName,
-		GoogleSubjectID: cmd.CreatorGoogleSubjectID,
+		ID:        memberID,
+		FamilyID:  familyID,
+		Name:      cmd.CreatorName,
+		AccountID: cmd.CreatorAccountID,
 	}
 
 	baby := Baby{

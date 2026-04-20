@@ -13,11 +13,12 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/hjoeftung/keklik/internal/apperror"
+	"github.com/hjoeftung/keklik/internal/auth"
 )
 
 // CreateFamilyInviteLinkCommand identifies the authenticated member creating the invite.
 type CreateFamilyInviteLinkCommand struct {
-	CreatorGoogleSubjectID string
+	CreatorAccountID auth.AccountID
 }
 
 // CreateFamilyInviteLinkResult returns the persisted invite and its shareable URL.
@@ -57,7 +58,7 @@ func (h *CreateFamilyInviteLinkHandler) Handle(
 	ctx context.Context,
 	cmd CreateFamilyInviteLinkCommand,
 ) (CreateFamilyInviteLinkResult, error) {
-	member, err := h.members.FindByGoogleSubjectID(ctx, cmd.CreatorGoogleSubjectID)
+	member, err := h.members.FindByAccountID(ctx, cmd.CreatorAccountID)
 	if err != nil {
 		if isFamilyMemberNotFound(err) {
 			return CreateFamilyInviteLinkResult{}, apperror.New(apperror.CodeForbidden, "account is not part of a family")
@@ -97,10 +98,10 @@ func (h *CreateFamilyInviteLinkHandler) Handle(
 
 // JoinFamilyByInviteLinkCommand contains the authenticated account and invite token.
 type JoinFamilyByInviteLinkCommand struct {
-	InviteToken     InviteToken
-	GoogleSubjectID string
-	Email           string
-	MemberName      string
+	InviteToken InviteToken
+	AccountID   auth.AccountID
+	Email       string
+	MemberName  string
 }
 
 // JoinFamilyByInviteLinkResult returns the linked membership identifiers.
@@ -143,7 +144,7 @@ func (h *JoinFamilyByInviteLinkHandler) Handle(
 		return JoinFamilyByInviteLinkResult{}, apperror.New(apperror.CodeInvalidInviteLink, "invite link is invalid or expired")
 	}
 
-	existingMember, err := h.members.FindByGoogleSubjectID(ctx, cmd.GoogleSubjectID)
+	existingMember, err := h.members.FindByAccountID(ctx, cmd.AccountID)
 	switch {
 	case err == nil:
 		if existingMember.FamilyID == f.ID() {
@@ -155,10 +156,10 @@ func (h *JoinFamilyByInviteLinkHandler) Handle(
 	}
 
 	member := FamilyMember{
-		ID:              FamilyMemberID(uuid.New().String()),
-		FamilyID:        f.ID(),
-		Name:            resolveMemberName(cmd.MemberName, cmd.Email),
-		GoogleSubjectID: cmd.GoogleSubjectID,
+		ID:        FamilyMemberID(uuid.New().String()),
+		FamilyID:  f.ID(),
+		Name:      resolveMemberName(cmd.MemberName, cmd.Email),
+		AccountID: cmd.AccountID,
 	}
 	if err := f.AddMember(member); err != nil {
 		return JoinFamilyByInviteLinkResult{}, err

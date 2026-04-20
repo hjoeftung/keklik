@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hjoeftung/keklik/internal/apperror"
+	"github.com/hjoeftung/keklik/internal/auth"
 )
 
 type inviteFamilyRepository struct {
@@ -75,10 +76,10 @@ func (r *inviteMemberRepository) FindByID(_ context.Context, id FamilyMemberID) 
 	return FamilyMember{}, apperror.New(apperror.CodeNotFound, "family member not found")
 }
 
-func (r *inviteMemberRepository) FindByGoogleSubjectID(_ context.Context, googleSubjectID string) (FamilyMember, error) {
+func (r *inviteMemberRepository) FindByAccountID(_ context.Context, accountID auth.AccountID) (FamilyMember, error) {
 	for _, f := range r.families.families {
 		for _, member := range f.Members() {
-			if member.GoogleSubjectID == googleSubjectID {
+			if member.AccountID == accountID {
 				return member, nil
 			}
 		}
@@ -98,7 +99,7 @@ func TestCreateFamilyInviteLinkPersistsInviteAndReturnsURL(t *testing.T) {
 	}
 
 	result, err := handler.Handle(context.Background(), CreateFamilyInviteLinkCommand{
-		CreatorGoogleSubjectID: "google-1",
+		CreatorAccountID: "google-1",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -134,7 +135,7 @@ func TestCreateFamilyInviteLinkRejectsAccountOutsideFamily(t *testing.T) {
 	handler := NewCreateFamilyInviteLinkHandler(families, members, "http://localhost:8080", 24*time.Hour)
 
 	_, err := handler.Handle(context.Background(), CreateFamilyInviteLinkCommand{
-		CreatorGoogleSubjectID: "google-missing",
+		CreatorAccountID: "google-missing",
 	})
 
 	var appErr apperror.AppError
@@ -164,9 +165,9 @@ func TestJoinFamilyByInviteLinkAddsMemberExactlyOnce(t *testing.T) {
 	}
 
 	result, err := handler.Handle(context.Background(), JoinFamilyByInviteLinkCommand{
-		InviteToken:     InviteToken("invite-1"),
-		GoogleSubjectID: "google-2",
-		Email:           "parent.two@example.com",
+		InviteToken: InviteToken("invite-1"),
+		AccountID:   "google-2",
+		Email:       "parent.two@example.com",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -212,9 +213,9 @@ func TestJoinFamilyByInviteLinkRejectsExpiredInvite(t *testing.T) {
 	}
 
 	_, err := handler.Handle(context.Background(), JoinFamilyByInviteLinkCommand{
-		InviteToken:     InviteToken("invite-expired"),
-		GoogleSubjectID: "google-2",
-		Email:           "parent.two@example.com",
+		InviteToken: InviteToken("invite-expired"),
+		AccountID:   "google-2",
+		Email:       "parent.two@example.com",
 	})
 
 	var appErr apperror.AppError
@@ -244,9 +245,9 @@ func TestJoinFamilyByInviteLinkRejectsDuplicateMembership(t *testing.T) {
 	}
 
 	_, err := handler.Handle(context.Background(), JoinFamilyByInviteLinkCommand{
-		InviteToken:     InviteToken("invite-1"),
-		GoogleSubjectID: "google-1",
-		Email:           "parent.one@example.com",
+		InviteToken: InviteToken("invite-1"),
+		AccountID:   "google-1",
+		Email:       "parent.one@example.com",
 	})
 
 	var appErr apperror.AppError

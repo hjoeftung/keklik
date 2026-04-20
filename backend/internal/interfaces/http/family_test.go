@@ -83,8 +83,8 @@ func (r *stubFamilyMemberRepository) FindByID(_ context.Context, _ family.Family
 	return r.member, nil
 }
 
-func (r *stubFamilyMemberRepository) FindByGoogleSubjectID(_ context.Context, googleSubjectID string) (family.FamilyMember, error) {
-	if r.member.GoogleSubjectID == googleSubjectID {
+func (r *stubFamilyMemberRepository) FindByAccountID(_ context.Context, accountID auth.AccountID) (family.FamilyMember, error) {
+	if r.member.AccountID == accountID {
 		return r.member, nil
 	}
 	return family.FamilyMember{}, apperror.New(apperror.CodeNotFound, "family member not found")
@@ -111,11 +111,11 @@ func (r *stubAccountRepository) FindByID(_ context.Context, _ auth.AccountID) (a
 	}
 	return r.account, nil
 }
-func (r *stubAccountRepository) FindByGoogleSubjectID(_ context.Context, _ string) (auth.Account, error) {
+func (r *stubAccountRepository) FindByGoogleSubjectID(_ context.Context, googleSubjectID string) (auth.Account, error) {
 	if r.err != nil {
 		return auth.Account{}, r.err
 	}
-	if r.account.ID == "" {
+	if r.account.GoogleSubjectID != googleSubjectID {
 		return auth.Account{}, auth.ErrAccountNotFound
 	}
 	return r.account, nil
@@ -311,10 +311,10 @@ func TestCreateFamilyInviteLinkReturns201WithURL(t *testing.T) {
 	aggregate, err := family.NewFamily(
 		family.FamilyID("family-1"),
 		[]family.FamilyMember{{
-			ID:              family.FamilyMemberID("member-1"),
-			FamilyID:        family.FamilyID("family-1"),
-			Name:            "Alice",
-			GoogleSubjectID: "google-subject-123",
+			ID:        family.FamilyMemberID("member-1"),
+			FamilyID:  family.FamilyID("family-1"),
+			Name:      "Alice",
+			AccountID: "test-account-id",
 		}},
 		[]family.Baby{{ID: family.BabyID("baby-1"), FamilyID: family.FamilyID("family-1"), Name: "Emma"}},
 	)
@@ -351,10 +351,10 @@ func TestJoinFamilyByInviteLinkReturns201WithMembership(t *testing.T) {
 	aggregate, err := family.NewFamily(
 		family.FamilyID("family-1"),
 		[]family.FamilyMember{{
-			ID:              family.FamilyMemberID("member-1"),
-			FamilyID:        family.FamilyID("family-1"),
-			Name:            "Alice",
-			GoogleSubjectID: "google-owner",
+			ID:        family.FamilyMemberID("member-1"),
+			FamilyID:  family.FamilyID("family-1"),
+			Name:      "Alice",
+			AccountID: "google-owner",
 		}},
 		[]family.Baby{{ID: family.BabyID("baby-1"), FamilyID: family.FamilyID("family-1"), Name: "Emma"}},
 	)
@@ -398,10 +398,10 @@ func TestJoinFamilyByInviteLinkRejectsInvalidToken(t *testing.T) {
 	aggregate, err := family.NewFamily(
 		family.FamilyID("family-1"),
 		[]family.FamilyMember{{
-			ID:              family.FamilyMemberID("member-1"),
-			FamilyID:        family.FamilyID("family-1"),
-			Name:            "Alice",
-			GoogleSubjectID: "google-owner",
+			ID:        family.FamilyMemberID("member-1"),
+			FamilyID:  family.FamilyID("family-1"),
+			Name:      "Alice",
+			AccountID: "google-owner",
 		}},
 		[]family.Baby{{ID: family.BabyID("baby-1"), FamilyID: family.FamilyID("family-1"), Name: "Emma"}},
 	)

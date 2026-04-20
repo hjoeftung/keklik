@@ -4,11 +4,12 @@ import (
 	"context"
 
 	"github.com/hjoeftung/keklik/internal/apperror"
+	"github.com/hjoeftung/keklik/internal/auth"
 )
 
 // GetFamilyQuery identifies the authenticated account requesting family data.
 type GetFamilyQuery struct {
-	GoogleSubjectID string
+	AccountID auth.AccountID
 }
 
 // GetFamilyMemberResult holds a member's public fields.
@@ -44,7 +45,7 @@ func NewGetFamilyHandler(families FamilyRepository, members FamilyMemberReposito
 // Handle resolves the authenticated account's family and returns its data.
 // Returns CodeNotFound if the account has no family yet.
 func (h *GetFamilyHandler) Handle(ctx context.Context, q GetFamilyQuery) (GetFamilyResult, error) {
-	member, err := h.members.FindByGoogleSubjectID(ctx, q.GoogleSubjectID)
+	member, err := h.members.FindByAccountID(ctx, q.AccountID)
 	if err != nil {
 		if isFamilyMemberNotFound(err) {
 			return GetFamilyResult{}, apperror.New(apperror.CodeNotFound, "no family found for this account")

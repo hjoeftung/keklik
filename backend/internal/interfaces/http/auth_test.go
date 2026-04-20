@@ -17,7 +17,6 @@ import (
 const testSigningKey = "test-signing-key"
 const testTokenDuration = 30 * 24 * time.Hour
 
-
 // --- requireAuth middleware ---
 
 func TestRequireAuth_MissingHeader(t *testing.T) {

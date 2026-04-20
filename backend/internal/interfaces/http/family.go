@@ -47,9 +47,9 @@ func createFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.Creat
 	}
 
 	result, err := h.Handle(r.Context(), family.CreateFamilyCommand{
-		BabyName:               req.BabyName,
-		CreatorName:            req.CreatorName,
-		CreatorGoogleSubjectID: account.GoogleSubjectID,
+		BabyName:         req.BabyName,
+		CreatorName:      req.CreatorName,
+		CreatorAccountID: account.ID,
 	})
 	if err != nil {
 		writeError(w, mapFamilyError(err))
@@ -76,9 +76,9 @@ type getFamilyBabyResponse struct {
 }
 
 type getFamilyResponse struct {
-	FamilyID string                   `json:"family_id"`
+	FamilyID string                    `json:"family_id"`
 	Members  []getFamilyMemberResponse `json:"members"`
-	Baby     getFamilyBabyResponse    `json:"baby"`
+	Baby     getFamilyBabyResponse     `json:"baby"`
 }
 
 // getFamilyHandler returns the authenticated member's family with its members and baby.
@@ -99,7 +99,7 @@ func getFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.GetFamil
 	}
 
 	result, err := h.Handle(r.Context(), family.GetFamilyQuery{
-		GoogleSubjectID: account.GoogleSubjectID,
+		AccountID: account.ID,
 	})
 	if err != nil {
 		writeError(w, mapFamilyError(err))
@@ -124,7 +124,7 @@ func mapFamilyError(err error) apperror.AppError {
 	switch {
 	case errors.Is(err, family.ErrInvalidBabyName),
 		errors.Is(err, family.ErrInvalidFamilyMemberName),
-		errors.Is(err, family.ErrEmptyGoogleSubjectID),
+		errors.Is(err, family.ErrEmptyAccountID),
 		errors.Is(err, family.ErrInvalidInviteToken):
 		return apperror.New(apperror.CodeInvalidArgument, err.Error())
 	case errors.Is(err, family.ErrInviteLinkCreatorNotMember):

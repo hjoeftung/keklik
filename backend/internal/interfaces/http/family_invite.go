@@ -43,7 +43,7 @@ func createFamilyInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *fa
 	}
 
 	result, err := h.Handle(r.Context(), family.CreateFamilyInviteLinkCommand{
-		CreatorGoogleSubjectID: account.GoogleSubjectID,
+		CreatorAccountID: account.ID,
 	})
 	if err != nil {
 		writeError(w, mapFamilyError(err))
@@ -85,10 +85,10 @@ func joinFamilyByInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *fa
 	}
 
 	result, err := h.Handle(r.Context(), family.JoinFamilyByInviteLinkCommand{
-		InviteToken:     family.InviteToken(req.Token),
-		GoogleSubjectID: account.GoogleSubjectID,
-		Email:           account.Email,
-		MemberName:      req.MemberName,
+		InviteToken: family.InviteToken(req.Token),
+		AccountID:   account.ID,
+		Email:       account.Email,
+		MemberName:  req.MemberName,
 	})
 	if err != nil {
 		writeError(w, mapFamilyError(err))

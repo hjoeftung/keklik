@@ -11,10 +11,10 @@ func TestNewFamilyRequiresExactlyOneBaby(t *testing.T) {
 
 	familyID := FamilyID("family-1")
 	member := FamilyMember{
-		ID:              FamilyMemberID("member-1"),
-		FamilyID:        familyID,
-		Name:            "Parent One",
-		GoogleSubjectID: "google-1",
+		ID:        FamilyMemberID("member-1"),
+		FamilyID:  familyID,
+		Name:      "Parent One",
+		AccountID: "google-1",
 	}
 
 	_, err := NewFamily(
@@ -45,10 +45,10 @@ func TestFamilyAddMemberRejectsDuplicateAccount(t *testing.T) {
 	aggregate := mustFamily(t)
 
 	err := aggregate.AddMember(FamilyMember{
-		ID:              FamilyMemberID("member-1"),
-		FamilyID:        aggregate.ID(),
-		Name:            "Parent One",
-		GoogleSubjectID: "google-2",
+		ID:        FamilyMemberID("member-1"),
+		FamilyID:  aggregate.ID(),
+		Name:      "Parent One",
+		AccountID: "google-2",
 	})
 	if !errors.Is(err, ErrDuplicateFamilyMember) {
 		t.Fatalf("expected ErrDuplicateFamilyMember, got %v", err)
@@ -77,10 +77,10 @@ func mustFamily(t *testing.T) Family {
 	aggregate, err := NewFamily(
 		FamilyID("family-1"),
 		[]FamilyMember{{
-			ID:              FamilyMemberID("member-1"),
-			FamilyID:        FamilyID("family-1"),
-			Name:            "Parent One",
-			GoogleSubjectID: "google-1",
+			ID:        FamilyMemberID("member-1"),
+			FamilyID:  FamilyID("family-1"),
+			Name:      "Parent One",
+			AccountID: "google-1",
 		}},
 		[]Baby{{ID: BabyID("baby-1"), FamilyID: FamilyID("family-1"), Name: "Mika"}},
 	)

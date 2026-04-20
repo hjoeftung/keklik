@@ -19,22 +19,22 @@ type healthResponse struct {
 
 // Dependencies holds all handler and repository dependencies for the HTTP server.
 type Dependencies struct {
-	Accounts           auth.AccountRepository
-	Validator          auth.TokenValidator
-	OAuthCallback      *auth.HandleOAuthCallbackHandler
-	TestLogin          *auth.HandleTestLoginHandler
-	CreateFamily       *family.CreateFamilyHandler
-	GetFamily          *family.GetFamilyHandler
-	CreateInviteLink   *family.CreateFamilyInviteLinkHandler
-	JoinFamilyByInvite *family.JoinFamilyByInviteLinkHandler
-	BabyAccess         babyAccessChecker
-	CreateSleepProfile *sleep.CreateSleepProfileHandler
-	StartSleep         *sleep.StartSleepHandler
-	StopSleep          *sleep.StopSleepHandler
-	EditSleepSession   *sleep.EditSleepSessionHandler
-	DeleteSleepSession *sleep.DeleteSleepSessionHandler
-	GetSleepHistory      *sleep.GetSleepHistoryHandler
-	GetDashboardSummary  *sleep.GetDashboardSummaryHandler
+	Accounts            auth.AccountRepository
+	Validator           auth.TokenValidator
+	OAuthCallback       *auth.HandleOAuthCallbackHandler
+	TestLogin           *auth.HandleTestLoginHandler
+	CreateFamily        *family.CreateFamilyHandler
+	GetFamily           *family.GetFamilyHandler
+	CreateInviteLink    *family.CreateFamilyInviteLinkHandler
+	JoinFamilyByInvite  *family.JoinFamilyByInviteLinkHandler
+	BabyAccess          babyAccessChecker
+	CreateSleepProfile  *sleep.CreateSleepProfileHandler
+	StartSleep          *sleep.StartSleepHandler
+	StopSleep           *sleep.StopSleepHandler
+	EditSleepSession    *sleep.EditSleepSessionHandler
+	DeleteSleepSession  *sleep.DeleteSleepSessionHandler
+	GetSleepHistory     *sleep.GetSleepHistoryHandler
+	GetDashboardSummary *sleep.GetDashboardSummaryHandler
 }
 
 // NewServer wires the HTTP transport and returns a ready-to-start server.
