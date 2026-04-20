@@ -44,9 +44,10 @@ type GoogleOAuthConfig struct {
 	RedirectURL  string
 }
 
-// AuthConfig contains authentication feature flags.
+// AuthConfig contains authentication feature flags and signing material.
 type AuthConfig struct {
 	EnableTestAuth bool
+	JWTSigningKey  string
 }
 
 // AppConfig contains application-level URLs and other cross-cutting settings.
@@ -83,6 +84,7 @@ func LoadConfig() (Config, error) {
 	clientSecret := strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_CLIENT_SECRET"))
 	redirectURL := strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_REDIRECT_URL"))
 	appBaseURL := strings.TrimSpace(os.Getenv("APP_BASE_URL"))
+	jwtSigningKey := strings.TrimSpace(os.Getenv("JWT_SIGNING_KEY"))
 
 	missing := missingKeys(map[string]string{
 		"DATABASE_URL":               databaseURL,
@@ -90,6 +92,7 @@ func LoadConfig() (Config, error) {
 		"GOOGLE_OAUTH_CLIENT_SECRET": clientSecret,
 		"GOOGLE_OAUTH_REDIRECT_URL":  redirectURL,
 		"APP_BASE_URL":               appBaseURL,
+		"JWT_SIGNING_KEY":            jwtSigningKey,
 	})
 	if len(missing) > 0 {
 		return Config{}, fmt.Errorf("missing required environment variables: %s", strings.Join(missing, ", "))
@@ -117,6 +120,7 @@ func LoadConfig() (Config, error) {
 		},
 		Auth: AuthConfig{
 			EnableTestAuth: enableTestAuth,
+			JWTSigningKey:  jwtSigningKey,
 		},
 		App: AppConfig{
 			BaseURL:            appBaseURL,

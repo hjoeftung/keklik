@@ -2,16 +2,12 @@ package auth
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 )
-
-const sessionDuration = 30 * 24 * time.Hour
 
 var now = time.Now
 
@@ -21,27 +17,27 @@ type HandleOAuthCallbackCommand struct {
 	Email           string
 }
 
-// HandleOAuthCallbackResult holds the resolved account and the new session token.
+// HandleOAuthCallbackResult holds the resolved account and the new signed JWT.
 type HandleOAuthCallbackResult struct {
 	Account Account
-	Session Session
+	Token   string
 }
 
 // HandleOAuthCallbackHandler resolves or provisions an internal Account for a Google identity
-// and issues a new session token.
+// and issues a signed JWT.
 type HandleOAuthCallbackHandler struct {
-	accounts AccountRepository
-	sessions SessionRepository
+	accounts   AccountRepository
+	signingKey string
+	duration   time.Duration
 }
 
-// NewHandleOAuthCallbackHandler returns a handler backed by the given repositories.
-func NewHandleOAuthCallbackHandler(accounts AccountRepository, sessions SessionRepository) *HandleOAuthCallbackHandler {
-	return &HandleOAuthCallbackHandler{accounts: accounts, sessions: sessions}
+// NewHandleOAuthCallbackHandler returns a handler backed by the given account repository.
+func NewHandleOAuthCallbackHandler(accounts AccountRepository, signingKey string, duration time.Duration) *HandleOAuthCallbackHandler {
+	return &HandleOAuthCallbackHandler{accounts: accounts, signingKey: signingKey, duration: duration}
 }
 
 // Handle looks up the account by Google subject ID, creating one if it does not exist,
-// then issues a new session. The link between the resulting Account and a family-domain
-// FamilyMember is resolved separately by callers using the Account.GoogleSubjectID.
+// then issues a signed JWT.
 func (h *HandleOAuthCallbackHandler) Handle(ctx context.Context, cmd HandleOAuthCallbackCommand) (HandleOAuthCallbackResult, error) {
 	if cmd.GoogleSubjectID == "" {
 		return HandleOAuthCallbackResult{}, fmt.Errorf("google subject ID must not be empty")
@@ -52,12 +48,12 @@ func (h *HandleOAuthCallbackHandler) Handle(ctx context.Context, cmd HandleOAuth
 		return HandleOAuthCallbackResult{}, err
 	}
 
-	session, err := issueSession(ctx, h.sessions, account.ID, now)
+	token, err := IssueJWT(account.ID, h.signingKey, h.duration)
 	if err != nil {
 		return HandleOAuthCallbackResult{}, err
 	}
 
-	return HandleOAuthCallbackResult{Account: account, Session: session}, nil
+	return HandleOAuthCallbackResult{Account: account, Token: token}, nil
 }
 
 func findOrCreateAccount(ctx context.Context, accounts AccountRepository, subjectID, email string) (Account, error) {
@@ -79,22 +75,4 @@ func findOrCreateAccount(ctx context.Context, accounts AccountRepository, subjec
 	}
 
 	return account, nil
-}
-
-func issueSession(ctx context.Context, sessions SessionRepository, accountID AccountID, clock func() time.Time) (Session, error) {
-	tokenBytes := make([]byte, 32)
-	if _, err := rand.Read(tokenBytes); err != nil {
-		return Session{}, fmt.Errorf("generate session token: %w", err)
-	}
-
-	session := Session{
-		Token:     SessionToken(base64.RawURLEncoding.EncodeToString(tokenBytes)),
-		AccountID: accountID,
-		ExpiresAt: clock().Add(sessionDuration),
-	}
-	if err := sessions.Save(ctx, session); err != nil {
-		return Session{}, fmt.Errorf("save session: %w", err)
-	}
-
-	return session, nil
 }

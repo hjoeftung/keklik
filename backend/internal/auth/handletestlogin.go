@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 )
 
 const testAuthSubjectPrefix = "test:"
@@ -14,19 +15,20 @@ type HandleTestLoginCommand struct {
 	Identifier string
 }
 
-// HandleTestLoginHandler resolves or provisions a test-only Account and issues a session.
+// HandleTestLoginHandler resolves or provisions a test-only Account and issues a JWT.
 type HandleTestLoginHandler struct {
-	accounts AccountRepository
-	sessions SessionRepository
+	accounts   AccountRepository
+	signingKey string
+	duration   time.Duration
 }
 
-// NewHandleTestLoginHandler returns a handler backed by the given repositories.
-func NewHandleTestLoginHandler(accounts AccountRepository, sessions SessionRepository) *HandleTestLoginHandler {
-	return &HandleTestLoginHandler{accounts: accounts, sessions: sessions}
+// NewHandleTestLoginHandler returns a handler backed by the given account repository.
+func NewHandleTestLoginHandler(accounts AccountRepository, signingKey string, duration time.Duration) *HandleTestLoginHandler {
+	return &HandleTestLoginHandler{accounts: accounts, signingKey: signingKey, duration: duration}
 }
 
 // Handle resolves or provisions a test-only account using a deterministic subject ID
-// derived from the caller-provided identifier, then issues a normal application session.
+// derived from the caller-provided identifier, then issues a signed JWT.
 func (h *HandleTestLoginHandler) Handle(ctx context.Context, cmd HandleTestLoginCommand) (HandleOAuthCallbackResult, error) {
 	identifier := strings.TrimSpace(cmd.Identifier)
 	if identifier == "" {
@@ -39,12 +41,12 @@ func (h *HandleTestLoginHandler) Handle(ctx context.Context, cmd HandleTestLogin
 		return HandleOAuthCallbackResult{}, err
 	}
 
-	session, err := issueSession(ctx, h.sessions, account.ID, now)
+	token, err := IssueJWT(account.ID, h.signingKey, h.duration)
 	if err != nil {
 		return HandleOAuthCallbackResult{}, err
 	}
 
-	return HandleOAuthCallbackResult{Account: account, Session: session}, nil
+	return HandleOAuthCallbackResult{Account: account, Token: token}, nil
 }
 
 func testAuthEmail(identifier string) string {

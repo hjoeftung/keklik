@@ -2,18 +2,16 @@ package auth_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/hjoeftung/keklik/internal/auth"
 )
 
-func TestHandleTestLoginCreatesAccountAndSession(t *testing.T) {
+func TestHandleTestLoginCreatesAccountAndToken(t *testing.T) {
 	t.Parallel()
 
 	accounts := &inMemoryAccountRepository{}
-	sessions := &inMemorySessionRepository{}
-	h := auth.NewHandleTestLoginHandler(accounts, sessions)
+	h := auth.NewHandleTestLoginHandler(accounts, testSigningKey, testTokenDuration)
 
 	result, err := h.Handle(context.Background(), auth.HandleTestLoginCommand{Identifier: "qa-user"})
 	if err != nil {
@@ -28,16 +26,21 @@ func TestHandleTestLoginCreatesAccountAndSession(t *testing.T) {
 		t.Fatalf("expected test email %q, got %q", "qa-user@test.local", result.Account.Email)
 	}
 
-	if result.Session.AccountID != result.Account.ID {
-		t.Fatalf("session account mismatch: got %q want %q", result.Session.AccountID, result.Account.ID)
+	if result.Token == "" {
+		t.Fatal("expected a non-empty JWT token")
+	}
+
+	validator := auth.NewJWTValidator(testSigningKey)
+	identity, err := validator.Validate(context.Background(), result.Token)
+	if err != nil {
+		t.Fatalf("issued token failed validation: %v", err)
+	}
+	if identity.AccountID != result.Account.ID {
+		t.Fatalf("token account mismatch: got %q want %q", identity.AccountID, result.Account.ID)
 	}
 
 	if len(accounts.saved) != 1 {
 		t.Fatalf("expected 1 saved account, got %d", len(accounts.saved))
-	}
-
-	if len(sessions.saved) != 1 {
-		t.Fatalf("expected 1 saved session, got %d", len(sessions.saved))
 	}
 }
 
@@ -50,8 +53,7 @@ func TestHandleTestLoginReusesExistingAccount(t *testing.T) {
 		Email:           "qa-user@test.local",
 	}
 	accounts := &inMemoryAccountRepository{saved: []auth.Account{existing}}
-	sessions := &inMemorySessionRepository{}
-	h := auth.NewHandleTestLoginHandler(accounts, sessions)
+	h := auth.NewHandleTestLoginHandler(accounts, testSigningKey, testTokenDuration)
 
 	result, err := h.Handle(context.Background(), auth.HandleTestLoginCommand{Identifier: "qa-user"})
 	if err != nil {
@@ -70,7 +72,7 @@ func TestHandleTestLoginReusesExistingAccount(t *testing.T) {
 func TestHandleTestLoginRejectsEmptyIdentifier(t *testing.T) {
 	t.Parallel()
 
-	h := auth.NewHandleTestLoginHandler(&inMemoryAccountRepository{}, &inMemorySessionRepository{})
+	h := auth.NewHandleTestLoginHandler(&inMemoryAccountRepository{}, testSigningKey, testTokenDuration)
 
 	_, err := h.Handle(context.Background(), auth.HandleTestLoginCommand{})
 	if err == nil {
@@ -79,18 +81,5 @@ func TestHandleTestLoginRejectsEmptyIdentifier(t *testing.T) {
 
 	if got := err.Error(); got != "identifier must not be empty" {
 		t.Fatalf("unexpected error: %q", got)
-	}
-}
-
-func TestHandleTestLoginReturnsSessionSaveError(t *testing.T) {
-	t.Parallel()
-
-	accounts := &inMemoryAccountRepository{}
-	sessions := &inMemorySessionRepository{err: errors.New("db failure")}
-	h := auth.NewHandleTestLoginHandler(accounts, sessions)
-
-	_, err := h.Handle(context.Background(), auth.HandleTestLoginCommand{Identifier: "qa-user"})
-	if err == nil {
-		t.Fatal("expected error when session save fails")
 	}
 }

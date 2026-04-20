@@ -273,7 +273,7 @@ func writeAuthSessionResponse(w http.ResponseWriter, result auth.HandleOAuthCall
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(authSessionResponse{
-		Token:     string(result.Session.Token),
+		Token:     result.Token,
 		AccountID: string(result.Account.ID),
 	})
 }

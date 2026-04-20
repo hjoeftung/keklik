@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/family"
@@ -51,7 +52,6 @@ func main() {
 	familyRepo := infrastructure.NewPostgresFamilyRepository(db)
 	familyMemberRepo := infrastructure.NewPostgresFamilyMemberRepository(db)
 	accountRepo := infrastructure.NewPostgresAccountRepository(db)
-	sessionRepo := infrastructure.NewPostgresSessionRepository(db)
 	sleepProfileRepo := infrastructure.NewPostgresSleepProfileRepository(db)
 	sleepSessionRepo := infrastructure.NewPostgresSleepSessionRepository(db)
 	babyAccessChecker := infrastructure.NewPostgresBabyAccessChecker(db)
@@ -73,13 +73,14 @@ func main() {
 	deleteSleepSession := sleep.NewDeleteSleepSessionHandler(sleepSessionRepo)
 	getSleepHistory := sleep.NewGetSleepHistoryHandler(sleepSessionRepo, sleepProfileRepo)
 	getDashboardSummary := sleep.NewGetDashboardSummaryHandler(sleepProfileRepo, sleepSessionRepo)
-	sessionValidator := auth.NewDBSessionValidator(sessionRepo)
-	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, sessionRepo)
-	testLogin := auth.NewHandleTestLoginHandler(accountRepo, sessionRepo)
+	const tokenDuration = 30 * 24 * time.Hour
+	jwtValidator := auth.NewJWTValidator(config.Auth.JWTSigningKey)
+	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, config.Auth.JWTSigningKey, tokenDuration)
+	testLogin := auth.NewHandleTestLoginHandler(accountRepo, config.Auth.JWTSigningKey, tokenDuration)
 
 	server := httpapi.NewServer(config, httpapi.Dependencies{
 		Accounts:           accountRepo,
-		Validator:          sessionValidator,
+		Validator:          jwtValidator,
 		OAuthCallback:      oauthCallback,
 		TestLogin:          testLogin,
 		CreateFamily:       createFamily,

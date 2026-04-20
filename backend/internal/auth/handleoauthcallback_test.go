@@ -45,29 +45,10 @@ func (r *inMemoryAccountRepository) FindByGoogleSubjectID(_ context.Context, sub
 	return auth.Account{}, auth.ErrAccountNotFound
 }
 
-type inMemorySessionRepository struct {
-	saved []auth.Session
-	err   error
-}
-
-func (r *inMemorySessionRepository) Save(_ context.Context, s auth.Session) error {
-	if r.err != nil {
-		return r.err
-	}
-	r.saved = append(r.saved, s)
-	return nil
-}
-
-func (r *inMemorySessionRepository) FindByToken(_ context.Context, token auth.SessionToken) (auth.Session, error) {
-	for _, s := range r.saved {
-		if s.Token == token {
-			return s, nil
-		}
-	}
-	return auth.Session{}, auth.ErrSessionNotFound
-}
-
 // --- helpers ---
+
+const testSigningKey = "test-signing-key"
+const testTokenDuration = 30 * 24 * time.Hour
 
 func validCallbackCommand() auth.HandleOAuthCallbackCommand {
 	return auth.HandleOAuthCallbackCommand{
@@ -82,8 +63,7 @@ func TestHandleOAuthCallbackNewAccount(t *testing.T) {
 	t.Parallel()
 
 	accounts := &inMemoryAccountRepository{}
-	sessions := &inMemorySessionRepository{}
-	h := auth.NewHandleOAuthCallbackHandler(accounts, sessions)
+	h := auth.NewHandleOAuthCallbackHandler(accounts, testSigningKey, testTokenDuration)
 
 	result, err := h.Handle(context.Background(), validCallbackCommand())
 	if err != nil {
@@ -113,8 +93,7 @@ func TestHandleOAuthCallbackExistingAccount(t *testing.T) {
 		Email:           "old@example.com",
 	}
 	accounts := &inMemoryAccountRepository{saved: []auth.Account{existing}}
-	sessions := &inMemorySessionRepository{}
-	h := auth.NewHandleOAuthCallbackHandler(accounts, sessions)
+	h := auth.NewHandleOAuthCallbackHandler(accounts, testSigningKey, testTokenDuration)
 
 	result, err := h.Handle(context.Background(), validCallbackCommand())
 	if err != nil {
@@ -130,35 +109,37 @@ func TestHandleOAuthCallbackExistingAccount(t *testing.T) {
 	}
 }
 
-func TestHandleOAuthCallbackSessionIssued(t *testing.T) {
+func TestHandleOAuthCallbackTokenIssued(t *testing.T) {
 	t.Parallel()
 
 	accounts := &inMemoryAccountRepository{}
-	sessions := &inMemorySessionRepository{}
-	h := auth.NewHandleOAuthCallbackHandler(accounts, sessions)
+	h := auth.NewHandleOAuthCallbackHandler(accounts, testSigningKey, testTokenDuration)
 
 	result, err := h.Handle(context.Background(), validCallbackCommand())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if result.Session.Token == "" {
-		t.Error("expected a non-empty session token")
+	if result.Token == "" {
+		t.Error("expected a non-empty JWT token")
 	}
-	if result.Session.AccountID != result.Account.ID {
-		t.Errorf("session account ID mismatch: got %q, want %q", result.Session.AccountID, result.Account.ID)
+
+	validator := auth.NewJWTValidator(testSigningKey)
+	identity, err := validator.Validate(context.Background(), result.Token)
+	if err != nil {
+		t.Fatalf("issued token failed validation: %v", err)
 	}
-	if result.Session.IsExpired(time.Now()) {
-		t.Error("expected session to not be expired")
+	if identity.AccountID != result.Account.ID {
+		t.Errorf("token account ID mismatch: got %q, want %q", identity.AccountID, result.Account.ID)
 	}
-	if len(sessions.saved) != 1 {
-		t.Errorf("expected 1 saved session, got %d", len(sessions.saved))
+	if !identity.ExpiresAt.After(time.Now()) {
+		t.Error("expected token to not be expired")
 	}
 }
 
 func TestHandleOAuthCallbackEmptySubjectID(t *testing.T) {
 	t.Parallel()
-	h := auth.NewHandleOAuthCallbackHandler(&inMemoryAccountRepository{}, &inMemorySessionRepository{})
+	h := auth.NewHandleOAuthCallbackHandler(&inMemoryAccountRepository{}, testSigningKey, testTokenDuration)
 	cmd := auth.HandleOAuthCallbackCommand{GoogleSubjectID: "", Email: "user@example.com"}
 
 	_, err := h.Handle(context.Background(), cmd)
@@ -172,23 +153,10 @@ func TestHandleOAuthCallbackAccountLookupError(t *testing.T) {
 
 	lookupErr := errors.New("db failure")
 	accounts := &inMemoryAccountRepository{err: lookupErr}
-	h := auth.NewHandleOAuthCallbackHandler(accounts, &inMemorySessionRepository{})
+	h := auth.NewHandleOAuthCallbackHandler(accounts, testSigningKey, testTokenDuration)
 
 	_, err := h.Handle(context.Background(), validCallbackCommand())
 	if err == nil {
 		t.Fatal("expected error when account lookup fails")
-	}
-}
-
-func TestHandleOAuthCallbackSessionSaveError(t *testing.T) {
-	t.Parallel()
-
-	accounts := &inMemoryAccountRepository{}
-	sessions := &inMemorySessionRepository{err: errors.New("db failure")}
-	h := auth.NewHandleOAuthCallbackHandler(accounts, sessions)
-
-	_, err := h.Handle(context.Background(), validCallbackCommand())
-	if err == nil {
-		t.Fatal("expected error when session save fails")
 	}
 }
