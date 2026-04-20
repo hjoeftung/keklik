@@ -6,12 +6,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"golang.org/x/oauth2"
 
 	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/infrastructure"
 )
+
+const testSigningKey = "test-signing-key"
+const testTokenDuration = 30 * 24 * time.Hour
 
 
 // --- requireAuth middleware ---
@@ -228,7 +232,7 @@ func TestTestLoginHandlerReturns404WhenDisabled(t *testing.T) {
 		Dependencies{
 			Accounts:  &stubAccountRepository{},
 			Validator: &stubTokenValidator{},
-			TestLogin: auth.NewHandleTestLoginHandler(&stubAccountRepository{}, &stubSessionRepository{}),
+			TestLogin: auth.NewHandleTestLoginHandler(&stubAccountRepository{}, testSigningKey, testTokenDuration),
 		},
 	)
 
@@ -246,16 +250,15 @@ func TestTestLoginHandlerReturnsSessionWhenEnabled(t *testing.T) {
 	t.Parallel()
 
 	accounts := &stubAccountRepository{}
-	sessions := &stubSessionRepository{}
 	server := NewServer(
 		infrastructure.Config{
 			HTTP: infrastructure.HTTPConfig{Port: 8080},
-			Auth: infrastructure.AuthConfig{EnableTestAuth: true},
+			Auth: infrastructure.AuthConfig{EnableTestAuth: true, JWTSigningKey: testSigningKey},
 		},
 		Dependencies{
 			Accounts:  accounts,
 			Validator: &stubTokenValidator{},
-			TestLogin: auth.NewHandleTestLoginHandler(accounts, sessions),
+			TestLogin: auth.NewHandleTestLoginHandler(accounts, testSigningKey, testTokenDuration),
 		},
 	)
 
@@ -294,9 +297,6 @@ func TestTestLoginHandlerReturnsSessionWhenEnabled(t *testing.T) {
 		t.Fatalf("expected test subject ID %q, got %q", "test:qa-user", accounts.saved[0].GoogleSubjectID)
 	}
 
-	if len(sessions.saved) != 1 {
-		t.Fatalf("expected 1 saved session, got %d", len(sessions.saved))
-	}
 }
 
 func TestTestLoginHandlerRejectsBadJSON(t *testing.T) {
@@ -310,7 +310,7 @@ func TestTestLoginHandlerRejectsBadJSON(t *testing.T) {
 		Dependencies{
 			Accounts:  &stubAccountRepository{},
 			Validator: &stubTokenValidator{},
-			TestLogin: auth.NewHandleTestLoginHandler(&stubAccountRepository{}, &stubSessionRepository{}),
+			TestLogin: auth.NewHandleTestLoginHandler(&stubAccountRepository{}, testSigningKey, testTokenDuration),
 		},
 	)
 

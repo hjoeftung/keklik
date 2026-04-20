@@ -87,7 +87,7 @@ func TestLoadConfigFailsOnMissingRequiredEnvironment(t *testing.T) {
 	}
 
 	got := err.Error()
-	expected := "missing required environment variables: APP_BASE_URL, DATABASE_URL, GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URL"
+	expected := "missing required environment variables: APP_BASE_URL, DATABASE_URL, GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URL, JWT_SIGNING_KEY"
 	if got != expected {
 		t.Fatalf("expected error %q, got %q", expected, got)
 	}
@@ -157,4 +157,5 @@ func setRequiredEnv(t *testing.T) {
 	t.Setenv("GOOGLE_OAUTH_CLIENT_SECRET", "client-secret")
 	t.Setenv("GOOGLE_OAUTH_REDIRECT_URL", "http://localhost:8080/auth/google/callback")
 	t.Setenv("APP_BASE_URL", "http://localhost:8080")
+	t.Setenv("JWT_SIGNING_KEY", "test-signing-key")
 }
