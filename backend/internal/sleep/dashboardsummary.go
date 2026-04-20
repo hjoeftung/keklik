@@ -2,10 +2,7 @@ package sleep
 
 import (
 	"context"
-	"errors"
 	"time"
-
-	"github.com/hjoeftung/keklik/internal/apperror"
 )
 
 // DashboardSummary holds all metrics needed for a single dashboard screen load.
@@ -40,8 +37,6 @@ type GetDashboardSummaryQuery struct {
 type GetDashboardSummaryHandler struct {
 	profiles SleepProfileRepository
 	sessions SleepSessionHistoryRepository
-	active   ActiveSleepSessionRepository
-	elapsed  SleepElapsedTimeRepository
 	now      func() time.Time
 }
 
@@ -49,19 +44,18 @@ type GetDashboardSummaryHandler struct {
 func NewGetDashboardSummaryHandler(
 	profiles SleepProfileRepository,
 	sessions SleepSessionHistoryRepository,
-	active ActiveSleepSessionRepository,
-	elapsed SleepElapsedTimeRepository,
 ) *GetDashboardSummaryHandler {
 	return &GetDashboardSummaryHandler{
 		profiles: profiles,
 		sessions: sessions,
-		active:   active,
-		elapsed:  elapsed,
 		now:      time.Now,
 	}
 }
 
 // Handle computes and returns all dashboard metrics for the given baby.
+//
+// All elapsed-time and active-session fields are derived from the same
+// 14-day session slice — no extra DB queries are needed for those fields.
 func (h *GetDashboardSummaryHandler) Handle(ctx context.Context, q GetDashboardSummaryQuery) (DashboardSummary, error) {
 	profile, err := h.profiles.FindByBabyID(ctx, q.BabyID)
 	if err != nil {
@@ -86,6 +80,7 @@ func (h *GetDashboardSummaryHandler) Handle(ctx context.Context, q GetDashboardS
 	if err != nil {
 		return DashboardSummary{}, err
 	}
+	// allSessions is ordered by started_at DESC.
 	allSessions, err := h.sessions.FindByBabyIDAndDateRange(ctx, q.BabyID, dr)
 	if err != nil {
 		return DashboardSummary{}, err
@@ -95,37 +90,38 @@ func (h *GetDashboardSummaryHandler) Handle(ctx context.Context, q GetDashboardS
 	rolling7d := computeRollingAverage(allSessions, loc, localNow, 7, now)
 	rolling14d := computeRollingAverage(allSessions, loc, localNow, 14, now)
 
+	// Active session: at most one, found by scanning for an unstopped session.
 	var activeSess *ActiveSessionInfo
-	activeSession, err := h.active.FindActiveByBabyID(ctx, q.BabyID)
-	if err == nil {
-		d := now.Sub(activeSession.StartedAt())
-		activeSess = &ActiveSessionInfo{
-			ID:        activeSession.ID(),
-			StartedAt: activeSession.StartedAt(),
-			Duration:  d,
+	for _, s := range allSessions {
+		if s.IsActive() {
+			d := now.Sub(s.StartedAt())
+			activeSess = &ActiveSessionInfo{
+				ID:        s.ID(),
+				StartedAt: s.StartedAt(),
+				Duration:  d,
+			}
+			break
 		}
-	} else if !isNotFoundErr(err) {
-		return DashboardSummary{}, err
 	}
 
+	// Time since last sleep start: allSessions[0] is the most recently started.
 	var timeSinceSleepStart *time.Duration
-	mostRecent, err := h.elapsed.FindMostRecentByBabyID(ctx, q.BabyID)
-	if err == nil {
-		d := now.Sub(mostRecent.StartedAt())
+	if len(allSessions) > 0 {
+		d := now.Sub(allSessions[0].StartedAt())
 		timeSinceSleepStart = &d
-	} else if !isNotFoundErr(err) {
-		return DashboardSummary{}, err
 	}
 
+	// Time since last awakening: the completed session with the latest stopped_at.
 	var timeSinceAwakening *time.Duration
-	mostRecentCompleted, err := h.elapsed.FindMostRecentCompletedByBabyID(ctx, q.BabyID)
-	if err == nil {
-		if stoppedAt, ok := mostRecentCompleted.StoppedAt(); ok {
-			d := now.Sub(stoppedAt)
-			timeSinceAwakening = &d
+	var latestStop time.Time
+	for _, s := range allSessions {
+		if stoppedAt, ok := s.StoppedAt(); ok && stoppedAt.After(latestStop) {
+			latestStop = stoppedAt
 		}
-	} else if !isNotFoundErr(err) {
-		return DashboardSummary{}, err
+	}
+	if !latestStop.IsZero() {
+		d := now.Sub(latestStop)
+		timeSinceAwakening = &d
 	}
 
 	return DashboardSummary{
@@ -154,9 +150,4 @@ func computeRollingAverage(sessions []SleepSession, loc *time.Location, localNow
 		AvgDailySleep:  totalSleep / time.Duration(days),
 		AvgDailyActive: totalActive / time.Duration(days),
 	}
-}
-
-func isNotFoundErr(err error) bool {
-	var appErr apperror.AppError
-	return errors.As(err, &appErr) && appErr.Code == apperror.CodeNotFound
 }

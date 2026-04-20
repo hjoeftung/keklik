@@ -72,11 +72,7 @@ func (r *stubEditableHTTPSleepSessionRepo) FindByID(_ context.Context, _ sleep.S
 	return r.session, r.findErr
 }
 
-func (r *stubEditableHTTPSleepSessionRepo) FindByIDForFamilyMember(_ context.Context, _ sleep.SleepSessionID, _ sleep.FamilyMemberID) (sleep.SleepSession, error) {
-	return r.session, r.findErr
-}
-
-func (r *stubEditableHTTPSleepSessionRepo) DeleteByIDForFamilyMember(_ context.Context, _ sleep.SleepSessionID, _ sleep.FamilyMemberID) error {
+func (r *stubEditableHTTPSleepSessionRepo) DeleteByID(_ context.Context, _ sleep.SleepSessionID) error {
 	return r.deleteErr
 }
 

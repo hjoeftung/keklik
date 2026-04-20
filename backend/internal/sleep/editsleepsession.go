@@ -7,10 +7,9 @@ import (
 
 // EditSleepSessionCommand holds the inputs for editing a sleep session.
 type EditSleepSessionCommand struct {
-	SessionID      SleepSessionID
-	FamilyMemberID FamilyMemberID
-	StartedAt      *time.Time
-	StoppedAt      *time.Time
+	SessionID SleepSessionID
+	StartedAt *time.Time
+	StoppedAt *time.Time
 }
 
 // EditSleepSessionHandler executes the EditSleepSession use case.
@@ -31,7 +30,7 @@ func (h *EditSleepSessionHandler) Handle(ctx context.Context, cmd EditSleepSessi
 		return SleepSession{}, ErrMissingSleepSessionEdit
 	}
 
-	existing, err := h.sessions.FindByIDForFamilyMember(ctx, cmd.SessionID, cmd.FamilyMemberID)
+	existing, err := h.sessions.FindByID(ctx, cmd.SessionID)
 	if err != nil {
 		return SleepSession{}, err
 	}

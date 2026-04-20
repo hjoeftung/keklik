@@ -4,8 +4,7 @@ import "context"
 
 // DeleteSleepSessionCommand holds the inputs for deleting a sleep session.
 type DeleteSleepSessionCommand struct {
-	SessionID      SleepSessionID
-	FamilyMemberID FamilyMemberID
+	SessionID SleepSessionID
 }
 
 // DeleteSleepSessionHandler executes the DeleteSleepSession use case.
@@ -21,5 +20,5 @@ func NewDeleteSleepSessionHandler(sessions EditableSleepSessionRepository) *Dele
 // Handle hard-deletes the requested sleep session after verifying it belongs to
 // the caller's family.
 func (h *DeleteSleepSessionHandler) Handle(ctx context.Context, cmd DeleteSleepSessionCommand) error {
-	return h.sessions.DeleteByIDForFamilyMember(ctx, cmd.SessionID, cmd.FamilyMemberID)
+	return h.sessions.DeleteByID(ctx, cmd.SessionID)
 }

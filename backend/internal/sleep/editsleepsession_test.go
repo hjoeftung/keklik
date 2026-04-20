@@ -34,11 +34,7 @@ func (r *stubEditableSleepSessionRepo) FindByID(_ context.Context, _ SleepSessio
 	return r.session, r.findErr
 }
 
-func (r *stubEditableSleepSessionRepo) FindByIDForFamilyMember(_ context.Context, _ SleepSessionID, _ FamilyMemberID) (SleepSession, error) {
-	return r.session, r.findErr
-}
-
-func (r *stubEditableSleepSessionRepo) DeleteByIDForFamilyMember(_ context.Context, id SleepSessionID, _ FamilyMemberID) error {
+func (r *stubEditableSleepSessionRepo) DeleteByID(_ context.Context, id SleepSessionID) error {
 	if r.deleteErr != nil {
 		return r.deleteErr
 	}
@@ -78,7 +74,7 @@ func TestEditSleepSessionUpdatesActiveSessionStart(t *testing.T) {
 	h := NewEditSleepSessionHandler(repo, profiles)
 	updated, err := h.Handle(context.Background(), EditSleepSessionCommand{
 		SessionID:      SleepSessionID("session-1"),
-		FamilyMemberID: FamilyMemberID("member-1"),
+
 		StartedAt:      &editedStart,
 	})
 	if err != nil {
@@ -108,7 +104,7 @@ func TestEditSleepSessionReclassifiesCompletedSession(t *testing.T) {
 	h := NewEditSleepSessionHandler(repo, profiles)
 	updated, err := h.Handle(context.Background(), EditSleepSessionCommand{
 		SessionID:      SleepSessionID("session-1"),
-		FamilyMemberID: FamilyMemberID("member-2"),
+
 		StoppedAt:      &stoppedAt,
 	})
 	if err != nil {
@@ -132,7 +128,7 @@ func TestEditSleepSessionRejectsMissingChanges(t *testing.T) {
 	h := NewEditSleepSessionHandler(repo, profiles)
 	_, err := h.Handle(context.Background(), EditSleepSessionCommand{
 		SessionID:      SleepSessionID("session-1"),
-		FamilyMemberID: FamilyMemberID("member-1"),
+
 	})
 
 	if !errors.Is(err, ErrMissingSleepSessionEdit) {
@@ -152,7 +148,7 @@ func TestEditSleepSessionRejectsInvalidInterval(t *testing.T) {
 	h := NewEditSleepSessionHandler(repo, profiles)
 	_, err := h.Handle(context.Background(), EditSleepSessionCommand{
 		SessionID:      SleepSessionID("session-1"),
-		FamilyMemberID: FamilyMemberID("member-1"),
+
 		StoppedAt:      &stoppedAt,
 	})
 
@@ -168,8 +164,7 @@ func TestDeleteSleepSessionDelegatesToRepository(t *testing.T) {
 	h := NewDeleteSleepSessionHandler(repo)
 
 	if err := h.Handle(context.Background(), DeleteSleepSessionCommand{
-		SessionID:      SleepSessionID("session-9"),
-		FamilyMemberID: FamilyMemberID("member-1"),
+		SessionID: SleepSessionID("session-9"),
 	}); err != nil {
 		t.Fatalf("Handle returned error: %v", err)
 	}
@@ -188,8 +183,7 @@ func TestDeleteSleepSessionReturnsNotFound(t *testing.T) {
 	h := NewDeleteSleepSessionHandler(repo)
 
 	err := h.Handle(context.Background(), DeleteSleepSessionCommand{
-		SessionID:      SleepSessionID("missing"),
-		FamilyMemberID: FamilyMemberID("member-1"),
+		SessionID: SleepSessionID("missing"),
 	})
 
 	var appErr apperror.AppError

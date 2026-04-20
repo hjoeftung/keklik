@@ -177,26 +177,6 @@ func (r *PostgresSleepSessionRepository) FindByID(ctx context.Context, id sleep.
 	return scanSleepSession(row)
 }
 
-// FindByIDForFamilyMember loads a sleep session by ID after verifying the
-// given family member belongs to the same family as the session's baby.
-func (r *PostgresSleepSessionRepository) FindByIDForFamilyMember(ctx context.Context, id sleep.SleepSessionID, memberID sleep.FamilyMemberID) (sleep.SleepSession, error) {
-	row := querierFromContext(ctx, r.db).QueryRowContext(ctx, `
-		SELECT s.id, s.baby_id, s.created_by_member_id,
-		       s.started_at, s.stopped_at,
-		       s.classification,
-		       s.classified_with_nw_start_hour, s.classified_with_nw_start_minute,
-		       s.classified_with_nw_end_hour,   s.classified_with_nw_end_minute
-		FROM sleep_sessions s
-		JOIN babies b ON b.id = s.baby_id
-		JOIN family_members fm ON fm.family_id = b.family_id
-		WHERE s.id = $1 AND fm.id = $2`,
-		string(id),
-		string(memberID),
-	)
-
-	return scanSleepSession(row)
-}
-
 // FindActiveByBabyID loads the active (not yet stopped) sleep session for a baby.
 // Returns apperror with CodeNotFound when no active session exists.
 func (r *PostgresSleepSessionRepository) FindActiveByBabyID(ctx context.Context, babyID sleep.BabyID) (sleep.SleepSession, error) {
@@ -248,18 +228,12 @@ func (r *PostgresSleepSessionRepository) FindByBabyIDAndDateRange(ctx context.Co
 	return sessions, nil
 }
 
-// DeleteByIDForFamilyMember hard-deletes a sleep session after verifying the
-// given family member belongs to the same family as the session's baby.
-func (r *PostgresSleepSessionRepository) DeleteByIDForFamilyMember(ctx context.Context, id sleep.SleepSessionID, memberID sleep.FamilyMemberID) error {
+// DeleteByID hard-deletes a sleep session by ID.
+// Returns apperror with CodeNotFound when no session with that ID exists.
+func (r *PostgresSleepSessionRepository) DeleteByID(ctx context.Context, id sleep.SleepSessionID) error {
 	result, err := querierFromContext(ctx, r.db).ExecContext(ctx, `
-		DELETE FROM sleep_sessions s
-		USING babies b, family_members fm
-		WHERE s.id = $1
-		  AND s.baby_id = b.id
-		  AND fm.id = $2
-		  AND fm.family_id = b.family_id`,
+		DELETE FROM sleep_sessions WHERE id = $1`,
 		string(id),
-		string(memberID),
 	)
 	if err != nil {
 		return fmt.Errorf("delete sleep session: %w", err)

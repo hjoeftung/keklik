@@ -345,8 +345,7 @@ func mapStopSleepError(err error) apperror.AppError {
 // @Failure   404      {object}  errorResponse
 // @Router    /babies/{baby_id}/sleep-sessions/{id} [patch]
 func editSleepSessionHandler(w http.ResponseWriter, r *http.Request, h *sleep.EditSleepSessionHandler) {
-	bc, ok := babyContextFromContext(r.Context())
-	if !ok {
+	if _, ok := babyContextFromContext(r.Context()); !ok {
 		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
@@ -358,10 +357,9 @@ func editSleepSessionHandler(w http.ResponseWriter, r *http.Request, h *sleep.Ed
 	}
 
 	session, err := h.Handle(r.Context(), sleep.EditSleepSessionCommand{
-		SessionID:      sleep.SleepSessionID(r.PathValue("id")),
-		FamilyMemberID: bc.MemberID,
-		StartedAt:      req.StartedAt,
-		StoppedAt:      req.StoppedAt,
+		SessionID: sleep.SleepSessionID(r.PathValue("id")),
+		StartedAt: req.StartedAt,
+		StoppedAt: req.StoppedAt,
 	})
 	if err != nil {
 		writeError(w, mapEditSleepSessionError(err))
@@ -386,15 +384,13 @@ func editSleepSessionHandler(w http.ResponseWriter, r *http.Request, h *sleep.Ed
 // @Failure   404  {object}  errorResponse
 // @Router    /babies/{baby_id}/sleep-sessions/{id} [delete]
 func deleteSleepSessionHandler(w http.ResponseWriter, r *http.Request, h *sleep.DeleteSleepSessionHandler) {
-	bc, ok := babyContextFromContext(r.Context())
-	if !ok {
+	if _, ok := babyContextFromContext(r.Context()); !ok {
 		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
 
 	if err := h.Handle(r.Context(), sleep.DeleteSleepSessionCommand{
-		SessionID:      sleep.SleepSessionID(r.PathValue("id")),
-		FamilyMemberID: bc.MemberID,
+		SessionID: sleep.SleepSessionID(r.PathValue("id")),
 	}); err != nil {
 		writeError(w, mapDeleteSleepSessionError(err))
 		return

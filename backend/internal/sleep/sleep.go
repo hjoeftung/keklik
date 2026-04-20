@@ -85,8 +85,7 @@ type Transactor interface {
 
 type EditableSleepSessionRepository interface {
 	SleepSessionRepository
-	FindByIDForFamilyMember(ctx context.Context, id SleepSessionID, memberID FamilyMemberID) (SleepSession, error)
-	DeleteByIDForFamilyMember(ctx context.Context, id SleepSessionID, memberID FamilyMemberID) error
+	DeleteByID(ctx context.Context, id SleepSessionID) error
 }
 
 type ActiveSleepSessionRepository interface {
