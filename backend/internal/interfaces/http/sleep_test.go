@@ -150,7 +150,7 @@ func newStopSleepTestServer(
 		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
 		Dependencies{
 			Accounts:   &stubAccountRepository{account: account},
-			Sessions:   &stubSessionRepository{session: session},
+			Validator: &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: session.AccountID}},
 			BabyAccess: checker,
 			StopSleep:  stopSleep,
 		},
@@ -176,7 +176,7 @@ func newEditDeleteSleepTestServer(
 		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
 		Dependencies{
 			Accounts:           &stubAccountRepository{account: account},
-			Sessions:           &stubSessionRepository{session: session},
+			Validator: &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: session.AccountID}},
 			BabyAccess:         checker,
 			EditSleepSession:   editSleep,
 			DeleteSleepSession: deleteSleep,
@@ -233,7 +233,7 @@ func newStartSleepTestServer(
 		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
 		Dependencies{
 			Accounts:   &stubAccountRepository{account: account},
-			Sessions:   &stubSessionRepository{session: session},
+			Validator: &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: session.AccountID}},
 			BabyAccess: checker,
 			StartSleep: startSleep,
 		},
@@ -258,7 +258,7 @@ func newGetSleepHistoryTestServer(
 		infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}},
 		Dependencies{
 			Accounts:        &stubAccountRepository{account: account},
-			Sessions:        &stubSessionRepository{session: session},
+			Validator: &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: session.AccountID}},
 			BabyAccess:      checker,
 			GetSleepHistory: getSleepHistory,
 		},

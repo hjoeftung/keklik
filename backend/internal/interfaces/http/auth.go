@@ -12,7 +12,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"golang.org/x/oauth2"
 
@@ -222,7 +221,7 @@ func requireBabyAccess(checker babyAccessChecker, next http.Handler) http.Handle
 // requireAuth is middleware that validates the Bearer session token in the Authorization
 // header, loads the associated Account, and attaches it to the request context.
 // Protected handlers retrieve the account via auth.AccountFromContext.
-func requireAuth(accounts auth.AccountRepository, sessions auth.SessionRepository, next http.Handler) http.Handler {
+func requireAuth(accounts auth.AccountRepository, validator auth.TokenValidator, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bearer := r.Header.Get("Authorization")
 		if !strings.HasPrefix(bearer, "Bearer ") {
@@ -230,15 +229,15 @@ func requireAuth(accounts auth.AccountRepository, sessions auth.SessionRepositor
 			return
 		}
 
-		token := auth.SessionToken(strings.TrimPrefix(bearer, "Bearer "))
+		token := strings.TrimPrefix(bearer, "Bearer ")
 
-		session, err := sessions.FindByToken(r.Context(), token)
-		if err != nil || session.IsExpired(time.Now()) {
+		identity, err := validator.Validate(r.Context(), token)
+		if err != nil {
 			writeError(w, apperror.New(apperror.CodeUnauthenticated, "invalid or expired session"))
 			return
 		}
 
-		account, err := accounts.FindByID(r.Context(), session.AccountID)
+		account, err := accounts.FindByID(r.Context(), identity.AccountID)
 		if err != nil {
 			writeError(w, apperror.New(apperror.CodeUnauthenticated, "account not found"))
 			return

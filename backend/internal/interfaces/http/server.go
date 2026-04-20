@@ -20,7 +20,7 @@ type healthResponse struct {
 // Dependencies holds all handler and repository dependencies for the HTTP server.
 type Dependencies struct {
 	Accounts           auth.AccountRepository
-	Sessions           auth.SessionRepository
+	Validator          auth.TokenValidator
 	OAuthCallback      *auth.HandleOAuthCallbackHandler
 	TestLogin          *auth.HandleTestLoginHandler
 	CreateFamily       *family.CreateFamilyHandler
@@ -40,7 +40,7 @@ type Dependencies struct {
 // NewServer wires the HTTP transport and returns a ready-to-start server.
 func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	accounts := deps.Accounts
-	sessions := deps.Sessions
+	validator := deps.Validator
 	oauthCallback := deps.OAuthCallback
 	testLogin := deps.TestLogin
 	createFamily := deps.CreateFamily
@@ -123,7 +123,7 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	protected.Handle("GET /babies/{baby_id}/dashboard", withBaby(func(w http.ResponseWriter, r *http.Request) {
 		getDashboardSummaryHandler(w, r, getDashboardSummary)
 	}))
-	mux.Handle("/", requireAuth(accounts, sessions, protected))
+	mux.Handle("/", requireAuth(accounts, validator, protected))
 
 	return &http.Server{
 		Addr:    config.Address(),

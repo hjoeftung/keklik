@@ -1,5 +1,14 @@
 basePath: /
 definitions:
+  httpapi.activeSleepSessionResponse:
+    properties:
+      duration_seconds:
+        type: number
+      id:
+        type: string
+      started_at:
+        type: string
+    type: object
   httpapi.authSessionResponse:
     properties:
       account_id:
@@ -40,6 +49,28 @@ definitions:
         $ref: '#/definitions/httpapi.nightWindowRequest'
       timezone:
         type: string
+    type: object
+  httpapi.dailySummaryResponse:
+    properties:
+      total_active_seconds:
+        type: number
+      total_sleep_seconds:
+        type: number
+    type: object
+  httpapi.dashboardSummaryResponse:
+    properties:
+      active_session:
+        $ref: '#/definitions/httpapi.activeSleepSessionResponse'
+      rolling_7d:
+        $ref: '#/definitions/httpapi.rollingAverageResponse'
+      rolling_14d:
+        $ref: '#/definitions/httpapi.rollingAverageResponse'
+      time_since_awakening_seconds:
+        type: number
+      time_since_sleep_start_seconds:
+        type: number
+      today:
+        $ref: '#/definitions/httpapi.dailySummaryResponse'
     type: object
   httpapi.editSleepSessionRequest:
     properties:
@@ -109,6 +140,13 @@ definitions:
         type: integer
       start_minute:
         type: integer
+    type: object
+  httpapi.rollingAverageResponse:
+    properties:
+      avg_daily_active_seconds:
+        type: number
+      avg_daily_sleep_seconds:
+        type: number
     type: object
   httpapi.sleepSessionResponse:
     properties:
@@ -227,6 +265,38 @@ paths:
       summary: Test login (dev/staging only)
       tags:
       - auth
+  /babies/{baby_id}/dashboard:
+    get:
+      parameters:
+      - description: Baby ID
+        in: path
+        name: baby_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.dashboardSummaryResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get dashboard summary
+      tags:
+      - sleep
   /babies/{baby_id}/sleep-profiles:
     post:
       consumes:

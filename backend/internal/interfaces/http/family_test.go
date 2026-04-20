@@ -121,6 +121,24 @@ func (r *stubAccountRepository) FindByGoogleSubjectID(_ context.Context, _ strin
 	return r.account, nil
 }
 
+// stubTokenValidator is a minimal TokenValidator test double.
+// If validToken is non-empty, only that exact token is accepted.
+type stubTokenValidator struct {
+	validToken string
+	identity   auth.Identity
+	err        error
+}
+
+func (v *stubTokenValidator) Validate(_ context.Context, token string) (auth.Identity, error) {
+	if v.err != nil {
+		return auth.Identity{}, v.err
+	}
+	if v.validToken != "" && token != v.validToken {
+		return auth.Identity{}, auth.ErrSessionNotFound
+	}
+	return v.identity, nil
+}
+
 // stubSessionRepository is a minimal SessionRepository test double.
 type stubSessionRepository struct {
 	session auth.Session
@@ -212,7 +230,7 @@ func newTestServer(familyRepo family.FamilyRepository, memberRepo family.FamilyM
 		},
 		Dependencies{
 			Accounts:           &stubAccountRepository{account: account},
-			Sessions:           &stubSessionRepository{session: session},
+			Validator:          &stubTokenValidator{validToken: testSessionToken, identity: auth.Identity{AccountID: session.AccountID}},
 			CreateFamily:       createFamily,
 			CreateInviteLink:   createInviteLink,
 			JoinFamilyByInvite: joinByInvite,

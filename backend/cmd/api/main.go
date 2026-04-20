@@ -73,12 +73,13 @@ func main() {
 	deleteSleepSession := sleep.NewDeleteSleepSessionHandler(sleepSessionRepo)
 	getSleepHistory := sleep.NewGetSleepHistoryHandler(sleepSessionRepo, sleepProfileRepo)
 	getDashboardSummary := sleep.NewGetDashboardSummaryHandler(sleepProfileRepo, sleepSessionRepo)
+	sessionValidator := auth.NewDBSessionValidator(sessionRepo)
 	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, sessionRepo)
 	testLogin := auth.NewHandleTestLoginHandler(accountRepo, sessionRepo)
 
 	server := httpapi.NewServer(config, httpapi.Dependencies{
 		Accounts:           accountRepo,
-		Sessions:           sessionRepo,
+		Validator:          sessionValidator,
 		OAuthCallback:      oauthCallback,
 		TestLogin:          testLogin,
 		CreateFamily:       createFamily,

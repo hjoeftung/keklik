@@ -50,3 +50,22 @@ type SessionRepository interface {
 	Save(ctx context.Context, session Session) error
 	FindByToken(ctx context.Context, token SessionToken) (Session, error)
 }
+
+// Identity is the verified result of a successful token validation.
+//
+// A JWT implementation must encode these two claims:
+//   - "account_id": the internal AccountID (UUID string)
+//   - "exp": Unix timestamp matching ExpiresAt
+//
+// Signing-key rotation should use a "kid" (key-ID) header paired with a
+// key store so old tokens remain verifiable during rollover.
+type Identity struct {
+	AccountID AccountID
+	ExpiresAt time.Time
+}
+
+// TokenValidator validates a raw bearer token and returns the associated Identity.
+// The returned error is non-nil when the token is missing, invalid, or expired.
+type TokenValidator interface {
+	Validate(ctx context.Context, token string) (Identity, error)
+}

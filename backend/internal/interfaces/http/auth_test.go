@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"golang.org/x/oauth2"
 
@@ -14,12 +13,13 @@ import (
 	"github.com/hjoeftung/keklik/internal/infrastructure"
 )
 
+
 // --- requireAuth middleware ---
 
 func TestRequireAuth_MissingHeader(t *testing.T) {
 	t.Parallel()
 
-	handler := requireAuth(&stubAccountRepository{}, &stubSessionRepository{}, okHandler())
+	handler := requireAuth(&stubAccountRepository{}, &stubTokenValidator{}, okHandler())
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
 
@@ -31,7 +31,7 @@ func TestRequireAuth_MissingHeader(t *testing.T) {
 func TestRequireAuth_WrongScheme(t *testing.T) {
 	t.Parallel()
 
-	handler := requireAuth(&stubAccountRepository{}, &stubSessionRepository{}, okHandler())
+	handler := requireAuth(&stubAccountRepository{}, &stubTokenValidator{}, okHandler())
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Authorization", "Basic dXNlcjpwYXNz")
 	rec := httptest.NewRecorder()
@@ -45,8 +45,8 @@ func TestRequireAuth_WrongScheme(t *testing.T) {
 func TestRequireAuth_InvalidToken(t *testing.T) {
 	t.Parallel()
 
-	sessions := &stubSessionRepository{err: auth.ErrSessionNotFound}
-	handler := requireAuth(&stubAccountRepository{}, sessions, okHandler())
+	validator := &stubTokenValidator{err: auth.ErrSessionNotFound}
+	handler := requireAuth(&stubAccountRepository{}, validator, okHandler())
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Authorization", "Bearer unknown-token")
 	rec := httptest.NewRecorder()
@@ -60,13 +60,8 @@ func TestRequireAuth_InvalidToken(t *testing.T) {
 func TestRequireAuth_ExpiredSession(t *testing.T) {
 	t.Parallel()
 
-	session := auth.Session{
-		Token:     "tok",
-		AccountID: "acc",
-		ExpiresAt: time.Now().Add(-time.Minute),
-	}
-	sessions := &stubSessionRepository{session: session}
-	handler := requireAuth(&stubAccountRepository{}, sessions, okHandler())
+	validator := &stubTokenValidator{err: auth.ErrSessionNotFound}
+	handler := requireAuth(&stubAccountRepository{}, validator, okHandler())
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Authorization", "Bearer tok")
 	rec := httptest.NewRecorder()
@@ -81,12 +76,7 @@ func TestRequireAuth_ValidToken_AttachesAccountToContext(t *testing.T) {
 	t.Parallel()
 
 	account := auth.Account{ID: "acc-id", GoogleSubjectID: "google-sub"}
-	session := auth.Session{
-		Token:     "valid-tok",
-		AccountID: "acc-id",
-		ExpiresAt: time.Now().Add(time.Hour),
-	}
-	sessions := &stubSessionRepository{session: session}
+	validator := &stubTokenValidator{identity: auth.Identity{AccountID: "acc-id"}}
 	accounts := &stubAccountRepository{account: account}
 
 	var capturedAccount auth.Account
@@ -95,7 +85,7 @@ func TestRequireAuth_ValidToken_AttachesAccountToContext(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	handler := requireAuth(accounts, sessions, next)
+	handler := requireAuth(accounts, validator, next)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Authorization", "Bearer valid-tok")
 	rec := httptest.NewRecorder()
@@ -237,7 +227,7 @@ func TestTestLoginHandlerReturns404WhenDisabled(t *testing.T) {
 		minimalServerConfig(),
 		Dependencies{
 			Accounts:  &stubAccountRepository{},
-			Sessions:  &stubSessionRepository{},
+			Validator: &stubTokenValidator{},
 			TestLogin: auth.NewHandleTestLoginHandler(&stubAccountRepository{}, &stubSessionRepository{}),
 		},
 	)
@@ -264,7 +254,7 @@ func TestTestLoginHandlerReturnsSessionWhenEnabled(t *testing.T) {
 		},
 		Dependencies{
 			Accounts:  accounts,
-			Sessions:  sessions,
+			Validator: &stubTokenValidator{},
 			TestLogin: auth.NewHandleTestLoginHandler(accounts, sessions),
 		},
 	)
@@ -319,7 +309,7 @@ func TestTestLoginHandlerRejectsBadJSON(t *testing.T) {
 		},
 		Dependencies{
 			Accounts:  &stubAccountRepository{},
-			Sessions:  &stubSessionRepository{},
+			Validator: &stubTokenValidator{},
 			TestLogin: auth.NewHandleTestLoginHandler(&stubAccountRepository{}, &stubSessionRepository{}),
 		},
 	)
