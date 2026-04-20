@@ -1,0 +1,15 @@
+basePath: /
+host: localhost:8080
+info:
+  contact: {}
+  description: Baby sleep tracking API for families.
+  title: Keklik API
+  version: "1.0"
+paths: {}
+securityDefinitions:
+  BearerAuth:
+    description: Session token obtained from the auth endpoints.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

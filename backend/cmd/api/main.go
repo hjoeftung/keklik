@@ -1,6 +1,6 @@
 // Package main is the entry point for the Keklik HTTP API server.
 //
-//go:generate go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g cmd/api/main.go --dir .. --output ../docs --outputTypes yaml
+//go:generate go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g cmd/api/main.go --dir ../.. --output ../../docs --outputTypes yaml
 //
 // @title       Keklik API
 // @version     1.0
@@ -72,7 +72,7 @@ func main() {
 	editSleepSession := sleep.NewEditSleepSessionHandler(sleepSessionRepo, sleepProfileRepo)
 	deleteSleepSession := sleep.NewDeleteSleepSessionHandler(sleepSessionRepo)
 	getSleepHistory := sleep.NewGetSleepHistoryHandler(sleepSessionRepo, sleepProfileRepo)
-	getDashboardSummary := sleep.NewGetDashboardSummaryHandler(sleepProfileRepo, sleepSessionRepo, sleepSessionRepo, sleepSessionRepo)
+	getDashboardSummary := sleep.NewGetDashboardSummaryHandler(sleepProfileRepo, sleepSessionRepo)
 	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, sessionRepo)
 	testLogin := auth.NewHandleTestLoginHandler(accountRepo, sessionRepo)
 
