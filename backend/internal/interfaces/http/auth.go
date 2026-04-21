@@ -11,7 +11,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/oauth2"
 
@@ -66,7 +68,8 @@ func oauthStartHandler(w http.ResponseWriter, r *http.Request, cfg *oauth2.Confi
 		writeError(w, apperror.New(apperror.CodeInternalError, "failed to generate state"))
 		return
 	}
-	state := base64.RawURLEncoding.EncodeToString(stateBytes)
+	nonce := base64.RawURLEncoding.EncodeToString(stateBytes)
+	state := buildState(nonce, time.Now().Unix())
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     oauthStateCookieName,
@@ -109,6 +112,10 @@ func oauthCallbackHandler(
 	cookie, err := r.Cookie(oauthStateCookieName)
 	if err != nil || !verifyState(state, cookie.Value, stateSecret) {
 		writeError(w, apperror.New(apperror.CodeUnauthenticated, "invalid oauth state"))
+		return
+	}
+	if !stateTimestampValid(state, time.Now().Unix()) {
+		writeError(w, apperror.New(apperror.CodeInvalidArgument, "oauth state expired"))
 		return
 	}
 
@@ -164,7 +171,7 @@ func oauthCallbackHandler(
 // @Router    /auth/test/login [post]
 func testLoginHandler(w http.ResponseWriter, r *http.Request, enabled bool, h *auth.HandleTestLoginHandler) {
 	if !enabled {
-		http.NotFound(w, r)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
@@ -351,4 +358,28 @@ func signState(state, secret string) string {
 func verifyState(state, signed, secret string) bool {
 	expected := signState(state, secret)
 	return hmac.Equal([]byte(signed), []byte(expected))
+}
+
+// buildState returns "nonce.base64(ts)" embedding the Unix timestamp in the state value.
+func buildState(nonce string, ts int64) string {
+	tsEncoded := base64.RawURLEncoding.EncodeToString([]byte(strconv.FormatInt(ts, 10)))
+	return nonce + "." + tsEncoded
+}
+
+// stateTimestampValid returns true if the timestamp embedded in state is within 5 minutes of now.
+func stateTimestampValid(state string, now int64) bool {
+	parts := strings.SplitN(state, ".", 2)
+	if len(parts) != 2 {
+		return false
+	}
+	tsBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return false
+	}
+	ts, err := strconv.ParseInt(string(tsBytes), 10, 64)
+	if err != nil {
+		return false
+	}
+	diff := now - ts
+	return diff >= 0 && diff <= oauthStateCookieMaxAge
 }
