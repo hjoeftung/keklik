@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
 
 	"github.com/lib/pq"
 
@@ -148,29 +147,101 @@ func (r *PostgresFamilyRepository) FindByInviteToken(ctx context.Context, token 
 	return r.reconstruct(ctx, familyID)
 }
 
-// reconstruct builds a Family aggregate from raw DB columns, loading members, babies, and invite links.
+// reconstruct builds a Family aggregate from a single JOIN across family_members, babies, and invite_links.
+// The JOIN produces a Cartesian product (member × baby × invite_link), so each entity is deduplicated by ID.
 func (r *PostgresFamilyRepository) reconstruct(
 	ctx context.Context,
 	id family.FamilyID,
 ) (family.Family, error) {
-	members, err := r.queryMembers(ctx, id)
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT
+			fm.id                   AS member_id,
+			fm.family_id            AS member_family_id,
+			fm.name                 AS member_name,
+			fm.account_id           AS member_account_id,
+			b.id                    AS baby_id,
+			b.family_id             AS baby_family_id,
+			b.name                  AS baby_name,
+			il.token                AS invite_token,
+			il.created_by_member_id AS invite_created_by,
+			il.expires_at           AS invite_expires_at
+		FROM families f
+		LEFT JOIN family_members fm ON fm.family_id = f.id
+		LEFT JOIN babies b          ON b.family_id  = f.id
+		LEFT JOIN invite_links il   ON il.family_id = f.id
+		WHERE f.id = $1`, string(id))
 	if err != nil {
-		return family.Family{}, err
+		return family.Family{}, fmt.Errorf("query family: %w", err)
 	}
+	defer rows.Close()
 
-	babies, err := r.queryBabies(ctx, id)
-	if err != nil {
-		return family.Family{}, err
+	seenMembers := make(map[family.FamilyMemberID]struct{})
+	seenBabies := make(map[family.BabyID]struct{})
+	seenLinks := make(map[family.InviteToken]struct{})
+	var members []family.FamilyMember
+	var babies []family.Baby
+	var links []family.InviteLink
+
+	for rows.Next() {
+		var (
+			memberID, memberFamilyID, memberName, memberAccountID sql.NullString
+			babyID, babyFamilyID, babyName                       sql.NullString
+			inviteToken, inviteCreatedBy                          sql.NullString
+			inviteExpiresAt                                       sql.NullTime
+		)
+		if err := rows.Scan(
+			&memberID, &memberFamilyID, &memberName, &memberAccountID,
+			&babyID, &babyFamilyID, &babyName,
+			&inviteToken, &inviteCreatedBy, &inviteExpiresAt,
+		); err != nil {
+			return family.Family{}, fmt.Errorf("scan family row: %w", err)
+		}
+
+		if memberID.Valid {
+			mid := family.FamilyMemberID(memberID.String)
+			if _, seen := seenMembers[mid]; !seen {
+				seenMembers[mid] = struct{}{}
+				members = append(members, family.FamilyMember{
+					ID:        mid,
+					FamilyID:  family.FamilyID(memberFamilyID.String),
+					Name:      memberName.String,
+					AccountID: auth.AccountID(memberAccountID.String),
+				})
+			}
+		}
+
+		if babyID.Valid {
+			bid := family.BabyID(babyID.String)
+			if _, seen := seenBabies[bid]; !seen {
+				seenBabies[bid] = struct{}{}
+				babies = append(babies, family.Baby{
+					ID:       bid,
+					FamilyID: family.FamilyID(babyFamilyID.String),
+					Name:     babyName.String,
+				})
+			}
+		}
+
+		if inviteToken.Valid {
+			tok := family.InviteToken(inviteToken.String)
+			if _, seen := seenLinks[tok]; !seen {
+				seenLinks[tok] = struct{}{}
+				links = append(links, family.InviteLink{
+					Token:             tok,
+					FamilyID:          id,
+					CreatedByMemberID: family.FamilyMemberID(inviteCreatedBy.String),
+					ExpiresAt:         inviteExpiresAt.Time,
+				})
+			}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return family.Family{}, fmt.Errorf("iterate family rows: %w", err)
 	}
 
 	f, err := family.NewFamily(id, members, babies)
 	if err != nil {
 		return family.Family{}, fmt.Errorf("reconstruct family aggregate: %w", err)
-	}
-
-	links, err := r.queryInviteLinks(ctx, id)
-	if err != nil {
-		return family.Family{}, err
 	}
 
 	for _, link := range links {
@@ -180,54 +251,6 @@ func (r *PostgresFamilyRepository) reconstruct(
 	}
 
 	return f, nil
-}
-
-func (r *PostgresFamilyRepository) queryMembers(ctx context.Context, familyID family.FamilyID) ([]family.FamilyMember, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, family_id, name, account_id
-		FROM family_members WHERE family_id = $1`, string(familyID))
-	if err != nil {
-		return nil, fmt.Errorf("query family members: %w", err)
-	}
-	defer rows.Close()
-
-	var members []family.FamilyMember
-	for rows.Next() {
-		var m family.FamilyMember
-		var id, fid string
-		if err := rows.Scan(&id, &fid, &m.Name, &m.AccountID); err != nil {
-			return nil, fmt.Errorf("scan family member: %w", err)
-		}
-		m.ID = family.FamilyMemberID(id)
-		m.FamilyID = family.FamilyID(fid)
-		members = append(members, m)
-	}
-
-	return members, rows.Err()
-}
-
-func (r *PostgresFamilyRepository) queryBabies(ctx context.Context, familyID family.FamilyID) ([]family.Baby, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, family_id, name
-		FROM babies WHERE family_id = $1`, string(familyID))
-	if err != nil {
-		return nil, fmt.Errorf("query babies: %w", err)
-	}
-	defer rows.Close()
-
-	var babies []family.Baby
-	for rows.Next() {
-		var b family.Baby
-		var id, fid string
-		if err := rows.Scan(&id, &fid, &b.Name); err != nil {
-			return nil, fmt.Errorf("scan baby: %w", err)
-		}
-		b.ID = family.BabyID(id)
-		b.FamilyID = family.FamilyID(fid)
-		babies = append(babies, b)
-	}
-
-	return babies, rows.Err()
 }
 
 // PostgresFamilyMemberRepository implements family.FamilyMemberRepository using PostgreSQL.
@@ -300,29 +323,3 @@ func (r *PostgresFamilyMemberRepository) FindByAccountID(ctx context.Context, ac
 	return m, nil
 }
 
-func (r *PostgresFamilyRepository) queryInviteLinks(ctx context.Context, familyID family.FamilyID) ([]family.InviteLink, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT token, family_id, created_by_member_id, expires_at
-		FROM invite_links WHERE family_id = $1`, string(familyID))
-	if err != nil {
-		return nil, fmt.Errorf("query invite links: %w", err)
-	}
-	defer rows.Close()
-
-	var links []family.InviteLink
-	for rows.Next() {
-		var token, fid, creatorID string
-		var expiresAt time.Time
-		if err := rows.Scan(&token, &fid, &creatorID, &expiresAt); err != nil {
-			return nil, fmt.Errorf("scan invite link: %w", err)
-		}
-		links = append(links, family.InviteLink{
-			Token:             family.InviteToken(token),
-			FamilyID:          family.FamilyID(fid),
-			CreatedByMemberID: family.FamilyMemberID(creatorID),
-			ExpiresAt:         expiresAt,
-		})
-	}
-
-	return links, rows.Err()
-}
