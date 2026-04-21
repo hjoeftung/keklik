@@ -59,6 +59,7 @@ type AppConfig struct {
 	BaseURL            string
 	InviteLinkLifetime time.Duration
 	EnableSwaggerUI    bool
+	IsDev              bool
 }
 
 // LoadConfig loads and validates the runtime environment contract.
@@ -92,6 +93,8 @@ func LoadConfig() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+
+	isDev := strings.TrimSpace(os.Getenv("ENVIRONMENT")) != "production"
 
 	databaseURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
 	clientID := strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_CLIENT_ID"))
@@ -142,6 +145,7 @@ func LoadConfig() (Config, error) {
 			BaseURL:            appBaseURL,
 			InviteLinkLifetime: inviteLinkLifetime,
 			EnableSwaggerUI:    enableSwaggerUI,
+			IsDev:              isDev,
 		},
 		ShutdownTimeout: defaultShutdownTimeout,
 	}, nil

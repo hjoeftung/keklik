@@ -60,7 +60,7 @@ type refreshTokenRequest struct {
 // @Tags     auth
 // @Success  307  {string}  string  "Redirect to Google authorisation page"
 // @Router   /auth/google/start [get]
-func oauthStartHandler(w http.ResponseWriter, r *http.Request, cfg *oauth2.Config, stateSecret string) {
+func oauthStartHandler(w http.ResponseWriter, r *http.Request, cfg *oauth2.Config, stateSecret string, secureCookie bool) {
 	stateBytes := make([]byte, 16)
 	if _, err := rand.Read(stateBytes); err != nil {
 		writeError(w, apperror.New(apperror.CodeInternalError, "failed to generate state"))
@@ -73,6 +73,7 @@ func oauthStartHandler(w http.ResponseWriter, r *http.Request, cfg *oauth2.Confi
 		Value:    signState(state, stateSecret),
 		MaxAge:   oauthStateCookieMaxAge,
 		HttpOnly: true,
+		Secure:   secureCookie,
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
 	})

@@ -28,6 +28,9 @@ type AccountRepository interface {
 	Save(ctx context.Context, account Account) error
 	FindByID(ctx context.Context, id AccountID) (Account, error)
 	FindByGoogleSubjectID(ctx context.Context, googleSubjectID string) (Account, error)
+	// Upsert inserts the account or, on a google_subject_id conflict, returns the existing row.
+	// It is safe to call concurrently for the same subject ID.
+	Upsert(ctx context.Context, account Account) (Account, error)
 }
 
 // Identity is the verified result of a successful token validation.

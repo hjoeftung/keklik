@@ -150,7 +150,7 @@ func TestOAuthStartHandler_SetsStateCookieAndRedirects(t *testing.T) {
 	cfg := minimalOAuthConfig()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/auth/google/start", nil)
-	oauthStartHandler(rec, req, cfg, "test-secret")
+	oauthStartHandler(rec, req, cfg, "test-secret", false)
 
 	if rec.Code != http.StatusTemporaryRedirect {
 		t.Fatalf("expected 307, got %d", rec.Code)

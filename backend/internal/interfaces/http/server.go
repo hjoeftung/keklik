@@ -73,7 +73,7 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	// Public endpoints.
 	mux.HandleFunc("GET /healthz", healthHandler)
 	mux.HandleFunc("GET /auth/google/start", func(w http.ResponseWriter, r *http.Request) {
-		oauthStartHandler(w, r, oauthCfg, stateSecret)
+		oauthStartHandler(w, r, oauthCfg, stateSecret, !config.App.IsDev)
 	})
 	mux.HandleFunc("GET /auth/google/callback", func(w http.ResponseWriter, r *http.Request) {
 		oauthCallbackHandler(w, r, oauthCfg, stateSecret, oauthCallback)

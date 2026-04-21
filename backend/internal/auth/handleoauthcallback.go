@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -84,22 +83,13 @@ func (h *HandleOAuthCallbackHandler) Handle(ctx context.Context, cmd HandleOAuth
 }
 
 func findOrCreateAccount(ctx context.Context, accounts AccountRepository, subjectID, email string) (Account, error) {
-	account, err := accounts.FindByGoogleSubjectID(ctx, subjectID)
-	if err == nil {
-		return account, nil
-	}
-	if !errors.Is(err, ErrAccountNotFound) {
-		return Account{}, fmt.Errorf("look up account: %w", err)
-	}
-
-	account = Account{
+	account, err := accounts.Upsert(ctx, Account{
 		ID:              AccountID(uuid.New().String()),
 		GoogleSubjectID: subjectID,
 		Email:           email,
+	})
+	if err != nil {
+		return Account{}, fmt.Errorf("upsert account: %w", err)
 	}
-	if err := accounts.Save(ctx, account); err != nil {
-		return Account{}, fmt.Errorf("save account: %w", err)
-	}
-
 	return account, nil
 }

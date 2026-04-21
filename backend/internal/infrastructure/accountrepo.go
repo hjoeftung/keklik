@@ -54,6 +54,25 @@ func (r *PostgresAccountRepository) FindByID(ctx context.Context, id auth.Accoun
 	return a, nil
 }
 
+// Upsert inserts the account or, on a google_subject_id conflict, updates email and returns the stored row.
+func (r *PostgresAccountRepository) Upsert(ctx context.Context, a auth.Account) (auth.Account, error) {
+	var rawID string
+	var createdAt time.Time
+	err := r.db.QueryRowContext(ctx, `
+		INSERT INTO accounts (id, google_subject_id, email)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (google_subject_id) DO UPDATE SET email = EXCLUDED.email
+		RETURNING id, google_subject_id, email, created_at`,
+		string(a.ID), a.GoogleSubjectID, a.Email,
+	).Scan(&rawID, &a.GoogleSubjectID, &a.Email, &createdAt)
+	if err != nil {
+		return auth.Account{}, fmt.Errorf("upsert account: %w", err)
+	}
+	a.ID = auth.AccountID(rawID)
+	a.CreatedAt = createdAt
+	return a, nil
+}
+
 // FindByGoogleSubjectID loads an Account by its Google subject identifier.
 func (r *PostgresAccountRepository) FindByGoogleSubjectID(ctx context.Context, googleSubjectID string) (auth.Account, error) {
 	var a auth.Account

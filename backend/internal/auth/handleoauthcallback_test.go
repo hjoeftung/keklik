@@ -3,6 +3,7 @@ package auth_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -12,11 +13,14 @@ import (
 // --- test doubles ---
 
 type inMemoryAccountRepository struct {
+	mu    sync.Mutex
 	saved []auth.Account
 	err   error
 }
 
 func (r *inMemoryAccountRepository) Save(_ context.Context, a auth.Account) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.err != nil {
 		return r.err
 	}
@@ -25,6 +29,8 @@ func (r *inMemoryAccountRepository) Save(_ context.Context, a auth.Account) erro
 }
 
 func (r *inMemoryAccountRepository) FindByID(_ context.Context, id auth.AccountID) (auth.Account, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	for _, a := range r.saved {
 		if a.ID == id {
 			return a, nil
@@ -34,6 +40,8 @@ func (r *inMemoryAccountRepository) FindByID(_ context.Context, id auth.AccountI
 }
 
 func (r *inMemoryAccountRepository) FindByGoogleSubjectID(_ context.Context, sub string) (auth.Account, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.err != nil {
 		return auth.Account{}, r.err
 	}
@@ -45,12 +53,30 @@ func (r *inMemoryAccountRepository) FindByGoogleSubjectID(_ context.Context, sub
 	return auth.Account{}, auth.ErrAccountNotFound
 }
 
+func (r *inMemoryAccountRepository) Upsert(_ context.Context, a auth.Account) (auth.Account, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.err != nil {
+		return auth.Account{}, r.err
+	}
+	for _, existing := range r.saved {
+		if existing.GoogleSubjectID == a.GoogleSubjectID {
+			return existing, nil
+		}
+	}
+	r.saved = append(r.saved, a)
+	return a, nil
+}
+
 type inMemoryRefreshTokenRepository struct {
+	mu     sync.Mutex
 	tokens []auth.RefreshToken
 	err    error
 }
 
 func (r *inMemoryRefreshTokenRepository) Save(_ context.Context, t auth.RefreshToken) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.err != nil {
 		return r.err
 	}
@@ -59,6 +85,8 @@ func (r *inMemoryRefreshTokenRepository) Save(_ context.Context, t auth.RefreshT
 }
 
 func (r *inMemoryRefreshTokenRepository) FindByToken(_ context.Context, token string) (auth.RefreshToken, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	for i, t := range r.tokens {
 		if t.Token == token {
 			return r.tokens[i], nil
@@ -68,6 +96,8 @@ func (r *inMemoryRefreshTokenRepository) FindByToken(_ context.Context, token st
 }
 
 func (r *inMemoryRefreshTokenRepository) Revoke(_ context.Context, token string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	now := time.Now()
 	for i, t := range r.tokens {
 		if t.Token == token {
@@ -79,6 +109,8 @@ func (r *inMemoryRefreshTokenRepository) Revoke(_ context.Context, token string)
 }
 
 func (r *inMemoryRefreshTokenRepository) RevokeAllForAccount(_ context.Context, accountID auth.AccountID) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	now := time.Now()
 	for i, t := range r.tokens {
 		if t.AccountID == accountID && t.RevokedAt == nil {
@@ -219,5 +251,48 @@ func TestHandleOAuthCallbackAccountLookupError(t *testing.T) {
 	_, err := h.Handle(context.Background(), validCallbackCommand())
 	if err == nil {
 		t.Fatal("expected error when account lookup fails")
+	}
+}
+
+func TestHandleOAuthCallbackConcurrentFirstTimeLogin(t *testing.T) {
+	t.Parallel()
+
+	accounts := &inMemoryAccountRepository{}
+	refreshTokens := &inMemoryRefreshTokenRepository{}
+	h := newCallbackHandler(accounts, refreshTokens)
+	cmd := validCallbackCommand()
+
+	const n = 20
+	results := make([]auth.HandleOAuthCallbackResult, n)
+	errs := make([]error, n)
+
+	var wg sync.WaitGroup
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func(i int) {
+			defer wg.Done()
+			results[i], errs[i] = h.Handle(context.Background(), cmd)
+		}(i)
+	}
+	wg.Wait()
+
+	for i, err := range errs {
+		if err != nil {
+			t.Errorf("goroutine %d got error: %v", i, err)
+		}
+	}
+
+	firstID := results[0].Account.ID
+	for i, r := range results {
+		if r.Account.ID != firstID {
+			t.Errorf("goroutine %d resolved to account %q, want %q", i, r.Account.ID, firstID)
+		}
+	}
+
+	accounts.mu.Lock()
+	saved := len(accounts.saved)
+	accounts.mu.Unlock()
+	if saved != 1 {
+		t.Errorf("expected exactly 1 saved account, got %d", saved)
 	}
 }

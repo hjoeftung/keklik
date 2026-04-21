@@ -1,38 +1,5 @@
 ## Story 6: Security Hardening
 
-### TASK-036: Fix race condition on concurrent first-time OAuth logins
-- Size: `S`
-- Goal: Prevent duplicate-account constraint errors when two OAuth callbacks for the same Google subject ID arrive simultaneously.
-- Scope:
-  - Replace the check-then-insert pattern in `findOrCreateAccount` with `INSERT ... ON CONFLICT (google_subject_id) DO UPDATE` (upsert), or catch the constraint violation and retry with a fetch
-  - Add a test that simulates concurrent callbacks for the same subject ID
-- Files: [internal/auth/handleoauthcallback.go](internal/auth/handleoauthcallback.go)
-- Acceptance criteria:
-  - Concurrent callbacks for the same `google_subject_id` both resolve to the same account without DB errors
-  - No duplicate rows in `accounts` under concurrent load
-
-### TASK-037: Add session invalidation (logout) endpoint
-- Size: `S`
-- Goal: Allow users to revoke their session and prevent unbounded accumulation of expired tokens in the DB.
-- Scope:
-  - Add `POST /auth/logout` handler that deletes the caller's token row from `sessions`
-  - Add a periodic cleanup job (or a DB cron query) to purge expired sessions
-  - Consider reducing session TTL from 30 days to 8 hours
-- Acceptance criteria:
-  - After logout, the token returns 401 on any authenticated endpoint
-  - Expired sessions are removed from the DB over time
-  - Logout is documented in the OpenAPI spec
-
-### TASK-038: Add Secure flag to OAuth state cookie
-- Size: `XS`
-- Goal: Prevent the state cookie from being transmitted over plain HTTP in production.
-- Scope:
-  - Set `Secure: true` on the state cookie in `internal/interfaces/http/auth.go:62-69`
-  - Gate it on environment: `!isDev` or `ENVIRONMENT=production`, so local dev keeps working
-- Files: [internal/interfaces/http/auth.go](internal/interfaces/http/auth.go)
-- Acceptance criteria:
-  - Cookie has `Secure` flag in any non-dev environment
-  - Local dev flow is unaffected
 
 ### TASK-039: Add timestamp verification to OAuth state parameter
 - Size: `XS`
