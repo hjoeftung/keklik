@@ -52,6 +52,16 @@ func (r *stubFamilyRepository) FindByMemberID(_ context.Context, _ family.Family
 	return r.family, nil
 }
 
+func (r *stubFamilyRepository) FindByAccountID(_ context.Context, _ auth.AccountID) (family.Family, error) {
+	if r.err != nil {
+		return family.Family{}, r.err
+	}
+	if r.family.ID() == "" {
+		return family.Family{}, apperror.New(apperror.CodeNotFound, "family not found")
+	}
+	return r.family, nil
+}
+
 func (r *stubFamilyRepository) FindByInviteToken(_ context.Context, token family.InviteToken) (family.Family, error) {
 	if r.err != nil {
 		return family.Family{}, r.err

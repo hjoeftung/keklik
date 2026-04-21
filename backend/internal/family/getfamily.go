@@ -3,7 +3,6 @@ package family
 import (
 	"context"
 
-	"github.com/hjoeftung/keklik/internal/apperror"
 	"github.com/hjoeftung/keklik/internal/auth"
 )
 
@@ -34,26 +33,17 @@ type GetFamilyResult struct {
 // GetFamilyHandler executes the GetFamily use case.
 type GetFamilyHandler struct {
 	families FamilyRepository
-	members  FamilyMemberRepository
 }
 
-// NewGetFamilyHandler returns a GetFamilyHandler backed by the given repositories.
-func NewGetFamilyHandler(families FamilyRepository, members FamilyMemberRepository) *GetFamilyHandler {
-	return &GetFamilyHandler{families: families, members: members}
+// NewGetFamilyHandler returns a GetFamilyHandler backed by the given repository.
+func NewGetFamilyHandler(families FamilyRepository) *GetFamilyHandler {
+	return &GetFamilyHandler{families: families}
 }
 
 // Handle resolves the authenticated account's family and returns its data.
 // Returns CodeNotFound if the account has no family yet.
 func (h *GetFamilyHandler) Handle(ctx context.Context, q GetFamilyQuery) (GetFamilyResult, error) {
-	member, err := h.members.FindByAccountID(ctx, q.AccountID)
-	if err != nil {
-		if isFamilyMemberNotFound(err) {
-			return GetFamilyResult{}, apperror.New(apperror.CodeNotFound, "no family found for this account")
-		}
-		return GetFamilyResult{}, err
-	}
-
-	f, err := h.families.FindByMemberID(ctx, member.ID)
+	f, err := h.families.FindByAccountID(ctx, q.AccountID)
 	if err != nil {
 		return GetFamilyResult{}, err
 	}

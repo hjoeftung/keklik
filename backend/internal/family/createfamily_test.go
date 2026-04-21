@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"testing"
+
+	"github.com/hjoeftung/keklik/internal/auth"
 )
 
 // inMemoryFamilyRepository is a test double for FamilyRepository.
@@ -25,6 +27,10 @@ func (r *inMemoryFamilyRepository) FindByID(_ context.Context, _ FamilyID) (Fami
 }
 
 func (r *inMemoryFamilyRepository) FindByMemberID(_ context.Context, _ FamilyMemberID) (Family, error) {
+	return Family{}, errors.New("not implemented")
+}
+
+func (r *inMemoryFamilyRepository) FindByAccountID(_ context.Context, _ auth.AccountID) (Family, error) {
 	return Family{}, errors.New("not implemented")
 }
 

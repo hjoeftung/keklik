@@ -127,6 +127,26 @@ func (r *PostgresFamilyRepository) FindByMemberID(ctx context.Context, memberID 
 	return r.reconstruct(ctx, familyID)
 }
 
+// FindByAccountID loads the family whose members include the given account.
+func (r *PostgresFamilyRepository) FindByAccountID(ctx context.Context, accountID auth.AccountID) (family.Family, error) {
+	var familyID family.FamilyID
+
+	err := r.db.QueryRowContext(ctx, `
+		SELECT f.id
+		FROM families f
+		JOIN family_members m ON m.family_id = f.id
+		WHERE m.account_id = $1`, accountID).
+		Scan(&familyID)
+	if err == sql.ErrNoRows {
+		return family.Family{}, apperror.New(apperror.CodeNotFound, "family not found")
+	}
+	if err != nil {
+		return family.Family{}, fmt.Errorf("query family by account: %w", err)
+	}
+
+	return r.reconstruct(ctx, familyID)
+}
+
 // FindByInviteToken loads the family associated with the given invite token.
 func (r *PostgresFamilyRepository) FindByInviteToken(ctx context.Context, token family.InviteToken) (family.Family, error) {
 	var familyID family.FamilyID

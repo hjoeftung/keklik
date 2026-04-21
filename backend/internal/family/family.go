@@ -64,6 +64,7 @@ type FamilyRepository interface {
 	Save(ctx context.Context, family Family) error
 	FindByID(ctx context.Context, id FamilyID) (Family, error)
 	FindByMemberID(ctx context.Context, memberID FamilyMemberID) (Family, error)
+	FindByAccountID(ctx context.Context, accountID auth.AccountID) (Family, error)
 	FindByInviteToken(ctx context.Context, token InviteToken) (Family, error)
 }
 

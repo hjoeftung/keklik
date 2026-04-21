@@ -46,6 +46,17 @@ func (r *inviteFamilyRepository) FindByMemberID(_ context.Context, memberID Fami
 	return Family{}, apperror.New(apperror.CodeNotFound, "family not found")
 }
 
+func (r *inviteFamilyRepository) FindByAccountID(_ context.Context, accountID auth.AccountID) (Family, error) {
+	for _, f := range r.families {
+		for _, m := range f.Members() {
+			if m.AccountID == accountID {
+				return f, nil
+			}
+		}
+	}
+	return Family{}, apperror.New(apperror.CodeNotFound, "family not found")
+}
+
 func (r *inviteFamilyRepository) FindByInviteToken(_ context.Context, token InviteToken) (Family, error) {
 	for _, f := range r.families {
 		for _, inviteLink := range f.InviteLinks() {
