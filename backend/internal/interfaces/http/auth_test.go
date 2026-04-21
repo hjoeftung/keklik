@@ -22,7 +22,7 @@ const testTokenDuration = 30 * 24 * time.Hour
 func TestRequireAuth_MissingHeader(t *testing.T) {
 	t.Parallel()
 
-	handler := requireAuth(&stubAccountRepository{}, &stubTokenValidator{}, okHandler())
+	handler := requireAuth(&stubTokenValidator{}, okHandler())
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
 
@@ -34,7 +34,7 @@ func TestRequireAuth_MissingHeader(t *testing.T) {
 func TestRequireAuth_WrongScheme(t *testing.T) {
 	t.Parallel()
 
-	handler := requireAuth(&stubAccountRepository{}, &stubTokenValidator{}, okHandler())
+	handler := requireAuth(&stubTokenValidator{}, okHandler())
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Authorization", "Basic dXNlcjpwYXNz")
 	rec := httptest.NewRecorder()
@@ -49,7 +49,7 @@ func TestRequireAuth_InvalidToken(t *testing.T) {
 	t.Parallel()
 
 	validator := &stubTokenValidator{err: auth.ErrInvalidToken}
-	handler := requireAuth(&stubAccountRepository{}, validator, okHandler())
+	handler := requireAuth(validator, okHandler())
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Authorization", "Bearer unknown-token")
 	rec := httptest.NewRecorder()
@@ -64,7 +64,7 @@ func TestRequireAuth_ExpiredSession(t *testing.T) {
 	t.Parallel()
 
 	validator := &stubTokenValidator{err: auth.ErrInvalidToken}
-	handler := requireAuth(&stubAccountRepository{}, validator, okHandler())
+	handler := requireAuth(validator, okHandler())
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Authorization", "Bearer tok")
 	rec := httptest.NewRecorder()
@@ -75,20 +75,18 @@ func TestRequireAuth_ExpiredSession(t *testing.T) {
 	}
 }
 
-func TestRequireAuth_ValidToken_AttachesAccountToContext(t *testing.T) {
+func TestRequireAuth_ValidToken_AttachesAccountIDToContext(t *testing.T) {
 	t.Parallel()
 
-	account := auth.Account{ID: "acc-id", GoogleSubjectID: "google-sub"}
 	validator := &stubTokenValidator{identity: auth.Identity{AccountID: "acc-id"}}
-	accounts := &stubAccountRepository{account: account}
 
-	var capturedAccount auth.Account
+	var capturedID auth.AccountID
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		capturedAccount, _ = auth.AccountFromContext(r.Context())
+		capturedID, _ = auth.AccountIDFromContext(r.Context())
 		w.WriteHeader(http.StatusOK)
 	})
 
-	handler := requireAuth(accounts, validator, next)
+	handler := requireAuth(validator, next)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Authorization", "Bearer valid-tok")
 	rec := httptest.NewRecorder()
@@ -97,8 +95,8 @@ func TestRequireAuth_ValidToken_AttachesAccountToContext(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
-	if capturedAccount.ID != "acc-id" {
-		t.Errorf("expected account ID %q in context, got %q", "acc-id", capturedAccount.ID)
+	if capturedID != "acc-id" {
+		t.Errorf("expected account ID %q in context, got %q", "acc-id", capturedID)
 	}
 }
 

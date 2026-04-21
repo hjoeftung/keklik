@@ -96,7 +96,7 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 		createFamilyInviteLinkHandler(w, r, createInviteLink)
 	})
 	protected.HandleFunc("POST /families/join-by-invite-link", func(w http.ResponseWriter, r *http.Request) {
-		joinFamilyByInviteLinkHandler(w, r, joinFamilyByInvite)
+		joinFamilyByInviteLinkHandler(w, r, joinFamilyByInvite, accounts)
 	})
 	// Sleep endpoints — additionally wrapped with requireBabyAccess middleware.
 	withBaby := func(h http.HandlerFunc) http.Handler {
@@ -123,7 +123,7 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	protected.Handle("GET /babies/{baby_id}/dashboard", withBaby(func(w http.ResponseWriter, r *http.Request) {
 		getDashboardSummaryHandler(w, r, getDashboardSummary)
 	}))
-	mux.Handle("/", requireAuth(accounts, validator, protected))
+	mux.Handle("/", requireAuth(validator, protected))
 
 	return &http.Server{
 		Addr:    config.Address(),

@@ -34,7 +34,7 @@ type createFamilyResponse struct {
 // @Failure   401   {object}  errorResponse
 // @Router    /families [post]
 func createFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.CreateFamilyHandler) {
-	account, ok := auth.AccountFromContext(r.Context())
+	accountID, ok := auth.AccountIDFromContext(r.Context())
 	if !ok {
 		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
 		return
@@ -49,7 +49,7 @@ func createFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.Creat
 	result, err := h.Handle(r.Context(), family.CreateFamilyCommand{
 		BabyName:         req.BabyName,
 		CreatorName:      req.CreatorName,
-		CreatorAccountID: account.ID,
+		CreatorAccountID: accountID,
 	})
 	if err != nil {
 		writeError(w, mapFamilyError(err))
@@ -92,14 +92,14 @@ type getFamilyResponse struct {
 // @Failure   404  {object}  errorResponse
 // @Router    /family [get]
 func getFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.GetFamilyHandler) {
-	account, ok := auth.AccountFromContext(r.Context())
+	accountID, ok := auth.AccountIDFromContext(r.Context())
 	if !ok {
 		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
 		return
 	}
 
 	result, err := h.Handle(r.Context(), family.GetFamilyQuery{
-		AccountID: account.ID,
+		AccountID: accountID,
 	})
 	if err != nil {
 		writeError(w, mapFamilyError(err))

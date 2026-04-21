@@ -188,7 +188,7 @@ func testLoginHandler(w http.ResponseWriter, r *http.Request, enabled bool, h *a
 // in the request context. Must be applied after requireAuth.
 func requireBabyAccess(checker babyAccessChecker, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		account, ok := auth.AccountFromContext(r.Context())
+		accountID, ok := auth.AccountIDFromContext(r.Context())
 		if !ok {
 			writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
 			return
@@ -201,7 +201,7 @@ func requireBabyAccess(checker babyAccessChecker, next http.Handler) http.Handle
 		}
 		babyID := sleep.BabyID(rawBabyID)
 
-		memberID, err := checker.CheckBabyAccess(r.Context(), account.ID, babyID)
+		memberID, err := checker.CheckBabyAccess(r.Context(), accountID, babyID)
 		if err != nil {
 			var appErr apperror.AppError
 			if asErr, ok2 := err.(apperror.AppError); ok2 {
@@ -219,9 +219,9 @@ func requireBabyAccess(checker babyAccessChecker, next http.Handler) http.Handle
 }
 
 // requireAuth is middleware that validates the Bearer session token in the Authorization
-// header, loads the associated Account, and attaches it to the request context.
-// Protected handlers retrieve the account via auth.AccountFromContext.
-func requireAuth(accounts auth.AccountRepository, validator auth.TokenValidator, next http.Handler) http.Handler {
+// header and attaches the account ID to the request context.
+// Protected handlers retrieve the account ID via auth.AccountIDFromContext.
+func requireAuth(validator auth.TokenValidator, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bearer := r.Header.Get("Authorization")
 		if !strings.HasPrefix(bearer, "Bearer ") {
@@ -237,13 +237,7 @@ func requireAuth(accounts auth.AccountRepository, validator auth.TokenValidator,
 			return
 		}
 
-		account, err := accounts.FindByID(r.Context(), identity.AccountID)
-		if err != nil {
-			writeError(w, apperror.New(apperror.CodeUnauthenticated, "account not found"))
-			return
-		}
-
-		next.ServeHTTP(w, r.WithContext(auth.WithAccount(r.Context(), account)))
+		next.ServeHTTP(w, r.WithContext(auth.WithAccountID(r.Context(), identity.AccountID)))
 	})
 }
 

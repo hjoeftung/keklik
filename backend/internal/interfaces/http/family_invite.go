@@ -36,14 +36,14 @@ type joinFamilyByInviteLinkResponse struct {
 // @Failure   403  {object}  errorResponse
 // @Router    /families/invite-links [post]
 func createFamilyInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.CreateFamilyInviteLinkHandler) {
-	account, ok := auth.AccountFromContext(r.Context())
+	accountID, ok := auth.AccountIDFromContext(r.Context())
 	if !ok {
 		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
 		return
 	}
 
 	result, err := h.Handle(r.Context(), family.CreateFamilyInviteLinkCommand{
-		CreatorAccountID: account.ID,
+		CreatorAccountID: accountID,
 	})
 	if err != nil {
 		writeError(w, mapFamilyError(err))
@@ -71,8 +71,8 @@ func createFamilyInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *fa
 // @Failure   400   {object}  errorResponse
 // @Failure   401   {object}  errorResponse
 // @Router    /families/join-by-invite-link [post]
-func joinFamilyByInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.JoinFamilyByInviteLinkHandler) {
-	account, ok := auth.AccountFromContext(r.Context())
+func joinFamilyByInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.JoinFamilyByInviteLinkHandler, accounts auth.AccountRepository) {
+	accountID, ok := auth.AccountIDFromContext(r.Context())
 	if !ok {
 		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
 		return
@@ -84,9 +84,15 @@ func joinFamilyByInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *fa
 		return
 	}
 
+	account, err := accounts.FindByID(r.Context(), accountID)
+	if err != nil {
+		writeError(w, apperror.New(apperror.CodeUnauthenticated, "account not found"))
+		return
+	}
+
 	result, err := h.Handle(r.Context(), family.JoinFamilyByInviteLinkCommand{
 		InviteToken: family.InviteToken(req.Token),
-		AccountID:   account.ID,
+		AccountID:   accountID,
 		Email:       account.Email,
 		MemberName:  req.MemberName,
 	})

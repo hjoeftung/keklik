@@ -6,14 +6,14 @@ type contextKey int
 
 const accountContextKey contextKey = iota
 
-// WithAccount returns a new context carrying the authenticated account.
-func WithAccount(ctx context.Context, account Account) context.Context {
-	return context.WithValue(ctx, accountContextKey, account)
+// WithAccountID returns a new context carrying the authenticated account ID.
+func WithAccountID(ctx context.Context, id AccountID) context.Context {
+	return context.WithValue(ctx, accountContextKey, id)
 }
 
-// AccountFromContext retrieves the authenticated account from the context.
-// The second return value is false when no account is present.
-func AccountFromContext(ctx context.Context) (Account, bool) {
-	acc, ok := ctx.Value(accountContextKey).(Account)
-	return acc, ok
+// AccountIDFromContext retrieves the authenticated account ID from the context.
+// The second return value is false when no account ID is present.
+func AccountIDFromContext(ctx context.Context) (AccountID, bool) {
+	id, ok := ctx.Value(accountContextKey).(AccountID)
+	return id, ok
 }
