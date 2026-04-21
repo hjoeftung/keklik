@@ -1,9 +1,7 @@
 ALTER TABLE family_members
-    RENAME COLUMN google_subject_id TO account_id;
+    ADD COLUMN account_id UUID REFERENCES accounts(id);
 
 ALTER TABLE family_members
-    ADD CONSTRAINT fk_family_members_account_id
-        FOREIGN KEY (account_id) REFERENCES accounts (id);
+    DROP COLUMN google_subject_id;
 
-ALTER INDEX idx_family_members_google_subject_id
-    RENAME TO idx_family_members_account_id;
+CREATE UNIQUE INDEX idx_family_members_account_id ON family_members (account_id);

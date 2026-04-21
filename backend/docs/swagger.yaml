@@ -11,9 +11,11 @@ definitions:
     type: object
   httpapi.authSessionResponse:
     properties:
+      access_token:
+        type: string
       account_id:
         type: string
-      token:
+      refresh_token:
         type: string
     type: object
   httpapi.createFamilyInviteLinkResponse:
@@ -141,6 +143,11 @@ definitions:
       start_minute:
         type: integer
     type: object
+  httpapi.refreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
   httpapi.rollingAverageResponse:
     properties:
       avg_daily_active_seconds:
@@ -196,6 +203,13 @@ definitions:
       identifier:
         type: string
     type: object
+  httpapi.tokenRefreshResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -238,6 +252,49 @@ paths:
           schema:
             type: string
       summary: Start Google OAuth flow
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.refreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.tokenRefreshResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+      summary: Refresh access token
       tags:
       - auth
   /auth/test/login:
