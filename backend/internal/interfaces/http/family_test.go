@@ -130,6 +130,17 @@ func (r *stubAccountRepository) FindByGoogleSubjectID(_ context.Context, googleS
 	}
 	return r.account, nil
 }
+func (r *stubAccountRepository) Upsert(_ context.Context, a auth.Account) (auth.Account, error) {
+	if r.err != nil {
+		return auth.Account{}, r.err
+	}
+	if r.account.GoogleSubjectID == a.GoogleSubjectID {
+		return r.account, nil
+	}
+	r.saved = append(r.saved, a)
+	r.account = a
+	return a, nil
+}
 
 // stubRefreshTokenRepository is a minimal RefreshTokenRepository test double.
 type stubRefreshTokenRepository struct{}
