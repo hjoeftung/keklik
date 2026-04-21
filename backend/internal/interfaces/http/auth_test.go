@@ -15,7 +15,8 @@ import (
 )
 
 const testSigningKey = "test-signing-key"
-const testTokenDuration = 30 * 24 * time.Hour
+const testAccessTokenDuration = 15 * time.Minute
+const testRefreshTokenDuration = 30 * 24 * time.Hour
 
 // --- requireAuth middleware ---
 
@@ -229,7 +230,7 @@ func TestTestLoginHandlerReturns404WhenDisabled(t *testing.T) {
 		Dependencies{
 			Accounts:  &stubAccountRepository{},
 			Validator: &stubTokenValidator{},
-			TestLogin: auth.NewHandleTestLoginHandler(&stubAccountRepository{}, testSigningKey, testTokenDuration),
+			TestLogin: auth.NewHandleTestLoginHandler(&stubAccountRepository{}, &stubRefreshTokenRepository{}, testSigningKey, testAccessTokenDuration, testRefreshTokenDuration),
 		},
 	)
 
@@ -255,7 +256,7 @@ func TestTestLoginHandlerReturnsSessionWhenEnabled(t *testing.T) {
 		Dependencies{
 			Accounts:  accounts,
 			Validator: &stubTokenValidator{},
-			TestLogin: auth.NewHandleTestLoginHandler(accounts, testSigningKey, testTokenDuration),
+			TestLogin: auth.NewHandleTestLoginHandler(accounts, &stubRefreshTokenRepository{}, testSigningKey, testAccessTokenDuration, testRefreshTokenDuration),
 		},
 	)
 
@@ -278,8 +279,11 @@ func TestTestLoginHandlerReturnsSessionWhenEnabled(t *testing.T) {
 		t.Fatalf("decode response: %v", err)
 	}
 
-	if resp.Token == "" {
-		t.Fatal("expected non-empty token")
+	if resp.AccessToken == "" {
+		t.Fatal("expected non-empty access token")
+	}
+	if resp.RefreshToken == "" {
+		t.Fatal("expected non-empty refresh token")
 	}
 
 	if resp.AccountID == "" {
@@ -307,7 +311,7 @@ func TestTestLoginHandlerRejectsBadJSON(t *testing.T) {
 		Dependencies{
 			Accounts:  &stubAccountRepository{},
 			Validator: &stubTokenValidator{},
-			TestLogin: auth.NewHandleTestLoginHandler(&stubAccountRepository{}, testSigningKey, testTokenDuration),
+			TestLogin: auth.NewHandleTestLoginHandler(&stubAccountRepository{}, &stubRefreshTokenRepository{}, testSigningKey, testAccessTokenDuration, testRefreshTokenDuration),
 		},
 	)
 

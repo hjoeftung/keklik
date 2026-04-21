@@ -11,7 +11,8 @@ func TestHandleTestLoginCreatesAccountAndToken(t *testing.T) {
 	t.Parallel()
 
 	accounts := &inMemoryAccountRepository{}
-	h := auth.NewHandleTestLoginHandler(accounts, testSigningKey, testTokenDuration)
+	refreshTokens := &inMemoryRefreshTokenRepository{}
+	h := auth.NewHandleTestLoginHandler(accounts, refreshTokens, testSigningKey, testAccessTokenDuration, testRefreshTokenDuration)
 
 	result, err := h.Handle(context.Background(), auth.HandleTestLoginCommand{Identifier: "qa-user"})
 	if err != nil {
@@ -26,17 +27,21 @@ func TestHandleTestLoginCreatesAccountAndToken(t *testing.T) {
 		t.Fatalf("expected test email %q, got %q", "qa-user@test.local", result.Account.Email)
 	}
 
-	if result.Token == "" {
-		t.Fatal("expected a non-empty JWT token")
+	if result.AccessToken == "" {
+		t.Fatal("expected a non-empty access token")
 	}
 
 	validator := auth.NewJWTValidator(testSigningKey)
-	identity, err := validator.Validate(context.Background(), result.Token)
+	identity, err := validator.Validate(context.Background(), result.AccessToken)
 	if err != nil {
 		t.Fatalf("issued token failed validation: %v", err)
 	}
 	if identity.AccountID != result.Account.ID {
 		t.Fatalf("token account mismatch: got %q want %q", identity.AccountID, result.Account.ID)
+	}
+
+	if result.RefreshToken == "" {
+		t.Fatal("expected a non-empty refresh token")
 	}
 
 	if len(accounts.saved) != 1 {
@@ -53,7 +58,8 @@ func TestHandleTestLoginReusesExistingAccount(t *testing.T) {
 		Email:           "qa-user@test.local",
 	}
 	accounts := &inMemoryAccountRepository{saved: []auth.Account{existing}}
-	h := auth.NewHandleTestLoginHandler(accounts, testSigningKey, testTokenDuration)
+	refreshTokens := &inMemoryRefreshTokenRepository{}
+	h := auth.NewHandleTestLoginHandler(accounts, refreshTokens, testSigningKey, testAccessTokenDuration, testRefreshTokenDuration)
 
 	result, err := h.Handle(context.Background(), auth.HandleTestLoginCommand{Identifier: "qa-user"})
 	if err != nil {
@@ -72,7 +78,7 @@ func TestHandleTestLoginReusesExistingAccount(t *testing.T) {
 func TestHandleTestLoginRejectsEmptyIdentifier(t *testing.T) {
 	t.Parallel()
 
-	h := auth.NewHandleTestLoginHandler(&inMemoryAccountRepository{}, testSigningKey, testTokenDuration)
+	h := auth.NewHandleTestLoginHandler(&inMemoryAccountRepository{}, &inMemoryRefreshTokenRepository{}, testSigningKey, testAccessTokenDuration, testRefreshTokenDuration)
 
 	_, err := h.Handle(context.Background(), auth.HandleTestLoginCommand{})
 	if err == nil {

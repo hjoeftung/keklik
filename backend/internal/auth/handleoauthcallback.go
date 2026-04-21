@@ -17,27 +17,41 @@ type HandleOAuthCallbackCommand struct {
 	Email           string
 }
 
-// HandleOAuthCallbackResult holds the resolved account and the new signed JWT.
+// HandleOAuthCallbackResult holds the resolved account and the new token pair.
 type HandleOAuthCallbackResult struct {
-	Account Account
-	Token   string
+	Account      Account
+	AccessToken  string
+	RefreshToken string
 }
 
 // HandleOAuthCallbackHandler resolves or provisions an internal Account for a Google identity
-// and issues a signed JWT.
+// and issues a short-lived access JWT plus a rotatable refresh token.
 type HandleOAuthCallbackHandler struct {
-	accounts   AccountRepository
-	signingKey string
-	duration   time.Duration
+	accounts        AccountRepository
+	refreshTokens   RefreshTokenRepository
+	signingKey      string
+	accessDuration  time.Duration
+	refreshDuration time.Duration
 }
 
-// NewHandleOAuthCallbackHandler returns a handler backed by the given account repository.
-func NewHandleOAuthCallbackHandler(accounts AccountRepository, signingKey string, duration time.Duration) *HandleOAuthCallbackHandler {
-	return &HandleOAuthCallbackHandler{accounts: accounts, signingKey: signingKey, duration: duration}
+// NewHandleOAuthCallbackHandler returns a handler backed by the given repositories.
+func NewHandleOAuthCallbackHandler(
+	accounts AccountRepository,
+	refreshTokens RefreshTokenRepository,
+	signingKey string,
+	accessDuration, refreshDuration time.Duration,
+) *HandleOAuthCallbackHandler {
+	return &HandleOAuthCallbackHandler{
+		accounts:        accounts,
+		refreshTokens:   refreshTokens,
+		signingKey:      signingKey,
+		accessDuration:  accessDuration,
+		refreshDuration: refreshDuration,
+	}
 }
 
 // Handle looks up the account by Google subject ID, creating one if it does not exist,
-// then issues a signed JWT.
+// then issues an access JWT and a new refresh token.
 func (h *HandleOAuthCallbackHandler) Handle(ctx context.Context, cmd HandleOAuthCallbackCommand) (HandleOAuthCallbackResult, error) {
 	if cmd.GoogleSubjectID == "" {
 		return HandleOAuthCallbackResult{}, fmt.Errorf("google subject ID must not be empty")
@@ -48,12 +62,25 @@ func (h *HandleOAuthCallbackHandler) Handle(ctx context.Context, cmd HandleOAuth
 		return HandleOAuthCallbackResult{}, err
 	}
 
-	token, err := IssueJWT(account.ID, h.signingKey, h.duration)
+	accessToken, err := IssueJWT(account.ID, h.signingKey, h.accessDuration)
 	if err != nil {
 		return HandleOAuthCallbackResult{}, err
 	}
 
-	return HandleOAuthCallbackResult{Account: account, Token: token}, nil
+	refreshToken := RefreshToken{
+		Token:     uuid.New().String(),
+		AccountID: account.ID,
+		ExpiresAt: now().Add(h.refreshDuration),
+	}
+	if err := h.refreshTokens.Save(ctx, refreshToken); err != nil {
+		return HandleOAuthCallbackResult{}, fmt.Errorf("save refresh token: %w", err)
+	}
+
+	return HandleOAuthCallbackResult{
+		Account:      account,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken.Token,
+	}, nil
 }
 
 func findOrCreateAccount(ctx context.Context, accounts AccountRepository, subjectID, email string) (Account, error) {

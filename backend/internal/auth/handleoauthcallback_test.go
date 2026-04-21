@@ -45,10 +45,54 @@ func (r *inMemoryAccountRepository) FindByGoogleSubjectID(_ context.Context, sub
 	return auth.Account{}, auth.ErrAccountNotFound
 }
 
+type inMemoryRefreshTokenRepository struct {
+	tokens []auth.RefreshToken
+	err    error
+}
+
+func (r *inMemoryRefreshTokenRepository) Save(_ context.Context, t auth.RefreshToken) error {
+	if r.err != nil {
+		return r.err
+	}
+	r.tokens = append(r.tokens, t)
+	return nil
+}
+
+func (r *inMemoryRefreshTokenRepository) FindByToken(_ context.Context, token string) (auth.RefreshToken, error) {
+	for i, t := range r.tokens {
+		if t.Token == token {
+			return r.tokens[i], nil
+		}
+	}
+	return auth.RefreshToken{}, auth.ErrRefreshTokenNotFound
+}
+
+func (r *inMemoryRefreshTokenRepository) Revoke(_ context.Context, token string) error {
+	now := time.Now()
+	for i, t := range r.tokens {
+		if t.Token == token {
+			r.tokens[i].RevokedAt = &now
+			return nil
+		}
+	}
+	return auth.ErrRefreshTokenNotFound
+}
+
+func (r *inMemoryRefreshTokenRepository) RevokeAllForAccount(_ context.Context, accountID auth.AccountID) error {
+	now := time.Now()
+	for i, t := range r.tokens {
+		if t.AccountID == accountID && t.RevokedAt == nil {
+			r.tokens[i].RevokedAt = &now
+		}
+	}
+	return nil
+}
+
 // --- helpers ---
 
 const testSigningKey = "test-signing-key"
-const testTokenDuration = 30 * 24 * time.Hour
+const testAccessTokenDuration = 15 * time.Minute
+const testRefreshTokenDuration = 30 * 24 * time.Hour
 
 func validCallbackCommand() auth.HandleOAuthCallbackCommand {
 	return auth.HandleOAuthCallbackCommand{
@@ -57,13 +101,18 @@ func validCallbackCommand() auth.HandleOAuthCallbackCommand {
 	}
 }
 
+func newCallbackHandler(accounts *inMemoryAccountRepository, refreshTokens *inMemoryRefreshTokenRepository) *auth.HandleOAuthCallbackHandler {
+	return auth.NewHandleOAuthCallbackHandler(accounts, refreshTokens, testSigningKey, testAccessTokenDuration, testRefreshTokenDuration)
+}
+
 // --- tests ---
 
 func TestHandleOAuthCallbackNewAccount(t *testing.T) {
 	t.Parallel()
 
 	accounts := &inMemoryAccountRepository{}
-	h := auth.NewHandleOAuthCallbackHandler(accounts, testSigningKey, testTokenDuration)
+	refreshTokens := &inMemoryRefreshTokenRepository{}
+	h := newCallbackHandler(accounts, refreshTokens)
 
 	result, err := h.Handle(context.Background(), validCallbackCommand())
 	if err != nil {
@@ -93,7 +142,8 @@ func TestHandleOAuthCallbackExistingAccount(t *testing.T) {
 		Email:           "old@example.com",
 	}
 	accounts := &inMemoryAccountRepository{saved: []auth.Account{existing}}
-	h := auth.NewHandleOAuthCallbackHandler(accounts, testSigningKey, testTokenDuration)
+	refreshTokens := &inMemoryRefreshTokenRepository{}
+	h := newCallbackHandler(accounts, refreshTokens)
 
 	result, err := h.Handle(context.Background(), validCallbackCommand())
 	if err != nil {
@@ -113,21 +163,22 @@ func TestHandleOAuthCallbackTokenIssued(t *testing.T) {
 	t.Parallel()
 
 	accounts := &inMemoryAccountRepository{}
-	h := auth.NewHandleOAuthCallbackHandler(accounts, testSigningKey, testTokenDuration)
+	refreshTokens := &inMemoryRefreshTokenRepository{}
+	h := newCallbackHandler(accounts, refreshTokens)
 
 	result, err := h.Handle(context.Background(), validCallbackCommand())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if result.Token == "" {
-		t.Error("expected a non-empty JWT token")
+	if result.AccessToken == "" {
+		t.Error("expected a non-empty access token")
 	}
 
 	validator := auth.NewJWTValidator(testSigningKey)
-	identity, err := validator.Validate(context.Background(), result.Token)
+	identity, err := validator.Validate(context.Background(), result.AccessToken)
 	if err != nil {
-		t.Fatalf("issued token failed validation: %v", err)
+		t.Fatalf("issued access token failed validation: %v", err)
 	}
 	if identity.AccountID != result.Account.ID {
 		t.Errorf("token account ID mismatch: got %q, want %q", identity.AccountID, result.Account.ID)
@@ -135,11 +186,21 @@ func TestHandleOAuthCallbackTokenIssued(t *testing.T) {
 	if !identity.ExpiresAt.After(time.Now()) {
 		t.Error("expected token to not be expired")
 	}
+
+	if result.RefreshToken == "" {
+		t.Error("expected a non-empty refresh token")
+	}
+	if len(refreshTokens.tokens) != 1 {
+		t.Errorf("expected 1 saved refresh token, got %d", len(refreshTokens.tokens))
+	}
+	if refreshTokens.tokens[0].AccountID != result.Account.ID {
+		t.Errorf("refresh token account ID mismatch")
+	}
 }
 
 func TestHandleOAuthCallbackEmptySubjectID(t *testing.T) {
 	t.Parallel()
-	h := auth.NewHandleOAuthCallbackHandler(&inMemoryAccountRepository{}, testSigningKey, testTokenDuration)
+	h := newCallbackHandler(&inMemoryAccountRepository{}, &inMemoryRefreshTokenRepository{})
 	cmd := auth.HandleOAuthCallbackCommand{GoogleSubjectID: "", Email: "user@example.com"}
 
 	_, err := h.Handle(context.Background(), cmd)
@@ -153,7 +214,7 @@ func TestHandleOAuthCallbackAccountLookupError(t *testing.T) {
 
 	lookupErr := errors.New("db failure")
 	accounts := &inMemoryAccountRepository{err: lookupErr}
-	h := auth.NewHandleOAuthCallbackHandler(accounts, testSigningKey, testTokenDuration)
+	h := newCallbackHandler(accounts, &inMemoryRefreshTokenRepository{})
 
 	_, err := h.Handle(context.Background(), validCallbackCommand())
 	if err == nil {

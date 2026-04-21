@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/family"
@@ -49,6 +48,7 @@ func main() {
 		log.Fatalf("migration error: %v", err)
 	}
 
+	refreshTokenRepo := infrastructure.NewPostgresRefreshTokenRepository(db)
 	familyRepo := infrastructure.NewPostgresFamilyRepository(db)
 	familyMemberRepo := infrastructure.NewPostgresFamilyMemberRepository(db)
 	accountRepo := infrastructure.NewPostgresAccountRepository(db)
@@ -73,16 +73,19 @@ func main() {
 	deleteSleepSession := sleep.NewDeleteSleepSessionHandler(sleepSessionRepo)
 	getSleepHistory := sleep.NewGetSleepHistoryHandler(sleepSessionRepo, sleepProfileRepo)
 	getDashboardSummary := sleep.NewGetDashboardSummaryHandler(sleepSessionRepo)
-	const tokenDuration = 30 * 24 * time.Hour
 	jwtValidator := auth.NewJWTValidator(config.Auth.JWTSigningKey)
-	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, config.Auth.JWTSigningKey, tokenDuration)
-	testLogin := auth.NewHandleTestLoginHandler(accountRepo, config.Auth.JWTSigningKey, tokenDuration)
+	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, refreshTokenRepo, config.Auth.JWTSigningKey, config.Auth.AccessTokenDuration, config.Auth.RefreshTokenDuration)
+	testLogin := auth.NewHandleTestLoginHandler(accountRepo, refreshTokenRepo, config.Auth.JWTSigningKey, config.Auth.AccessTokenDuration, config.Auth.RefreshTokenDuration)
+	refreshTokenHandler := auth.NewHandleRefreshTokenHandler(refreshTokenRepo, config.Auth.JWTSigningKey, config.Auth.AccessTokenDuration, config.Auth.RefreshTokenDuration)
+	logoutHandler := auth.NewHandleLogoutHandler(refreshTokenRepo)
 
 	server := httpapi.NewServer(config, httpapi.Dependencies{
 		Accounts:            accountRepo,
 		Validator:           jwtValidator,
 		OAuthCallback:       oauthCallback,
 		TestLogin:           testLogin,
+		RefreshToken:        refreshTokenHandler,
+		Logout:              logoutHandler,
 		CreateFamily:        createFamily,
 		GetFamily:           getFamily,
 		CreateInviteLink:    createInviteLink,

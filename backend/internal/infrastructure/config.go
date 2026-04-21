@@ -11,9 +11,11 @@ import (
 )
 
 const (
-	defaultHTTPPort        = 8080
-	defaultShutdownTimeout = 10 * time.Second
-	defaultInviteLinkTTL   = 7 * 24 * time.Hour
+	defaultHTTPPort             = 8080
+	defaultShutdownTimeout      = 10 * time.Second
+	defaultInviteLinkTTL        = 7 * 24 * time.Hour
+	defaultAccessTokenDuration  = 15 * time.Minute
+	defaultRefreshTokenDuration = 30 * 24 * time.Hour
 )
 
 // Config contains process-level settings used to boot the service and inject
@@ -46,8 +48,10 @@ type GoogleOAuthConfig struct {
 
 // AuthConfig contains authentication feature flags and signing material.
 type AuthConfig struct {
-	EnableTestAuth bool
-	JWTSigningKey  string
+	EnableTestAuth       bool
+	JWTSigningKey        string
+	AccessTokenDuration  time.Duration
+	RefreshTokenDuration time.Duration
 }
 
 // AppConfig contains application-level URLs and other cross-cutting settings.
@@ -70,6 +74,16 @@ func LoadConfig() (Config, error) {
 	}
 
 	inviteLinkLifetime, err := readDurationEnv("FAMILY_INVITE_LINK_EXPIRY", defaultInviteLinkTTL)
+	if err != nil {
+		return Config{}, err
+	}
+
+	accessTokenDuration, err := readDurationEnv("ACCESS_TOKEN_DURATION", defaultAccessTokenDuration)
+	if err != nil {
+		return Config{}, err
+	}
+
+	refreshTokenDuration, err := readDurationEnv("REFRESH_TOKEN_DURATION", defaultRefreshTokenDuration)
 	if err != nil {
 		return Config{}, err
 	}
@@ -119,8 +133,10 @@ func LoadConfig() (Config, error) {
 			RedirectURL:  redirectURL,
 		},
 		Auth: AuthConfig{
-			EnableTestAuth: enableTestAuth,
-			JWTSigningKey:  jwtSigningKey,
+			EnableTestAuth:       enableTestAuth,
+			JWTSigningKey:        jwtSigningKey,
+			AccessTokenDuration:  accessTokenDuration,
+			RefreshTokenDuration: refreshTokenDuration,
 		},
 		App: AppConfig{
 			BaseURL:            appBaseURL,

@@ -205,7 +205,7 @@ func (r *PostgresFamilyRepository) reconstruct(
 	for rows.Next() {
 		var (
 			memberID, memberFamilyID, memberName, memberAccountID sql.NullString
-			babyID, babyFamilyID, babyName                       sql.NullString
+			babyID, babyFamilyID, babyName                        sql.NullString
 			inviteToken, inviteCreatedBy                          sql.NullString
 			inviteExpiresAt                                       sql.NullTime
 		)
@@ -342,4 +342,3 @@ func (r *PostgresFamilyMemberRepository) FindByAccountID(ctx context.Context, ac
 	m.FamilyID = family.FamilyID(rawFamilyID)
 	return m, nil
 }
-

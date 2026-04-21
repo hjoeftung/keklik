@@ -131,6 +131,20 @@ func (r *stubAccountRepository) FindByGoogleSubjectID(_ context.Context, googleS
 	return r.account, nil
 }
 
+// stubRefreshTokenRepository is a minimal RefreshTokenRepository test double.
+type stubRefreshTokenRepository struct{}
+
+func (r *stubRefreshTokenRepository) Save(_ context.Context, _ auth.RefreshToken) error {
+	return nil
+}
+func (r *stubRefreshTokenRepository) FindByToken(_ context.Context, _ string) (auth.RefreshToken, error) {
+	return auth.RefreshToken{}, auth.ErrRefreshTokenNotFound
+}
+func (r *stubRefreshTokenRepository) Revoke(_ context.Context, _ string) error { return nil }
+func (r *stubRefreshTokenRepository) RevokeAllForAccount(_ context.Context, _ auth.AccountID) error {
+	return nil
+}
+
 // stubTokenValidator is a minimal TokenValidator test double.
 // If validToken is non-empty, only that exact token is accepted.
 type stubTokenValidator struct {

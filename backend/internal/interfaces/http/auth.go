@@ -35,12 +35,22 @@ type googleUserInfo struct {
 }
 
 type authSessionResponse struct {
-	Token     string `json:"token"`
-	AccountID string `json:"account_id"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	AccountID    string `json:"account_id"`
+}
+
+type tokenRefreshResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 type testLoginRequest struct {
 	Identifier string `json:"identifier"`
+}
+
+type refreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token"`
 }
 
 // oauthStartHandler generates a random state, stores it in a signed cookie, and
@@ -72,7 +82,7 @@ func oauthStartHandler(w http.ResponseWriter, r *http.Request, cfg *oauth2.Confi
 
 // oauthCallbackHandler verifies the state, exchanges the code for a Google token,
 // fetches the user's identity from Google, then resolves or provisions an internal
-// Account and issues a session token.
+// Account and issues a session token pair.
 //
 // @Summary   Google OAuth callback
 // @Tags      auth
@@ -183,6 +193,62 @@ func testLoginHandler(w http.ResponseWriter, r *http.Request, enabled bool, h *a
 	writeAuthSessionResponse(w, result)
 }
 
+// refreshTokenHandler exchanges a valid refresh token for a new access token and rotated
+// refresh token.
+//
+// @Summary   Refresh access token
+// @Tags      auth
+// @Accept    json
+// @Produce   json
+// @Param     body  body      refreshTokenRequest  true  "Refresh token"
+// @Success   200   {object}  tokenRefreshResponse
+// @Failure   400   {object}  errorResponse
+// @Failure   401   {object}  errorResponse
+// @Router    /auth/refresh [post]
+func refreshTokenHandler(w http.ResponseWriter, r *http.Request, h *auth.HandleRefreshTokenHandler) {
+	var req refreshTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid JSON body"))
+		return
+	}
+
+	result, err := h.Handle(r.Context(), auth.HandleRefreshTokenCommand{Token: req.RefreshToken})
+	if err != nil {
+		writeError(w, apperror.New(apperror.CodeUnauthenticated, "invalid or expired refresh token"))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(tokenRefreshResponse{
+		AccessToken:  result.AccessToken,
+		RefreshToken: result.RefreshToken,
+	})
+}
+
+// logoutHandler revokes all refresh tokens for the authenticated account.
+//
+// @Summary   Logout
+// @Tags      auth
+// @Security  BearerAuth
+// @Success   204
+// @Failure   401   {object}  errorResponse
+// @Router    /auth/logout [post]
+func logoutHandler(w http.ResponseWriter, r *http.Request, h *auth.HandleLogoutHandler) {
+	accountID, ok := auth.AccountIDFromContext(r.Context())
+	if !ok {
+		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		return
+	}
+
+	if err := h.Handle(r.Context(), auth.HandleLogoutCommand{AccountID: accountID}); err != nil {
+		writeError(w, apperror.New(apperror.CodeInternalError, "logout failed"))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // requireBabyAccess is middleware that extracts {baby_id} from the request path, verifies
 // the authenticated caller is a family member of that baby, and stores (baby_id, member_id)
 // in the request context. Must be applied after requireAuth.
@@ -267,8 +333,9 @@ func writeAuthSessionResponse(w http.ResponseWriter, result auth.HandleOAuthCall
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(authSessionResponse{
-		Token:     result.Token,
-		AccountID: string(result.Account.ID),
+		AccessToken:  result.AccessToken,
+		RefreshToken: result.RefreshToken,
+		AccountID:    string(result.Account.ID),
 	})
 }
 

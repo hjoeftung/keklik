@@ -23,6 +23,8 @@ type Dependencies struct {
 	Validator           auth.TokenValidator
 	OAuthCallback       *auth.HandleOAuthCallbackHandler
 	TestLogin           *auth.HandleTestLoginHandler
+	RefreshToken        *auth.HandleRefreshTokenHandler
+	Logout              *auth.HandleLogoutHandler
 	CreateFamily        *family.CreateFamilyHandler
 	GetFamily           *family.GetFamilyHandler
 	CreateInviteLink    *family.CreateFamilyInviteLinkHandler
@@ -43,6 +45,8 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	validator := deps.Validator
 	oauthCallback := deps.OAuthCallback
 	testLogin := deps.TestLogin
+	refreshToken := deps.RefreshToken
+	logout := deps.Logout
 	createFamily := deps.CreateFamily
 	getFamily := deps.GetFamily
 	createInviteLink := deps.CreateInviteLink
@@ -77,6 +81,9 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	mux.HandleFunc("/auth/test/login", func(w http.ResponseWriter, r *http.Request) {
 		testLoginHandler(w, r, config.Auth.EnableTestAuth, testLogin)
 	})
+	mux.HandleFunc("POST /auth/refresh", func(w http.ResponseWriter, r *http.Request) {
+		refreshTokenHandler(w, r, refreshToken)
+	})
 	mux.HandleFunc("GET /swagger/index.html", func(w http.ResponseWriter, r *http.Request) {
 		swaggerUIHandler(w, r, config.App.EnableSwaggerUI)
 	})
@@ -86,6 +93,9 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 
 	// Protected endpoints — wrapped with requireAuth middleware.
 	protected := http.NewServeMux()
+	protected.HandleFunc("POST /auth/logout", func(w http.ResponseWriter, r *http.Request) {
+		logoutHandler(w, r, logout)
+	})
 	protected.HandleFunc("POST /families", func(w http.ResponseWriter, r *http.Request) {
 		createFamilyHandler(w, r, createFamily)
 	})
