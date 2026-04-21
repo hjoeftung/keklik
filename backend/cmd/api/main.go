@@ -72,7 +72,7 @@ func main() {
 	editSleepSession := sleep.NewEditSleepSessionHandler(sleepSessionRepo, sleepProfileRepo)
 	deleteSleepSession := sleep.NewDeleteSleepSessionHandler(sleepSessionRepo)
 	getSleepHistory := sleep.NewGetSleepHistoryHandler(sleepSessionRepo, sleepProfileRepo)
-	getDashboardSummary := sleep.NewGetDashboardSummaryHandler(sleepProfileRepo, sleepSessionRepo)
+	getDashboardSummary := sleep.NewGetDashboardSummaryHandler(sleepSessionRepo)
 	const tokenDuration = 30 * 24 * time.Hour
 	jwtValidator := auth.NewJWTValidator(config.Auth.JWTSigningKey)
 	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, config.Auth.JWTSigningKey, tokenDuration)

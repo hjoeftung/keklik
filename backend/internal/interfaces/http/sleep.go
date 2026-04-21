@@ -468,8 +468,15 @@ func getDashboardSummaryHandler(w http.ResponseWriter, r *http.Request, h *sleep
 		return
 	}
 
+	tz := r.URL.Query().Get("timezone")
+	if tz == "" {
+		writeError(w, apperror.New(apperror.CodeInvalidArgument, "timezone query parameter is required"))
+		return
+	}
+
 	summary, err := h.Handle(r.Context(), sleep.GetDashboardSummaryQuery{
-		BabyID: bc.BabyID,
+		BabyID:   bc.BabyID,
+		Timezone: tz,
 	})
 	if err != nil {
 		writeError(w, mapDashboardSummaryError(err))

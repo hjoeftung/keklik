@@ -30,23 +30,21 @@ type RollingAverage struct {
 
 // GetDashboardSummaryQuery holds the inputs for the dashboard summary.
 type GetDashboardSummaryQuery struct {
-	BabyID BabyID
+	BabyID   BabyID
+	Timezone string // IANA timezone name
 }
 
 // GetDashboardSummaryHandler computes all dashboard metrics in a single use case.
 type GetDashboardSummaryHandler struct {
-	profiles SleepProfileRepository
 	sessions SleepSessionHistoryRepository
 	now      func() time.Time
 }
 
 // NewGetDashboardSummaryHandler returns a handler backed by the given repositories.
 func NewGetDashboardSummaryHandler(
-	profiles SleepProfileRepository,
 	sessions SleepSessionHistoryRepository,
 ) *GetDashboardSummaryHandler {
 	return &GetDashboardSummaryHandler{
-		profiles: profiles,
 		sessions: sessions,
 		now:      time.Now,
 	}
@@ -57,12 +55,7 @@ func NewGetDashboardSummaryHandler(
 // All elapsed-time and active-session fields are derived from the same
 // 14-day session slice — no extra DB queries are needed for those fields.
 func (h *GetDashboardSummaryHandler) Handle(ctx context.Context, q GetDashboardSummaryQuery) (DashboardSummary, error) {
-	profile, err := h.profiles.FindByBabyID(ctx, q.BabyID)
-	if err != nil {
-		return DashboardSummary{}, err
-	}
-
-	loc, err := time.LoadLocation(profile.Timezone())
+	loc, err := time.LoadLocation(q.Timezone)
 	if err != nil {
 		return DashboardSummary{}, ErrInvalidTimezone
 	}
@@ -86,52 +79,51 @@ func (h *GetDashboardSummaryHandler) Handle(ctx context.Context, q GetDashboardS
 		return DashboardSummary{}, err
 	}
 
-	today := ComputeDailySummary(allSessions, todayStart, todayEnd, now)
-	rolling7d := computeRollingAverage(allSessions, loc, localNow, 7, now)
-	rolling14d := computeRollingAverage(allSessions, loc, localNow, 14, now)
+	return DashboardSummary{
+		ActiveSession:       findActiveSession(allSessions, now),
+		TimeSinceSleepStart: timeSinceSleepStart(allSessions, now),
+		TimeSinceAwakening:  timeSinceAwakening(allSessions, now),
+		Today:               ComputeDailySummary(allSessions, todayStart, todayEnd, now),
+		Rolling7d:           computeRollingAverage(allSessions, loc, localNow, 7, now),
+		Rolling14d:          computeRollingAverage(allSessions, loc, localNow, 14, now),
+	}, nil
+}
 
-	// Active session: at most one, found by scanning for an unstopped session.
-	var activeSess *ActiveSessionInfo
-	for _, s := range allSessions {
+func findActiveSession(sessions []SleepSession, now time.Time) *ActiveSessionInfo {
+	for _, s := range sessions {
 		if s.IsActive() {
-			d := now.Sub(s.StartedAt())
-			activeSess = &ActiveSessionInfo{
+			return &ActiveSessionInfo{
 				ID:        s.ID(),
 				StartedAt: s.StartedAt(),
-				Duration:  d,
+				Duration:  now.Sub(s.StartedAt()),
 			}
-			break
 		}
 	}
+	return nil
+}
 
-	// Time since last sleep start: allSessions[0] is the most recently started.
-	var timeSinceSleepStart *time.Duration
-	if len(allSessions) > 0 {
-		d := now.Sub(allSessions[0].StartedAt())
-		timeSinceSleepStart = &d
+// timeSinceSleepStart returns elapsed time since the most recently started session.
+// sessions must be ordered by started_at DESC.
+func timeSinceSleepStart(sessions []SleepSession, now time.Time) *time.Duration {
+	if len(sessions) == 0 {
+		return nil
 	}
+	d := now.Sub(sessions[0].StartedAt())
+	return &d
+}
 
-	// Time since last awakening: the completed session with the latest stopped_at.
-	var timeSinceAwakening *time.Duration
+func timeSinceAwakening(sessions []SleepSession, now time.Time) *time.Duration {
 	var latestStop time.Time
-	for _, s := range allSessions {
+	for _, s := range sessions {
 		if stoppedAt, ok := s.StoppedAt(); ok && stoppedAt.After(latestStop) {
 			latestStop = stoppedAt
 		}
 	}
-	if !latestStop.IsZero() {
-		d := now.Sub(latestStop)
-		timeSinceAwakening = &d
+	if latestStop.IsZero() {
+		return nil
 	}
-
-	return DashboardSummary{
-		ActiveSession:       activeSess,
-		TimeSinceSleepStart: timeSinceSleepStart,
-		TimeSinceAwakening:  timeSinceAwakening,
-		Today:               today,
-		Rolling7d:           rolling7d,
-		Rolling14d:          rolling14d,
-	}, nil
+	d := now.Sub(latestStop)
+	return &d
 }
 
 // computeRollingAverage averages ComputeDailySummary over the given number of
