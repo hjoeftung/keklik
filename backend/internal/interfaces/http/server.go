@@ -56,6 +56,7 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	revokeInviteLink := deps.RevokeInviteLink
 	joinFamilyByInvite := deps.JoinFamilyByInvite
 	joinLimiter := newIPRateLimiter(rate.Every(time.Minute/5), 5)
+	testLoginLimiter := newIPRateLimiter(rate.Every(time.Minute/5), 5)
 	babyAccess := deps.BabyAccess
 	createSleepProfile := deps.CreateSleepProfile
 	startSleep := deps.StartSleep
@@ -83,9 +84,9 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	mux.HandleFunc("GET /auth/google/callback", func(w http.ResponseWriter, r *http.Request) {
 		oauthCallbackHandler(w, r, oauthCfg, stateSecret, oauthCallback)
 	})
-	mux.HandleFunc("/auth/test/login", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/auth/test/login", rateLimitByIP(testLoginLimiter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		testLoginHandler(w, r, config.Auth.EnableTestAuth, testLogin)
-	})
+	})))
 	mux.HandleFunc("POST /auth/refresh", func(w http.ResponseWriter, r *http.Request) {
 		refreshTokenHandler(w, r, refreshToken)
 	})
