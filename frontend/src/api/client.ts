@@ -1,7 +1,8 @@
 const SESSION_KEY = 'keklik_session'
 
 export interface Session {
-  token: string
+  accessToken: string
+  refreshToken: string
   accountId: string
 }
 
@@ -43,17 +44,18 @@ export class NetworkError extends Error {
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const session = getSession()
-
+async function executeRequest(
+  method: string,
+  path: string,
+  body: unknown,
+  accessToken?: string,
+): Promise<Response> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (session) {
-    headers['Authorization'] = `Bearer ${session.token}`
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`
   }
-
-  let response: Response
   try {
-    response = await fetch(`${BASE_URL}${path}`, {
+    return await fetch(`${BASE_URL}${path}`, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -61,11 +63,45 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   } catch {
     throw new NetworkError()
   }
+}
+
+async function tryRefreshSession(): Promise<Session | null> {
+  const session = getSession()
+  if (!session) return null
+  try {
+    const resp = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: session.refreshToken }),
+    })
+    if (!resp.ok) return null
+    const data = (await resp.json()) as { access_token: string; refresh_token: string }
+    const newSession: Session = {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      accountId: session.accountId,
+    }
+    saveSession(newSession)
+    return newSession
+  } catch {
+    return null
+  }
+}
+
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const session = getSession()
+  let response = await executeRequest(method, path, body, session?.accessToken)
 
   if (response.status === 401) {
-    clearSession()
-    window.location.replace('/signin')
-    throw new ApiError('Session expired. Please sign in again.', 'unauthenticated', 401)
+    const refreshed = await tryRefreshSession()
+    if (refreshed) {
+      response = await executeRequest(method, path, body, refreshed.accessToken)
+    }
+    if (response.status === 401) {
+      clearSession()
+      window.location.replace('/signin')
+      throw new ApiError('Session expired. Please sign in again.', 'unauthenticated', 401)
+    }
   }
 
   if (!response.ok) {
