@@ -25,13 +25,14 @@ export function clearSession(): void {
 }
 
 export class ApiError extends Error {
-  constructor(
-    message: string,
-    public readonly code: string,
-    public readonly status: number,
-  ) {
+  readonly code: string
+  readonly status: number
+
+  constructor(message: string, code: string, status: number) {
     super(message)
     this.name = 'ApiError'
+    this.code = code
+    this.status = status
   }
 }
 
@@ -99,7 +100,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     }
     if (response.status === 401) {
       clearSession()
-      window.location.replace('/signin')
+      window.location.replace('/')
       throw new ApiError('Session expired. Please sign in again.', 'unauthenticated', 401)
     }
   }

@@ -1,0 +1,66 @@
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { getSession, clearSession, ApiError } from '@/api/client'
+import { logout, getFamily, GetFamilyResponse } from '@/api/endpoints'
+
+export interface User {
+  accountId: string
+}
+
+interface AuthContextValue {
+  user: User | null
+  family: GetFamilyResponse | null
+  isLoading: boolean
+  signOut: () => Promise<void>
+}
+
+export const AuthContext = createContext<AuthContextValue | null>(null)
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [family, setFamily] = useState<GetFamilyResponse | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function init() {
+      const session = getSession()
+      if (!session) {
+        setIsLoading(false)
+        return
+      }
+      setUser({ accountId: session.accountId })
+      try {
+        const familyData = await getFamily()
+        setFamily(familyData)
+      } catch (err) {
+        if (!(err instanceof ApiError) || err.status !== 404) {
+          // 401 is handled by client.ts (page redirects); 404 means no family yet
+        }
+      }
+      setIsLoading(false)
+    }
+    init()
+  }, [])
+
+  async function signOut() {
+    try {
+      await logout()
+    } catch {
+      // proceed regardless of API failure
+    }
+    clearSession()
+    setUser(null)
+    setFamily(null)
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, family, isLoading, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export function useAuthContext(): AuthContextValue {
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuthContext must be used within AuthProvider')
+  return ctx
+}
