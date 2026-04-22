@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -51,9 +52,12 @@ func (h *HandleTestLoginHandler) Handle(ctx context.Context, cmd HandleTestLogin
 	}
 
 	subjectID := testAuthSubjectPrefix + identifier
-	account, err := findOrCreateAccount(ctx, h.accounts, subjectID, testAuthEmail(identifier))
+	account, created, err := findOrCreateAccount(ctx, h.accounts, subjectID, testAuthEmail(identifier))
 	if err != nil {
 		return HandleOAuthCallbackResult{}, err
+	}
+	if created {
+		slog.InfoContext(ctx, "account_created", "account_id", string(account.ID))
 	}
 
 	accessToken, err := IssueJWT(account.ID, h.signingKey, h.accessDuration)
@@ -75,6 +79,11 @@ func (h *HandleTestLoginHandler) Handle(ctx context.Context, cmd HandleTestLogin
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken.Token,
 	}, nil
+}
+
+// IsTestAccount reports whether a was created via the test-auth flow.
+func IsTestAccount(a Account) bool {
+	return strings.HasPrefix(a.GoogleSubjectID, testAuthSubjectPrefix)
 }
 
 func testAuthEmail(identifier string) string {

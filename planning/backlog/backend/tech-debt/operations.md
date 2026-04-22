@@ -25,7 +25,6 @@
   - Add structured logs for command failures and validation errors
   - Attach request identifier to logs
   - Avoid logging secrets or OAuth credentials
-- Dependencies: [TASK-001](#task-001-bootstrap-go-service-skeleton)
 - Acceptance criteria:
   - Logs include request context and stable error code where possible
   - Validation failures are visible in logs without leaking sensitive data

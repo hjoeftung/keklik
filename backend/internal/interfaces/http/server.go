@@ -115,7 +115,7 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 		revokeInviteLinkHandler(w, r, revokeInviteLink)
 	})
 	protected.Handle("POST /families/join-by-invite-link", rateLimitByIP(joinLimiter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		joinFamilyByInviteLinkHandler(w, r, joinFamilyByInvite, accounts)
+		joinFamilyByInviteLinkHandler(w, r, joinFamilyByInvite, accounts, config.Auth.EnableTestAuth)
 	})))
 	// Sleep endpoints — additionally wrapped with requireBabyAccess middleware.
 	withBaby := func(h http.HandlerFunc) http.Handler {

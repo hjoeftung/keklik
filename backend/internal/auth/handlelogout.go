@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log/slog"
 )
 
 // HandleLogoutCommand identifies the account whose refresh tokens should be revoked.
@@ -25,5 +26,6 @@ func (h *HandleLogoutHandler) Handle(ctx context.Context, cmd HandleLogoutComman
 	if err := h.refreshTokens.RevokeAllForAccount(ctx, cmd.AccountID); err != nil {
 		return fmt.Errorf("revoke refresh tokens: %w", err)
 	}
+	slog.InfoContext(ctx, "logout", "account_id", string(cmd.AccountID))
 	return nil
 }

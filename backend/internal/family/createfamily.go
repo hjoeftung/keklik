@@ -2,6 +2,7 @@ package family
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/google/uuid"
 
@@ -59,6 +60,7 @@ func (h *CreateFamilyHandler) Handle(ctx context.Context, cmd CreateFamilyComman
 	if err := h.families.Save(ctx, f); err != nil {
 		return CreateFamilyResult{}, err
 	}
+	slog.InfoContext(ctx, "family_created", "account_id", string(cmd.CreatorAccountID), "family_id", string(familyID))
 
 	return CreateFamilyResult{
 		FamilyID: familyID,

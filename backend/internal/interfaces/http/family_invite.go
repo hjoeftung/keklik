@@ -107,7 +107,7 @@ func revokeInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.R
 // @Failure   400   {object}  errorResponse
 // @Failure   401   {object}  errorResponse
 // @Router    /families/join-by-invite-link [post]
-func joinFamilyByInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.JoinFamilyByInviteLinkHandler, accounts auth.AccountRepository) {
+func joinFamilyByInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.JoinFamilyByInviteLinkHandler, accounts auth.AccountRepository, enableTestAuth bool) {
 	accountID, ok := auth.AccountIDFromContext(r.Context())
 	if !ok {
 		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
@@ -123,6 +123,11 @@ func joinFamilyByInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *fa
 	account, err := accounts.FindByID(r.Context(), accountID)
 	if err != nil {
 		writeError(w, apperror.New(apperror.CodeUnauthenticated, "account not found"))
+		return
+	}
+
+	if !enableTestAuth && auth.IsTestAccount(account) {
+		writeError(w, apperror.New(apperror.CodeForbidden, "test accounts cannot join families"))
 		return
 	}
 

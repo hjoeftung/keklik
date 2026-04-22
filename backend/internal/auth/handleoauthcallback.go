@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -56,9 +57,12 @@ func (h *HandleOAuthCallbackHandler) Handle(ctx context.Context, cmd HandleOAuth
 		return HandleOAuthCallbackResult{}, fmt.Errorf("google subject ID must not be empty")
 	}
 
-	account, err := findOrCreateAccount(ctx, h.accounts, cmd.GoogleSubjectID, cmd.Email)
+	account, created, err := findOrCreateAccount(ctx, h.accounts, cmd.GoogleSubjectID, cmd.Email)
 	if err != nil {
 		return HandleOAuthCallbackResult{}, err
+	}
+	if created {
+		slog.InfoContext(ctx, "account_created", "account_id", string(account.ID))
 	}
 
 	accessToken, err := IssueJWT(account.ID, h.signingKey, h.accessDuration)
@@ -82,14 +86,15 @@ func (h *HandleOAuthCallbackHandler) Handle(ctx context.Context, cmd HandleOAuth
 	}, nil
 }
 
-func findOrCreateAccount(ctx context.Context, accounts AccountRepository, subjectID, email string) (Account, error) {
+func findOrCreateAccount(ctx context.Context, accounts AccountRepository, subjectID, email string) (Account, bool, error) {
+	inputID := AccountID(uuid.New().String())
 	account, err := accounts.Upsert(ctx, Account{
-		ID:              AccountID(uuid.New().String()),
+		ID:              inputID,
 		GoogleSubjectID: subjectID,
 		Email:           email,
 	})
 	if err != nil {
-		return Account{}, fmt.Errorf("upsert account: %w", err)
+		return Account{}, false, fmt.Errorf("upsert account: %w", err)
 	}
-	return account, nil
+	return account, account.ID == inputID, nil
 }

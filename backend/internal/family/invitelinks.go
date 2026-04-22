@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"strings"
 	"time"
@@ -89,6 +90,7 @@ func (h *CreateFamilyInviteLinkHandler) Handle(
 	if err := h.families.Save(ctx, f); err != nil {
 		return CreateFamilyInviteLinkResult{}, err
 	}
+	slog.InfoContext(ctx, "invite_link_created", "account_id", string(cmd.CreatorAccountID), "family_id", string(f.ID()))
 
 	return CreateFamilyInviteLinkResult{
 		InviteLink: inviteLink,
@@ -168,6 +170,7 @@ func (h *JoinFamilyByInviteLinkHandler) Handle(
 	if err := h.families.Save(ctx, f); err != nil {
 		return JoinFamilyByInviteLinkResult{}, err
 	}
+	slog.InfoContext(ctx, "family_joined", "account_id", string(cmd.AccountID), "family_id", string(f.ID()))
 
 	return JoinFamilyByInviteLinkResult{
 		FamilyID: f.ID(),
