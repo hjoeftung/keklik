@@ -63,7 +63,7 @@ func (rl *ipRateLimiter) cleanup() {
 func rateLimitByIP(rl *ipRateLimiter, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !rl.allow(clientIP(r)) {
-			writeError(w, apperror.New(apperror.CodeTooManyRequests, "too many requests"))
+			writeError(w, r, apperror.New(apperror.CodeTooManyRequests, "too many requests"))
 			return
 		}
 		next.ServeHTTP(w, r)

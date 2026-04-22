@@ -65,7 +65,7 @@ type refreshTokenRequest struct {
 func oauthStartHandler(w http.ResponseWriter, r *http.Request, cfg *oauth2.Config, stateSecret string, secureCookie bool) {
 	stateBytes := make([]byte, 16)
 	if _, err := rand.Read(stateBytes); err != nil {
-		writeError(w, apperror.New(apperror.CodeInternalError, "failed to generate state"))
+		writeError(w, r, apperror.New(apperror.CodeInternalError, "failed to generate state"))
 		return
 	}
 	nonce := base64.RawURLEncoding.EncodeToString(stateBytes)
@@ -104,36 +104,36 @@ func oauthCallbackHandler(
 	h *auth.HandleOAuthCallbackHandler,
 ) {
 	if errParam := r.URL.Query().Get("error"); errParam != "" {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, fmt.Sprintf("google oauth error: %s", errParam)))
+		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, fmt.Sprintf("google oauth error: %s", errParam)))
 		return
 	}
 
 	state := r.URL.Query().Get("state")
 	cookie, err := r.Cookie(oauthStateCookieName)
 	if err != nil || !verifyState(state, cookie.Value, stateSecret) {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "invalid oauth state"))
+		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "invalid oauth state"))
 		return
 	}
 	if !stateTimestampValid(state, time.Now().Unix()) {
-		writeError(w, apperror.New(apperror.CodeInvalidArgument, "oauth state expired"))
+		writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "oauth state expired"))
 		return
 	}
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "missing authorization code"))
+		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "missing authorization code"))
 		return
 	}
 
 	token, err := cfg.Exchange(r.Context(), code)
 	if err != nil {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "failed to exchange authorization code"))
+		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "failed to exchange authorization code"))
 		return
 	}
 
 	userInfo, err := fetchGoogleUserInfo(r.Context(), cfg, token)
 	if err != nil {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "failed to retrieve google identity"))
+		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "failed to retrieve google identity"))
 		return
 	}
 
@@ -142,7 +142,7 @@ func oauthCallbackHandler(
 		Email:           userInfo.Email,
 	})
 	if err != nil {
-		writeError(w, apperror.New(apperror.CodeInternalError, "failed to resolve account"))
+		writeError(w, r, apperror.New(apperror.CodeInternalError, "failed to resolve account"))
 		return
 	}
 
@@ -182,19 +182,19 @@ func testLoginHandler(w http.ResponseWriter, r *http.Request, enabled bool, h *a
 	}
 
 	if h == nil {
-		writeError(w, apperror.New(apperror.CodeInternalError, "test auth is unavailable"))
+		writeError(w, r, apperror.New(apperror.CodeInternalError, "test auth is unavailable"))
 		return
 	}
 
 	var req testLoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid JSON body"))
+		writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "invalid JSON body"))
 		return
 	}
 
 	result, err := h.Handle(r.Context(), auth.HandleTestLoginCommand{Identifier: req.Identifier})
 	if err != nil {
-		writeError(w, apperror.New(apperror.CodeInvalidArgument, err.Error()))
+		writeError(w, r, apperror.New(apperror.CodeInvalidArgument, err.Error()))
 		return
 	}
 
@@ -216,13 +216,13 @@ func testLoginHandler(w http.ResponseWriter, r *http.Request, enabled bool, h *a
 func refreshTokenHandler(w http.ResponseWriter, r *http.Request, h *auth.HandleRefreshTokenHandler) {
 	var req refreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid JSON body"))
+		writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "invalid JSON body"))
 		return
 	}
 
 	result, err := h.Handle(r.Context(), auth.HandleRefreshTokenCommand{Token: req.RefreshToken})
 	if err != nil {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "invalid or expired refresh token"))
+		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "invalid or expired refresh token"))
 		return
 	}
 
@@ -245,12 +245,12 @@ func refreshTokenHandler(w http.ResponseWriter, r *http.Request, h *auth.HandleR
 func logoutHandler(w http.ResponseWriter, r *http.Request, h *auth.HandleLogoutHandler) {
 	accountID, ok := auth.AccountIDFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
 		return
 	}
 
 	if err := h.Handle(r.Context(), auth.HandleLogoutCommand{AccountID: accountID}); err != nil {
-		writeError(w, apperror.New(apperror.CodeInternalError, "logout failed"))
+		writeError(w, r, apperror.New(apperror.CodeInternalError, "logout failed"))
 		return
 	}
 
@@ -264,13 +264,13 @@ func requireBabyAccess(checker babyAccessChecker, next http.Handler) http.Handle
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accountID, ok := auth.AccountIDFromContext(r.Context())
 		if !ok {
-			writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+			writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
 			return
 		}
 
 		rawBabyID := r.PathValue("baby_id")
 		if _, err := uuid.Parse(rawBabyID); err != nil {
-			writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid baby_id"))
+			writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "invalid baby_id"))
 			return
 		}
 		babyID := sleep.BabyID(rawBabyID)
@@ -283,7 +283,7 @@ func requireBabyAccess(checker babyAccessChecker, next http.Handler) http.Handle
 			} else {
 				appErr = apperror.New(apperror.CodeInternalError, "unexpected error")
 			}
-			writeError(w, appErr)
+			writeError(w, r, appErr)
 			return
 		}
 
@@ -299,7 +299,7 @@ func requireAuth(validator auth.TokenValidator, next http.Handler) http.Handler 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bearer := r.Header.Get("Authorization")
 		if !strings.HasPrefix(bearer, "Bearer ") {
-			writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+			writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
 			return
 		}
 
@@ -307,7 +307,7 @@ func requireAuth(validator auth.TokenValidator, next http.Handler) http.Handler 
 
 		identity, err := validator.Validate(r.Context(), token)
 		if err != nil {
-			writeError(w, apperror.New(apperror.CodeUnauthenticated, "invalid or expired session"))
+			writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "invalid or expired session"))
 			return
 		}
 

@@ -36,13 +36,13 @@ type createFamilyResponse struct {
 func createFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.CreateFamilyHandler) {
 	accountID, ok := auth.AccountIDFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
 		return
 	}
 
 	var req createFamilyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
+		writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
 		return
 	}
 
@@ -52,7 +52,7 @@ func createFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.Creat
 		CreatorAccountID: accountID,
 	})
 	if err != nil {
-		writeError(w, mapFamilyError(err))
+		writeError(w, r, mapFamilyError(err))
 		return
 	}
 
@@ -94,7 +94,7 @@ type getFamilyResponse struct {
 func getFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.GetFamilyHandler) {
 	accountID, ok := auth.AccountIDFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
 		return
 	}
 
@@ -102,7 +102,7 @@ func getFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.GetFamil
 		AccountID: accountID,
 	})
 	if err != nil {
-		writeError(w, mapFamilyError(err))
+		writeError(w, r, mapFamilyError(err))
 		return
 	}
 

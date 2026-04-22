@@ -33,6 +33,8 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	infrastructure.SetupLogger()
+
 	config, err := infrastructure.LoadConfig()
 	if err != nil {
 		log.Fatalf("configuration error: %v", err)

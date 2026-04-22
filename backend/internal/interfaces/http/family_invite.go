@@ -38,7 +38,7 @@ type joinFamilyByInviteLinkResponse struct {
 func createFamilyInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.CreateFamilyInviteLinkHandler) {
 	accountID, ok := auth.AccountIDFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
 		return
 	}
 
@@ -46,7 +46,7 @@ func createFamilyInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *fa
 		CreatorAccountID: accountID,
 	})
 	if err != nil {
-		writeError(w, mapFamilyError(err))
+		writeError(w, r, mapFamilyError(err))
 		return
 	}
 
@@ -74,13 +74,13 @@ func createFamilyInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *fa
 func revokeInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.RevokeInviteLinkHandler) {
 	accountID, ok := auth.AccountIDFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
 		return
 	}
 
 	token := r.PathValue("token")
 	if token == "" {
-		writeError(w, apperror.New(apperror.CodeInvalidArgument, "token is required"))
+		writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "token is required"))
 		return
 	}
 
@@ -88,7 +88,7 @@ func revokeInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.R
 		AccountID: accountID,
 		Token:     family.InviteToken(token),
 	}); err != nil {
-		writeError(w, mapFamilyError(err))
+		writeError(w, r, mapFamilyError(err))
 		return
 	}
 
@@ -110,24 +110,24 @@ func revokeInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.R
 func joinFamilyByInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.JoinFamilyByInviteLinkHandler, accounts auth.AccountRepository, enableTestAuth bool) {
 	accountID, ok := auth.AccountIDFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
 		return
 	}
 
 	var req joinFamilyByInviteLinkRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
+		writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
 		return
 	}
 
 	account, err := accounts.FindByID(r.Context(), accountID)
 	if err != nil {
-		writeError(w, apperror.New(apperror.CodeUnauthenticated, "account not found"))
+		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "account not found"))
 		return
 	}
 
 	if !enableTestAuth && auth.IsTestAccount(account) {
-		writeError(w, apperror.New(apperror.CodeForbidden, "test accounts cannot join families"))
+		writeError(w, r, apperror.New(apperror.CodeForbidden, "test accounts cannot join families"))
 		return
 	}
 
@@ -138,7 +138,7 @@ func joinFamilyByInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *fa
 		MemberName:  req.MemberName,
 	})
 	if err != nil {
-		writeError(w, mapFamilyError(err))
+		writeError(w, r, mapFamilyError(err))
 		return
 	}
 

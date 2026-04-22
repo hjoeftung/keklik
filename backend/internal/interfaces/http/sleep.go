@@ -72,7 +72,7 @@ func toSleepSessionResponse(s sleep.SleepSession) sleepSessionResponse {
 func getSleepHistoryHandler(w http.ResponseWriter, r *http.Request, h *sleep.GetSleepHistoryHandler) {
 	bc, ok := babyContextFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
+		writeError(w, r, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
 
@@ -84,7 +84,7 @@ func getSleepHistoryHandler(w http.ResponseWriter, r *http.Request, h *sleep.Get
 	case "today", "7d", "14d":
 		// valid
 	default:
-		writeError(w, apperror.New(apperror.CodeInvalidArgument, sleep.ErrInvalidSleepHistoryPeriod.Error()))
+		writeError(w, r, apperror.New(apperror.CodeInvalidArgument, sleep.ErrInvalidSleepHistoryPeriod.Error()))
 		return
 	}
 
@@ -93,7 +93,7 @@ func getSleepHistoryHandler(w http.ResponseWriter, r *http.Request, h *sleep.Get
 		Period: period,
 	})
 	if err != nil {
-		writeError(w, mapSleepHistoryError(err))
+		writeError(w, r, mapSleepHistoryError(err))
 		return
 	}
 
@@ -152,7 +152,7 @@ type createSleepProfileRequest struct {
 func createSleepProfileHandler(w http.ResponseWriter, r *http.Request, h *sleep.CreateSleepProfileHandler) {
 	bc, ok := babyContextFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
+		writeError(w, r, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
 
@@ -160,9 +160,9 @@ func createSleepProfileHandler(w http.ResponseWriter, r *http.Request, h *sleep.
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		var timeErr *time.ParseError
 		if errors.As(err, &timeErr) {
-			writeError(w, apperror.New(apperror.CodeInvalidArgument, "effective_from must be a valid RFC3339 timestamp (e.g. 2006-01-02T15:04:05Z)"))
+			writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "effective_from must be a valid RFC3339 timestamp (e.g. 2006-01-02T15:04:05Z)"))
 		} else {
-			writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
+			writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
 		}
 		return
 	}
@@ -177,7 +177,7 @@ func createSleepProfileHandler(w http.ResponseWriter, r *http.Request, h *sleep.
 		EffectiveFrom:          req.EffectiveFrom,
 	})
 	if err != nil {
-		writeError(w, mapSleepProfileError(err))
+		writeError(w, r, mapSleepProfileError(err))
 		return
 	}
 
@@ -212,7 +212,7 @@ type startSleepResponse struct {
 func startSleepHandler(w http.ResponseWriter, r *http.Request, h *sleep.StartSleepHandler) {
 	bc, ok := babyContextFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
+		writeError(w, r, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
 
@@ -225,7 +225,7 @@ func startSleepHandler(w http.ResponseWriter, r *http.Request, h *sleep.StartSle
 		StartedAt:         req.StartedAt,
 	})
 	if err != nil {
-		writeError(w, mapStartSleepError(err))
+		writeError(w, r, mapStartSleepError(err))
 		return
 	}
 
@@ -288,7 +288,7 @@ type editSleepSessionRequest struct {
 func stopSleepHandler(w http.ResponseWriter, r *http.Request, h *sleep.StopSleepHandler) {
 	bc, ok := babyContextFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
+		writeError(w, r, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
 
@@ -300,7 +300,7 @@ func stopSleepHandler(w http.ResponseWriter, r *http.Request, h *sleep.StopSleep
 		StoppedAt: req.StoppedAt,
 	})
 	if err != nil {
-		writeError(w, mapStopSleepError(err))
+		writeError(w, r, mapStopSleepError(err))
 		return
 	}
 
@@ -346,13 +346,13 @@ func mapStopSleepError(err error) apperror.AppError {
 // @Router    /babies/{baby_id}/sleep-sessions/{id} [patch]
 func editSleepSessionHandler(w http.ResponseWriter, r *http.Request, h *sleep.EditSleepSessionHandler) {
 	if _, ok := babyContextFromContext(r.Context()); !ok {
-		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
+		writeError(w, r, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
 
 	var req editSleepSessionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
+		writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
 		return
 	}
 
@@ -362,7 +362,7 @@ func editSleepSessionHandler(w http.ResponseWriter, r *http.Request, h *sleep.Ed
 		StoppedAt: req.StoppedAt,
 	})
 	if err != nil {
-		writeError(w, mapEditSleepSessionError(err))
+		writeError(w, r, mapEditSleepSessionError(err))
 		return
 	}
 
@@ -385,14 +385,14 @@ func editSleepSessionHandler(w http.ResponseWriter, r *http.Request, h *sleep.Ed
 // @Router    /babies/{baby_id}/sleep-sessions/{id} [delete]
 func deleteSleepSessionHandler(w http.ResponseWriter, r *http.Request, h *sleep.DeleteSleepSessionHandler) {
 	if _, ok := babyContextFromContext(r.Context()); !ok {
-		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
+		writeError(w, r, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
 
 	if err := h.Handle(r.Context(), sleep.DeleteSleepSessionCommand{
 		SessionID: sleep.SleepSessionID(r.PathValue("id")),
 	}); err != nil {
-		writeError(w, mapDeleteSleepSessionError(err))
+		writeError(w, r, mapDeleteSleepSessionError(err))
 		return
 	}
 
@@ -464,13 +464,13 @@ type dashboardSummaryResponse struct {
 func getDashboardSummaryHandler(w http.ResponseWriter, r *http.Request, h *sleep.GetDashboardSummaryHandler) {
 	bc, ok := babyContextFromContext(r.Context())
 	if !ok {
-		writeError(w, apperror.New(apperror.CodeInternalError, "baby context missing"))
+		writeError(w, r, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
 
 	tz := r.URL.Query().Get("timezone")
 	if tz == "" {
-		writeError(w, apperror.New(apperror.CodeInvalidArgument, "timezone query parameter is required"))
+		writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "timezone query parameter is required"))
 		return
 	}
 
@@ -479,7 +479,7 @@ func getDashboardSummaryHandler(w http.ResponseWriter, r *http.Request, h *sleep
 		Timezone: tz,
 	})
 	if err != nil {
-		writeError(w, mapDashboardSummaryError(err))
+		writeError(w, r, mapDashboardSummaryError(err))
 		return
 	}
 
