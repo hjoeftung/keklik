@@ -59,6 +59,42 @@ func createFamilyInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *fa
 	})
 }
 
+// revokeInviteLinkHandler deletes an invite link so the token can no longer be used to join.
+//
+// @Summary   Revoke family invite link
+// @Tags      families
+// @Produce   json
+// @Security  BearerAuth
+// @Param     token  path      string  true  "Invite token"
+// @Success   204
+// @Failure   401  {object}  errorResponse
+// @Failure   403  {object}  errorResponse
+// @Failure   404  {object}  errorResponse
+// @Router    /families/invite-links/{token} [delete]
+func revokeInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.RevokeInviteLinkHandler) {
+	accountID, ok := auth.AccountIDFromContext(r.Context())
+	if !ok {
+		writeError(w, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
+		return
+	}
+
+	token := r.PathValue("token")
+	if token == "" {
+		writeError(w, apperror.New(apperror.CodeInvalidArgument, "token is required"))
+		return
+	}
+
+	if err := h.Handle(r.Context(), family.RevokeInviteLinkCommand{
+		AccountID: accountID,
+		Token:     family.InviteToken(token),
+	}); err != nil {
+		writeError(w, mapFamilyError(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // joinFamilyByInviteLinkHandler adds the authenticated user to a family using an invite token.
 //
 // @Summary   Join family by invite link

@@ -3,9 +3,11 @@ package httpapi
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"golang.org/x/time/rate"
 
 	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/family"
@@ -28,6 +30,7 @@ type Dependencies struct {
 	CreateFamily        *family.CreateFamilyHandler
 	GetFamily           *family.GetFamilyHandler
 	CreateInviteLink    *family.CreateFamilyInviteLinkHandler
+	RevokeInviteLink    *family.RevokeInviteLinkHandler
 	JoinFamilyByInvite  *family.JoinFamilyByInviteLinkHandler
 	BabyAccess          babyAccessChecker
 	CreateSleepProfile  *sleep.CreateSleepProfileHandler
@@ -50,7 +53,9 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	createFamily := deps.CreateFamily
 	getFamily := deps.GetFamily
 	createInviteLink := deps.CreateInviteLink
+	revokeInviteLink := deps.RevokeInviteLink
 	joinFamilyByInvite := deps.JoinFamilyByInvite
+	joinLimiter := newIPRateLimiter(rate.Every(time.Minute/5), 5)
 	babyAccess := deps.BabyAccess
 	createSleepProfile := deps.CreateSleepProfile
 	startSleep := deps.StartSleep
@@ -105,9 +110,12 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 	protected.HandleFunc("POST /families/invite-links", func(w http.ResponseWriter, r *http.Request) {
 		createFamilyInviteLinkHandler(w, r, createInviteLink)
 	})
-	protected.HandleFunc("POST /families/join-by-invite-link", func(w http.ResponseWriter, r *http.Request) {
-		joinFamilyByInviteLinkHandler(w, r, joinFamilyByInvite, accounts)
+	protected.HandleFunc("DELETE /families/invite-links/{token}", func(w http.ResponseWriter, r *http.Request) {
+		revokeInviteLinkHandler(w, r, revokeInviteLink)
 	})
+	protected.Handle("POST /families/join-by-invite-link", rateLimitByIP(joinLimiter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		joinFamilyByInviteLinkHandler(w, r, joinFamilyByInvite, accounts)
+	})))
 	// Sleep endpoints — additionally wrapped with requireBabyAccess middleware.
 	withBaby := func(h http.HandlerFunc) http.Handler {
 		return requireBabyAccess(babyAccess, h)

@@ -175,6 +175,45 @@ func (h *JoinFamilyByInviteLinkHandler) Handle(
 	}, nil
 }
 
+// RevokeInviteLinkCommand identifies the authenticated member and the token to revoke.
+type RevokeInviteLinkCommand struct {
+	AccountID auth.AccountID
+	Token     InviteToken
+}
+
+// RevokeInviteLinkHandler deletes an invite link so it can no longer be used.
+type RevokeInviteLinkHandler struct {
+	families FamilyRepository
+	members  FamilyMemberRepository
+}
+
+// NewRevokeInviteLinkHandler returns a handler backed by the given repositories.
+func NewRevokeInviteLinkHandler(families FamilyRepository, members FamilyMemberRepository) *RevokeInviteLinkHandler {
+	return &RevokeInviteLinkHandler{families: families, members: members}
+}
+
+// Handle verifies the caller is a member of the family that owns the token, then deletes it.
+func (h *RevokeInviteLinkHandler) Handle(ctx context.Context, cmd RevokeInviteLinkCommand) error {
+	member, err := h.members.FindByAccountID(ctx, cmd.AccountID)
+	if err != nil {
+		if isFamilyMemberNotFound(err) {
+			return apperror.New(apperror.CodeForbidden, "account is not part of a family")
+		}
+		return err
+	}
+
+	f, err := h.families.FindByMemberID(ctx, member.ID)
+	if err != nil {
+		return err
+	}
+
+	if _, ok := findInviteLink(f, cmd.Token); !ok {
+		return apperror.New(apperror.CodeNotFound, "invite link not found")
+	}
+
+	return h.families.DeleteInviteLink(ctx, cmd.Token)
+}
+
 func generateInviteToken() (InviteToken, error) {
 	tokenBytes := make([]byte, 32)
 	if _, err := rand.Read(tokenBytes); err != nil {
@@ -201,7 +240,7 @@ func findInviteLink(f Family, token InviteToken) (InviteLink, bool) {
 func invalidInviteLinkError(err error) error {
 	var appErr apperror.AppError
 	if errors.As(err, &appErr) && appErr.Code == apperror.CodeNotFound {
-		return apperror.New(apperror.CodeInvalidInviteLink, "invite link is invalid or expired")
+		return apperror.New(apperror.CodeNotFound, "invite link not found")
 	}
 
 	return err

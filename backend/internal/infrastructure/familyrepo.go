@@ -273,6 +273,15 @@ func (r *PostgresFamilyRepository) reconstruct(
 	return f, nil
 }
 
+// DeleteInviteLink removes an invite link row so the token can no longer be used.
+func (r *PostgresFamilyRepository) DeleteInviteLink(ctx context.Context, token family.InviteToken) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM invite_links WHERE token = $1`, string(token))
+	if err != nil {
+		return fmt.Errorf("delete invite link: %w", err)
+	}
+	return nil
+}
+
 // PostgresFamilyMemberRepository implements family.FamilyMemberRepository using PostgreSQL.
 type PostgresFamilyMemberRepository struct {
 	db *sql.DB

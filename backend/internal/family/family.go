@@ -66,6 +66,7 @@ type FamilyRepository interface {
 	FindByMemberID(ctx context.Context, memberID FamilyMemberID) (Family, error)
 	FindByAccountID(ctx context.Context, accountID auth.AccountID) (Family, error)
 	FindByInviteToken(ctx context.Context, token InviteToken) (Family, error)
+	DeleteInviteLink(ctx context.Context, token InviteToken) error
 }
 
 type FamilyMemberRepository interface {

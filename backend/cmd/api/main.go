@@ -65,6 +65,7 @@ func main() {
 		config.App.InviteLinkLifetime,
 	)
 	joinFamilyByInvite := family.NewJoinFamilyByInviteLinkHandler(familyRepo, familyMemberRepo)
+	revokeInviteLink := family.NewRevokeInviteLinkHandler(familyRepo, familyMemberRepo)
 	transactor := infrastructure.NewPostgresTransactor(db)
 	createSleepProfile := sleep.NewCreateSleepProfileHandler(sleepProfileRepo, sleepSessionRepo, sleepSessionRepo, transactor)
 	startSleep := sleep.NewStartSleepHandler(sleepSessionRepo)
@@ -89,6 +90,7 @@ func main() {
 		CreateFamily:        createFamily,
 		GetFamily:           getFamily,
 		CreateInviteLink:    createInviteLink,
+		RevokeInviteLink:    revokeInviteLink,
 		JoinFamilyByInvite:  joinFamilyByInvite,
 		BabyAccess:          babyAccessChecker,
 		CreateSleepProfile:  createSleepProfile,

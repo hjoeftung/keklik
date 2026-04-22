@@ -15,6 +15,7 @@ const (
 	CodeActiveSleepExists    Code = "active_sleep_exists"
 	CodeInvalidSleepInterval Code = "invalid_sleep_interval"
 	CodeInvalidInviteLink    Code = "invalid_invite_link"
+	CodeTooManyRequests      Code = "too_many_requests"
 	CodeInternalError        Code = "internal_error"
 )
 
@@ -46,6 +47,8 @@ func HTTPStatus(code Code) int {
 		return http.StatusNotFound
 	case CodeConflict, CodeActiveSleepExists:
 		return http.StatusConflict
+	case CodeTooManyRequests:
+		return http.StatusTooManyRequests
 	default:
 		return http.StatusInternalServerError
 	}

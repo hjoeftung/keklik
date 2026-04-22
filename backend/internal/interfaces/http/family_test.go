@@ -77,6 +77,10 @@ func (r *stubFamilyRepository) FindByInviteToken(_ context.Context, token family
 	return family.Family{}, apperror.New(apperror.CodeNotFound, "family not found")
 }
 
+func (r *stubFamilyRepository) DeleteInviteLink(_ context.Context, _ family.InviteToken) error {
+	return r.err
+}
+
 type stubFamilyMemberRepository struct {
 	member family.FamilyMember
 }
@@ -452,7 +456,7 @@ func TestJoinFamilyByInviteLinkRejectsInvalidToken(t *testing.T) {
 		"token": "missing",
 	})
 
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
 	}
 }

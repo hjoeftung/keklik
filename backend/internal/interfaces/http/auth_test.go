@@ -142,6 +142,69 @@ func TestVerifyState_TamperedSignature(t *testing.T) {
 	}
 }
 
+// --- state timestamp ---
+
+func TestBuildState_StateTimestampValid_RoundTrip(t *testing.T) {
+	t.Parallel()
+
+	now := int64(1000000)
+	state := buildState("nonce123", now)
+	if !stateTimestampValid(state, now) {
+		t.Error("expected stateTimestampValid to return true immediately after buildState")
+	}
+}
+
+func TestStateTimestampValid_WithinWindow(t *testing.T) {
+	t.Parallel()
+
+	ts := int64(1000000)
+	state := buildState("nonce", ts)
+	if !stateTimestampValid(state, ts+299) {
+		t.Error("expected state within 5-minute window to be valid")
+	}
+}
+
+func TestStateTimestampValid_AtBoundary(t *testing.T) {
+	t.Parallel()
+
+	ts := int64(1000000)
+	state := buildState("nonce", ts)
+	if !stateTimestampValid(state, ts+300) {
+		t.Error("expected state exactly at the 5-minute boundary to be valid")
+	}
+}
+
+func TestStateTimestampValid_Expired(t *testing.T) {
+	t.Parallel()
+
+	ts := int64(1000000)
+	state := buildState("nonce", ts)
+	if stateTimestampValid(state, ts+301) {
+		t.Error("expected state beyond 5-minute window to be invalid")
+	}
+}
+
+func TestStateTimestampValid_FutureTimestamp(t *testing.T) {
+	t.Parallel()
+
+	ts := int64(1000000)
+	state := buildState("nonce", ts)
+	if stateTimestampValid(state, ts-1) {
+		t.Error("expected state with future timestamp to be invalid")
+	}
+}
+
+func TestStateTimestampValid_MalformedState(t *testing.T) {
+	t.Parallel()
+
+	if stateTimestampValid("no-dot-separator", 1000000) {
+		t.Error("expected malformed state (no dot) to be invalid")
+	}
+	if stateTimestampValid("nonce.!!invalid-base64!!", 1000000) {
+		t.Error("expected state with invalid base64 timestamp to be invalid")
+	}
+}
+
 // --- OAuth start handler ---
 
 func TestOAuthStartHandler_SetsStateCookieAndRedirects(t *testing.T) {
@@ -222,7 +285,7 @@ func TestOAuthCallbackHandler_StateMismatch(t *testing.T) {
 	}
 }
 
-func TestTestLoginHandlerReturns404WhenDisabled(t *testing.T) {
+func TestTestLoginHandlerReturns401WhenDisabled(t *testing.T) {
 	t.Parallel()
 
 	server := NewServer(
@@ -239,8 +302,8 @@ func TestTestLoginHandlerReturns404WhenDisabled(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	server.Handler.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("expected 404, got %d", rec.Code)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
 	}
 }
 

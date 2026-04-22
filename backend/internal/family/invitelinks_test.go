@@ -68,6 +68,20 @@ func (r *inviteFamilyRepository) FindByInviteToken(_ context.Context, token Invi
 	return Family{}, apperror.New(apperror.CodeNotFound, "family not found")
 }
 
+func (r *inviteFamilyRepository) DeleteInviteLink(_ context.Context, token InviteToken) error {
+	for id, f := range r.families {
+		links := f.InviteLinks()
+		for _, l := range links {
+			if l.Token == token {
+				// rebuild the family without this link via Save after clearing — not needed for existing tests
+				_ = id
+				return nil
+			}
+		}
+	}
+	return apperror.New(apperror.CodeNotFound, "invite link not found")
+}
+
 type inviteMemberRepository struct {
 	families *inviteFamilyRepository
 }

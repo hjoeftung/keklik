@@ -38,6 +38,10 @@ func (r *inMemoryFamilyRepository) FindByInviteToken(_ context.Context, _ Invite
 	return Family{}, errors.New("not implemented")
 }
 
+func (r *inMemoryFamilyRepository) DeleteInviteLink(_ context.Context, _ InviteToken) error {
+	return errors.New("not implemented")
+}
+
 func validCreateFamilyCommand() CreateFamilyCommand {
 	return CreateFamilyCommand{
 		BabyName:         "Emma",
