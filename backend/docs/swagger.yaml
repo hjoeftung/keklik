@@ -661,6 +661,36 @@ paths:
       summary: Create family invite link
       tags:
       - families
+  /families/invite-links/{token}:
+    delete:
+      parameters:
+      - description: Invite token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Revoke family invite link
+      tags:
+      - families
   /families/join-by-invite-link:
     post:
       consumes:
