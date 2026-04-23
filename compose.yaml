@@ -13,6 +13,7 @@ services:
       GOOGLE_OAUTH_CLIENT_SECRET: local-dev-client-secret
       GOOGLE_OAUTH_REDIRECT_URL: http://localhost:8080/auth/google/callback
       APP_BASE_URL: http://localhost:8080
+      FRONTEND_URL: http://localhost:5173
       ENABLE_TEST_AUTH: true
       ENABLE_SWAGGER_UI: true
     volumes:
