@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuthContext } from '@/context/AuthContext'
-import { getDashboardSummary, startSleep, stopSleep, DashboardSummary } from '@/api/endpoints'
+import { getDashboardSummary, startSleep, stopSleep, type DashboardSummary } from '@/api/endpoints'
 import { ApiError } from '@/api/client'
 
 export default function SleepControl() {
