@@ -146,7 +146,7 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 
 	return &http.Server{
 		Addr:    config.Address(),
-		Handler: withRequestID(mux),
+		Handler: withCORS(config.App.FrontendURL, withRequestID(mux)),
 	}
 }
 
