@@ -1,0 +1,21 @@
+.auth-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.auth-layout__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Mobile: add bottom padding so content doesn't hide behind the fixed bottom bar */
+@media (max-width: 767px) {
+  .auth-layout__content {
+    /* bottom nav bar is roughly 60px tall */
+    padding-bottom: 64px;
+  }
+}
