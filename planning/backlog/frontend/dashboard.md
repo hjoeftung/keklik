@@ -1,23 +1,5 @@
 ## Story 5: Dashboard
 
-### TASK-057: Build dashboard sleep state control (Start/Stop button)
-- Size: `S`
-- Goal: Show the baby's current sleep state and let the user toggle it with a prominent button.
-- Scope:
-  - `src/screens/Dashboard/SleepControl.tsx`
-  - Fetch dashboard summary from `GET /babies/{baby_id}/sleep-sessions/summary` on mount and after each toggle
-  - Awake state: show large "Start sleep" button → calls `POST /babies/{baby_id}/sleep-sessions`
-  - Sleeping state: show large "Stop sleep" button → calls `DELETE /babies/{baby_id}/sleep-sessions/active`
-  - Show loading state during the API call; disable button to prevent double-submit
-  - Surface API errors inline
-- Dependencies:
-  - [TASK-048](#task-048-implement-api-client-with-auth-header-error-normalization-and-401-redirect)
-  - [TASK-056](#task-056-implement-persistent-navigation-bar)
-- Acceptance criteria:
-  - Button label and action reflect actual backend state on load
-  - Double-tapping before response does not send two requests
-  - API error is shown without navigating away
-
 ### TASK-058: Implement real-time elapsed timer for active session
 - Size: `S`
 - Goal: Show how long the baby has been sleeping, updating every second client-side.

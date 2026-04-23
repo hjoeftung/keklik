@@ -1,3 +1,9 @@
+import SleepControl from './SleepControl'
+
 export default function DashboardScreen() {
-  return <div>Dashboard</div>
+  return (
+    <div>
+      <SleepControl />
+    </div>
+  )
 }
