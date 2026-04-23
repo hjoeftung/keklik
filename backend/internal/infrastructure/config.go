@@ -57,6 +57,7 @@ type AuthConfig struct {
 // AppConfig contains application-level URLs and other cross-cutting settings.
 type AppConfig struct {
 	BaseURL            string
+	FrontendURL        string
 	InviteLinkLifetime time.Duration
 	EnableSwaggerUI    bool
 	IsDev              bool
@@ -101,10 +102,12 @@ func LoadConfig() (Config, error) {
 	clientSecret := strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_CLIENT_SECRET"))
 	redirectURL := strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_REDIRECT_URL"))
 	appBaseURL := strings.TrimSpace(os.Getenv("APP_BASE_URL"))
+	frontendURL := strings.TrimSpace(os.Getenv("FRONTEND_URL"))
 	jwtSigningKey := strings.TrimSpace(os.Getenv("JWT_SIGNING_KEY"))
 
 	missing := missingKeys(map[string]string{
 		"DATABASE_URL":               databaseURL,
+		"FRONTEND_URL":               frontendURL,
 		"GOOGLE_OAUTH_CLIENT_ID":     clientID,
 		"GOOGLE_OAUTH_CLIENT_SECRET": clientSecret,
 		"GOOGLE_OAUTH_REDIRECT_URL":  redirectURL,
@@ -120,6 +123,10 @@ func LoadConfig() (Config, error) {
 	}
 
 	if err := requireAbsoluteURL("APP_BASE_URL", appBaseURL); err != nil {
+		return Config{}, err
+	}
+
+	if err := requireAbsoluteURL("FRONTEND_URL", frontendURL); err != nil {
 		return Config{}, err
 	}
 
@@ -143,6 +150,7 @@ func LoadConfig() (Config, error) {
 		},
 		App: AppConfig{
 			BaseURL:            appBaseURL,
+			FrontendURL:        frontendURL,
 			InviteLinkLifetime: inviteLinkLifetime,
 			EnableSwaggerUI:    enableSwaggerUI,
 			IsDev:              isDev,

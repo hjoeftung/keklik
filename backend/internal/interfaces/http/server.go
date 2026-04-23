@@ -82,7 +82,7 @@ func NewServer(config infrastructure.Config, deps Dependencies) *http.Server {
 		oauthStartHandler(w, r, oauthCfg, stateSecret, !config.App.IsDev)
 	})
 	mux.HandleFunc("GET /auth/google/callback", func(w http.ResponseWriter, r *http.Request) {
-		oauthCallbackHandler(w, r, oauthCfg, stateSecret, oauthCallback)
+		oauthCallbackHandler(w, r, oauthCfg, stateSecret, config.App.FrontendURL, oauthCallback)
 	})
 	mux.Handle("/auth/test/login", rateLimitByIP(testLoginLimiter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		testLoginHandler(w, r, config.Auth.EnableTestAuth, testLogin)

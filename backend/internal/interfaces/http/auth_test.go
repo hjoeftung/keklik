@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -241,16 +242,25 @@ func TestOAuthStartHandler_SetsStateCookieAndRedirects(t *testing.T) {
 
 // --- OAuth callback handler: error cases that don't reach Google ---
 
+const testFrontendURL = "http://localhost:5173"
+
 func TestOAuthCallbackHandler_GoogleErrorParam(t *testing.T) {
 	t.Parallel()
 
 	cfg := minimalOAuthConfig()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/auth/google/callback?error=access_denied", nil)
-	oauthCallbackHandler(rec, req, cfg, "secret", nil)
+	oauthCallbackHandler(rec, req, cfg, "secret", testFrontendURL, nil)
 
-	if rec.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", rec.Code)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", rec.Code)
+	}
+	loc := rec.Header().Get("Location")
+	if loc == "" {
+		t.Fatal("expected Location header")
+	}
+	if !strings.Contains(loc, "error=google_error") {
+		t.Errorf("expected error=google_error in redirect, got %q", loc)
 	}
 }
 
@@ -260,10 +270,14 @@ func TestOAuthCallbackHandler_MissingStateCookie(t *testing.T) {
 	cfg := minimalOAuthConfig()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/auth/google/callback?state=some-state&code=code", nil)
-	oauthCallbackHandler(rec, req, cfg, "secret", nil)
+	oauthCallbackHandler(rec, req, cfg, "secret", testFrontendURL, nil)
 
-	if rec.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", rec.Code)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", rec.Code)
+	}
+	loc := rec.Header().Get("Location")
+	if !strings.Contains(loc, "error=invalid_state") {
+		t.Errorf("expected error=invalid_state in redirect, got %q", loc)
 	}
 }
 
@@ -278,10 +292,14 @@ func TestOAuthCallbackHandler_StateMismatch(t *testing.T) {
 		Name:  oauthStateCookieName,
 		Value: signState("different-state", "secret"),
 	})
-	oauthCallbackHandler(rec, req, cfg, "secret", nil)
+	oauthCallbackHandler(rec, req, cfg, "secret", testFrontendURL, nil)
 
-	if rec.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", rec.Code)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d", rec.Code)
+	}
+	loc := rec.Header().Get("Location")
+	if !strings.Contains(loc, "error=invalid_state") {
+		t.Errorf("expected error=invalid_state in redirect, got %q", loc)
 	}
 }
 

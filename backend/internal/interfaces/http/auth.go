@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -86,54 +87,62 @@ func oauthStartHandler(w http.ResponseWriter, r *http.Request, cfg *oauth2.Confi
 
 // oauthCallbackHandler verifies the state, exchanges the code for a Google token,
 // fetches the user's identity from Google, then resolves or provisions an internal
-// Account and issues a session token pair.
+// Account and redirects the browser to the frontend with session tokens.
 //
 // @Summary   Google OAuth callback
 // @Tags      auth
-// @Produce   json
-// @Param     code   query     string  true  "Authorization code returned by Google"
-// @Param     state  query     string  true  "State value for CSRF verification"
-// @Success   200    {object}  authSessionResponse
-// @Failure   401    {object}  errorResponse
+// @Param     code   query  string  true  "Authorization code returned by Google"
+// @Param     state  query  string  true  "State value for CSRF verification"
+// @Success   302
+// @Failure   302
 // @Router    /auth/google/callback [get]
 func oauthCallbackHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 	cfg *oauth2.Config,
 	stateSecret string,
+	frontendURL string,
 	h *auth.HandleOAuthCallbackHandler,
 ) {
+	redirectError := func(code string) {
+		dest, _ := url.Parse(frontendURL + "/")
+		q := dest.Query()
+		q.Set("error", code)
+		dest.RawQuery = q.Encode()
+		http.Redirect(w, r, dest.String(), http.StatusFound)
+	}
+
 	if errParam := r.URL.Query().Get("error"); errParam != "" {
-		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, fmt.Sprintf("google oauth error: %s", errParam)))
+		redirectError("google_error")
 		return
 	}
 
 	state := r.URL.Query().Get("state")
 	cookie, err := r.Cookie(oauthStateCookieName)
 	if err != nil || !verifyState(state, cookie.Value, stateSecret) {
-		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "invalid oauth state"))
+		redirectError("invalid_state")
 		return
 	}
 	if !stateTimestampValid(state, time.Now().Unix()) {
-		writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "oauth state expired"))
+		redirectError("state_expired")
 		return
 	}
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "missing authorization code"))
+		redirectError("missing_code")
 		return
 	}
 
 	token, err := cfg.Exchange(r.Context(), code)
 	if err != nil {
-		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "failed to exchange authorization code"))
+		redirectError("token_exchange_failed")
 		return
 	}
 
 	userInfo, err := fetchGoogleUserInfo(r.Context(), cfg, token)
 	if err != nil {
-		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "failed to retrieve google identity"))
+		redirectError("identity_fetch_failed")
 		return
 	}
 
@@ -142,7 +151,7 @@ func oauthCallbackHandler(
 		Email:           userInfo.Email,
 	})
 	if err != nil {
-		writeError(w, r, apperror.New(apperror.CodeInternalError, "failed to resolve account"))
+		redirectError("account_resolution_failed")
 		return
 	}
 
@@ -155,7 +164,13 @@ func oauthCallbackHandler(
 		Path:     "/",
 	})
 
-	writeAuthSessionResponse(w, result)
+	dest, _ := url.Parse(frontendURL + "/auth/callback")
+	q := dest.Query()
+	q.Set("access_token", result.AccessToken)
+	q.Set("refresh_token", result.RefreshToken)
+	q.Set("account_id", string(result.Account.ID))
+	dest.RawQuery = q.Encode()
+	http.Redirect(w, r, dest.String(), http.StatusFound)
 }
 
 // testLoginHandler issues a regular application session for a test-only identity.
