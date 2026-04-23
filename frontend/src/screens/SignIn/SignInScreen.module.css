@@ -1,0 +1,85 @@
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+  max-width: 360px;
+  min-width: 0;
+}
+
+.title {
+  font-size: 36px;
+  font-weight: 500;
+  color: var(--text-h);
+  font-family: var(--heading);
+  letter-spacing: -1px;
+  margin: 0;
+}
+
+.subtitle {
+  color: var(--text);
+  margin: 0;
+  font-size: 15px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  box-shadow: var(--shadow);
+  white-space: nowrap;
+}
+
+.button:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.button:active:not(:disabled) {
+  opacity: 0.78;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* Spinner shown while loading */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
