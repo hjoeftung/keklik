@@ -17,10 +17,12 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
+	"os"
 	"os/signal"
-	"syscall"
 
 	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/family"
@@ -30,24 +32,35 @@ import (
 )
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx := context.Background()
+	if err := run(ctx, os.Stdout, os.Args); err != nil {
+        fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context, _ io.Writer, _ []string) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
 	infrastructure.SetupLogger()
 
 	config, err := infrastructure.LoadConfig()
 	if err != nil {
-		log.Fatalf("configuration error: %v", err)
+		slog.Error("configuration error", "err", err)
+		return err
 	}
 
 	db, err := infrastructure.OpenDB(config.Database.URL)
 	if err != nil {
-		log.Fatalf("database connection error: %v", err)
+		slog.Error("database connection error", "err", err)
+		return err
 	}
 	defer db.Close()
 
 	if err := infrastructure.RunMigrations(db); err != nil {
-		log.Fatalf("migration error: %v", err)
+		slog.Error("migration error", "err", err)
+		return err
 	}
 
 	refreshTokenRepo := infrastructure.NewPostgresRefreshTokenRepository(db)
@@ -104,7 +117,7 @@ func main() {
 		GetDashboardSummary: getDashboardSummary,
 	})
 
-	log.Printf("starting HTTP server on %s", config.Address())
+	slog.Info("starting HTTP server", "addr", config.Address())
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -117,11 +130,14 @@ func main() {
 		defer cancel()
 
 		if err := server.Shutdown(shutdownCtx); err != nil {
-			log.Printf("server shutdown failed: %v", err)
+			slog.Error("server shutdown failed", "err", err)
+			return err
 		}
 	case err := <-errCh:
 		if err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server failed: %v", err)
+			slog.Error("server failed", "err", err)
+			return err
 		}
 	}
+	return err
 }
