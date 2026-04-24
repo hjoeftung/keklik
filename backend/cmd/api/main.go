@@ -18,7 +18,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -33,19 +32,19 @@ import (
 
 func main() {
 	ctx := context.Background()
-	if err := run(ctx, os.Stdout, os.Args); err != nil {
+	if err := run(ctx, os.Getenv); err != nil {
         fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, _ io.Writer, _ []string) error {
+func run(ctx context.Context, getenv func(string) string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
 	infrastructure.SetupLogger()
 
-	config, err := infrastructure.LoadConfig()
+	config, err := infrastructure.LoadConfig(getenv)
 	if err != nil {
 		slog.Error("configuration error", "err", err)
 		return err

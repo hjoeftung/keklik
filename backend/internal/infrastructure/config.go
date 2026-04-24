@@ -3,7 +3,6 @@ package infrastructure
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -64,46 +63,46 @@ type AppConfig struct {
 }
 
 // LoadConfig loads and validates the runtime environment contract.
-func LoadConfig() (Config, error) {
-	httpPort, err := readIntEnv("HTTP_PORT", defaultHTTPPort)
+func LoadConfig(getenv func(string) string) (Config, error) {
+	httpPort, err := readIntEnv(getenv, "HTTP_PORT", defaultHTTPPort)
 	if err != nil {
 		return Config{}, err
 	}
 
-	enableTestAuth, err := readBoolEnv("ENABLE_TEST_AUTH", false)
+	enableTestAuth, err := readBoolEnv(getenv, "ENABLE_TEST_AUTH", false)
 	if err != nil {
 		return Config{}, err
 	}
 
-	inviteLinkLifetime, err := readDurationEnv("FAMILY_INVITE_LINK_EXPIRY", defaultInviteLinkTTL)
+	inviteLinkLifetime, err := readDurationEnv(getenv, "FAMILY_INVITE_LINK_EXPIRY", defaultInviteLinkTTL)
 	if err != nil {
 		return Config{}, err
 	}
 
-	accessTokenDuration, err := readDurationEnv("ACCESS_TOKEN_DURATION", defaultAccessTokenDuration)
+	accessTokenDuration, err := readDurationEnv(getenv, "ACCESS_TOKEN_DURATION", defaultAccessTokenDuration)
 	if err != nil {
 		return Config{}, err
 	}
 
-	refreshTokenDuration, err := readDurationEnv("REFRESH_TOKEN_DURATION", defaultRefreshTokenDuration)
+	refreshTokenDuration, err := readDurationEnv(getenv, "REFRESH_TOKEN_DURATION", defaultRefreshTokenDuration)
 	if err != nil {
 		return Config{}, err
 	}
 
-	enableSwaggerUI, err := readBoolEnv("ENABLE_SWAGGER_UI", false)
+	enableSwaggerUI, err := readBoolEnv(getenv, "ENABLE_SWAGGER_UI", false)
 	if err != nil {
 		return Config{}, err
 	}
 
-	isDev := strings.TrimSpace(os.Getenv("ENVIRONMENT")) != "production"
+	isDev := strings.TrimSpace(getenv("ENVIRONMENT")) != "production"
 
-	databaseURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
-	clientID := strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_CLIENT_ID"))
-	clientSecret := strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_CLIENT_SECRET"))
-	redirectURL := strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_REDIRECT_URL"))
-	appBaseURL := strings.TrimSpace(os.Getenv("APP_BASE_URL"))
-	frontendURL := strings.TrimSpace(os.Getenv("FRONTEND_URL"))
-	jwtSigningKey := strings.TrimSpace(os.Getenv("JWT_SIGNING_KEY"))
+	databaseURL := strings.TrimSpace(getenv("DATABASE_URL"))
+	clientID := strings.TrimSpace(getenv("GOOGLE_OAUTH_CLIENT_ID"))
+	clientSecret := strings.TrimSpace(getenv("GOOGLE_OAUTH_CLIENT_SECRET"))
+	redirectURL := strings.TrimSpace(getenv("GOOGLE_OAUTH_REDIRECT_URL"))
+	appBaseURL := strings.TrimSpace(getenv("APP_BASE_URL"))
+	frontendURL := strings.TrimSpace(getenv("FRONTEND_URL"))
+	jwtSigningKey := strings.TrimSpace(getenv("JWT_SIGNING_KEY"))
 
 	missing := missingKeys(map[string]string{
 		"DATABASE_URL":               databaseURL,
@@ -164,8 +163,8 @@ func (c Config) Address() string {
 	return fmt.Sprintf(":%d", c.HTTP.Port)
 }
 
-func readIntEnv(key string, fallback int) (int, error) {
-	value := os.Getenv(key)
+func readIntEnv(getenv func(string) string, key string, fallback int) (int, error) {
+	value := getenv(key)
 	if value == "" {
 		return fallback, nil
 	}
@@ -178,8 +177,8 @@ func readIntEnv(key string, fallback int) (int, error) {
 	return parsed, nil
 }
 
-func readBoolEnv(key string, fallback bool) (bool, error) {
-	value := strings.TrimSpace(os.Getenv(key))
+func readBoolEnv(getenv func(string) string, key string, fallback bool) (bool, error) {
+	value := strings.TrimSpace(getenv(key))
 	if value == "" {
 		return fallback, nil
 	}
@@ -192,8 +191,8 @@ func readBoolEnv(key string, fallback bool) (bool, error) {
 	return parsed, nil
 }
 
-func readDurationEnv(key string, fallback time.Duration) (time.Duration, error) {
-	value := strings.TrimSpace(os.Getenv(key))
+func readDurationEnv(getenv func(string) string, key string, fallback time.Duration) (time.Duration, error) {
+	value := strings.TrimSpace(getenv(key))
 	if value == "" {
 		return fallback, nil
 	}

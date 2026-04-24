@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"os"
 	"testing"
 	"time"
 )
@@ -8,7 +9,7 @@ import (
 func TestLoadConfigUsesDefaultHTTPPortAndLoadsRequiredEnvironment(t *testing.T) {
 	setRequiredEnv(t)
 
-	config, err := LoadConfig()
+	config, err := LoadConfig(os.Getenv)
 	if err != nil {
 		t.Fatalf("LoadConfig returned error: %v", err)
 	}
@@ -58,7 +59,7 @@ func TestLoadConfigEnablesTestAuthWhenConfigured(t *testing.T) {
 	setRequiredEnv(t)
 	t.Setenv("ENABLE_TEST_AUTH", "true")
 
-	config, err := LoadConfig()
+	config, err := LoadConfig(os.Getenv)
 	if err != nil {
 		t.Fatalf("LoadConfig returned error: %v", err)
 	}
@@ -72,7 +73,7 @@ func TestLoadConfigUsesCustomInviteLinkLifetime(t *testing.T) {
 	setRequiredEnv(t)
 	t.Setenv("FAMILY_INVITE_LINK_EXPIRY", "48h")
 
-	config, err := LoadConfig()
+	config, err := LoadConfig(os.Getenv)
 	if err != nil {
 		t.Fatalf("LoadConfig returned error: %v", err)
 	}
@@ -85,7 +86,7 @@ func TestLoadConfigUsesCustomInviteLinkLifetime(t *testing.T) {
 func TestLoadConfigFailsOnMissingRequiredEnvironment(t *testing.T) {
 	t.Setenv("HTTP_PORT", "8081")
 
-	_, err := LoadConfig()
+	_, err := LoadConfig(os.Getenv)
 	if err == nil {
 		t.Fatal("expected error for missing required environment variables")
 	}
@@ -101,7 +102,7 @@ func TestLoadConfigFailsOnInvalidHTTPPort(t *testing.T) {
 	setRequiredEnv(t)
 	t.Setenv("HTTP_PORT", "invalid")
 
-	_, err := LoadConfig()
+	_, err := LoadConfig(os.Getenv)
 	if err == nil {
 		t.Fatal("expected error for invalid HTTP_PORT")
 	}
@@ -115,7 +116,7 @@ func TestLoadConfigFailsOnInvalidURLs(t *testing.T) {
 	setRequiredEnv(t)
 	t.Setenv("APP_BASE_URL", "localhost:8080")
 
-	_, err := LoadConfig()
+	_, err := LoadConfig(os.Getenv)
 	if err == nil {
 		t.Fatal("expected error for invalid APP_BASE_URL")
 	}
@@ -129,7 +130,7 @@ func TestLoadConfigFailsOnInvalidEnableTestAuth(t *testing.T) {
 	setRequiredEnv(t)
 	t.Setenv("ENABLE_TEST_AUTH", "not-a-bool")
 
-	_, err := LoadConfig()
+	_, err := LoadConfig(os.Getenv)
 	if err == nil {
 		t.Fatal("expected error for invalid ENABLE_TEST_AUTH")
 	}
@@ -143,7 +144,7 @@ func TestLoadConfigFailsOnInvalidInviteLinkLifetime(t *testing.T) {
 	setRequiredEnv(t)
 	t.Setenv("FAMILY_INVITE_LINK_EXPIRY", "later")
 
-	_, err := LoadConfig()
+	_, err := LoadConfig(os.Getenv)
 	if err == nil {
 		t.Fatal("expected error for invalid FAMILY_INVITE_LINK_EXPIRY")
 	}
