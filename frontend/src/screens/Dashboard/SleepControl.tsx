@@ -1,5 +1,6 @@
 import ElapsedTimer from '@/components/ElapsedTimer'
 import { type ActiveSessionSummary } from '@/api/endpoints'
+import styles from './SleepControl.module.css'
 
 interface SleepControlProps {
   activeSession: ActiveSessionSummary | null
@@ -23,14 +24,21 @@ export default function SleepControl({
   const isSleeping = Boolean(activeSession)
 
   return (
-    <div>
-      <button onClick={onToggle} disabled={isToggling}>
-        {isToggling ? 'Loading…' : isSleeping ? 'Stop sleep' : 'Start sleep'}
+    <div className={styles.control}>
+      <button
+        className={`${styles.button} ${isSleeping ? styles.stop : styles.start}`}
+        onClick={onToggle}
+        disabled={isToggling}
+      >
+        {isToggling && <span className={styles.spinner} />}
+        {isToggling ? '' : isSleeping ? 'Stop sleep' : 'Start sleep'}
       </button>
       {isSleeping && activeSession && (
-        <ElapsedTimer startedAt={activeSession.started_at} />
+        <span className={styles.elapsed}>
+          <ElapsedTimer startedAt={activeSession.started_at} />
+        </span>
       )}
-      {error && <p role="alert">{error}</p>}
+      {error && <p className={styles.error} role="alert">{error}</p>}
     </div>
   )
 }
