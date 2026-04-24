@@ -1,0 +1,204 @@
+/* ── Screen shell ──────────────────────────────────────────── */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  min-width: 0;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+/* ── Period toggle ─────────────────────────────────────────── */
+.periodToggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.periodButton {
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.periodButton:hover:not(.periodButtonActive) {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.periodButtonActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  cursor: default;
+}
+
+/* ── Status messages ───────────────────────────────────────── */
+.loading,
+.error,
+.empty {
+  padding: 32px 0;
+  font-size: 15px;
+  color: var(--text);
+  text-align: center;
+}
+
+.error {
+  color: #ef4444;
+}
+
+/* ── Chart container ───────────────────────────────────────── */
+.chartContainer {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* ── Legend ────────────────────────────────────────────────── */
+.legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.legendSwatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Axis ticks ────────────────────────────────────────────── */
+.axisRow {
+  display: flex;
+  margin-left: 70px; /* match label width */
+  margin-bottom: 4px;
+  position: relative;
+}
+
+.axisTick {
+  position: absolute;
+  font-size: 11px;
+  color: var(--text);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* ── Day rows ──────────────────────────────────────────────── */
+.dayRow {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  margin-bottom: 4px;
+}
+
+.dayLabel {
+  width: 70px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 6px;
+  box-sizing: border-box;
+  text-align: right;
+}
+
+.dayTrack {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  position: relative;
+  background: var(--code-bg);
+  border-radius: 3px;
+  overflow: visible;
+}
+
+/* ── Sleep blocks ──────────────────────────────────────────── */
+.block {
+  position: absolute;
+  top: 2px;
+  height: 20px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.block:hover {
+  opacity: 0.8;
+}
+
+.blockNight {
+  background: #3b82f6;
+}
+
+.blockNap {
+  background: #f59e0b;
+}
+
+@keyframes pulse {
+  0%   { opacity: 0.6; }
+  50%  { opacity: 1.0; }
+  100% { opacity: 0.6; }
+}
+
+.blockActive {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* ── Session detail overlay ────────────────────────────────── */
+.overlay {
+  position: fixed;
+  z-index: 100;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow);
+  min-width: 180px;
+  max-width: 260px;
+  font-size: 14px;
+  color: var(--text-h);
+}
+
+.overlayRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.overlayRow:last-child {
+  margin-bottom: 0;
+}
+
+.overlayLabel {
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.overlayValue {
+  text-align: right;
+  font-weight: 500;
+  color: var(--text-h);
+}

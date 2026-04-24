@@ -149,16 +149,32 @@ export function getSleepHistory(
   return api.get(`/babies/${babyId}/sleep-sessions?period=${period}`)
 }
 
+// --- Sleep profiles ---
+
+export interface NightWindowRequest {
+  start_hour: number
+  start_minute: number
+  end_hour: number
+  end_minute: number
+}
+
+export interface CreateSleepProfileRequest {
+  timezone: string
+  night_window: NightWindowRequest
+}
+
+export function createSleepProfile(
+  babyId: string,
+  req: CreateSleepProfileRequest,
+): Promise<void> {
+  return api.post(`/babies/${babyId}/sleep-profiles`, req)
+}
+
 // --- Dashboard summary ---
 
 export interface ActiveSessionSummary {
   id: string
   started_at: string
-}
-
-export interface SinceLastSummary {
-  since_sleep_start_seconds: number | null
-  since_awakening_seconds: number | null
 }
 
 export interface DayStats {
@@ -173,12 +189,13 @@ export interface RollingStats {
 
 export interface DashboardSummary {
   active_session: ActiveSessionSummary | null
-  since_last: SinceLastSummary | null
+  time_since_sleep_start_seconds: number | null
+  time_since_awakening_seconds: number | null
   today: DayStats
   rolling_7d: RollingStats
   rolling_14d: RollingStats
 }
 
-export function getDashboardSummary(babyId: string): Promise<DashboardSummary> {
-  return api.get(`/babies/${babyId}/sleep-sessions/summary`)
+export function getDashboardSummary(babyId: string, timezone: string): Promise<DashboardSummary> {
+  return api.get(`/babies/${babyId}/dashboard?timezone=${encodeURIComponent(timezone)}`)
 }

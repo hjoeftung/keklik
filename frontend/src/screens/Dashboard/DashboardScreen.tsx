@@ -19,7 +19,7 @@ export default function DashboardScreen() {
     if (!babyId) return
     setError(null)
     try {
-      const data = await getDashboardSummary(babyId)
+      const data = await getDashboardSummary(babyId, Intl.DateTimeFormat().resolvedOptions().timeZone)
       setSummary(data)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load sleep status')
@@ -59,7 +59,10 @@ export default function DashboardScreen() {
         error={error}
         onToggle={handleToggle}
       />
-      <SinceLastPanel sinceLast={summary?.since_last ?? null} />
+      <SinceLastPanel
+        timeSinceSleepStart={summary?.time_since_sleep_start_seconds ?? null}
+        timeSinceAwakening={summary?.time_since_awakening_seconds ?? null}
+      />
       {summary && (
         <SummaryPanel
           today={summary.today}

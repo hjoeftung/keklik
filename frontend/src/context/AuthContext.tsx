@@ -11,6 +11,7 @@ interface AuthContextValue {
   family: GetFamilyResponse | null
   isLoading: boolean
   signOut: () => Promise<void>
+  refreshFamily: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
@@ -41,6 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     init()
   }, [])
 
+  async function refreshFamily() {
+    const data = await getFamily()
+    setFamily(data)
+  }
+
   async function signOut() {
     try {
       await logout()
@@ -53,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, family, isLoading, signOut }}>
+    <AuthContext.Provider value={{ user, family, isLoading, signOut, refreshFamily }}>
       {children}
     </AuthContext.Provider>
   )

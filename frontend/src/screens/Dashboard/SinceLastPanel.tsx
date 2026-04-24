@@ -1,19 +1,19 @@
-import { type SinceLastSummary } from '@/api/endpoints'
 import { formatDuration } from '@/utils/time'
 
 interface SinceLastPanelProps {
-  sinceLast: SinceLastSummary | null
+  timeSinceSleepStart: number | null
+  timeSinceAwakening: number | null
 }
 
-export default function SinceLastPanel({ sinceLast }: SinceLastPanelProps) {
+export default function SinceLastPanel({ timeSinceSleepStart, timeSinceAwakening }: SinceLastPanelProps) {
   const sleepStart =
-    sinceLast?.since_sleep_start_seconds != null
-      ? formatDuration(sinceLast.since_sleep_start_seconds)
+    timeSinceSleepStart != null
+      ? formatDuration(timeSinceSleepStart)
       : 'No data yet'
 
   const awakening =
-    sinceLast?.since_awakening_seconds != null
-      ? formatDuration(sinceLast.since_awakening_seconds)
+    timeSinceAwakening != null
+      ? formatDuration(timeSinceAwakening)
       : 'No data yet'
 
   return (
