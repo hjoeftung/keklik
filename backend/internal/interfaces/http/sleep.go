@@ -118,7 +118,7 @@ func mapSleepHistoryError(err error) apperror.AppError {
 		if errors.As(err, &appErr) {
 			return appErr
 		}
-		return apperror.New(apperror.CodeInternalError, "unexpected error")
+		return apperror.Wrap(apperror.CodeInternalError, "unexpected error", err)
 	}
 }
 
@@ -250,7 +250,7 @@ func mapStartSleepError(err error) apperror.AppError {
 		if errors.As(err, &appErr) {
 			return appErr
 		}
-		return apperror.New(apperror.CodeInternalError, "unexpected error")
+		return apperror.Wrap(apperror.CodeInternalError, "unexpected error", err)
 	}
 }
 
@@ -324,7 +324,7 @@ func mapStopSleepError(err error) apperror.AppError {
 		if errors.As(err, &appErr) {
 			return appErr
 		}
-		return apperror.New(apperror.CodeInternalError, "unexpected error")
+		return apperror.Wrap(apperror.CodeInternalError, "unexpected error", err)
 	}
 }
 
@@ -412,7 +412,7 @@ func mapEditSleepSessionError(err error) apperror.AppError {
 		if errors.As(err, &appErr) {
 			return appErr
 		}
-		return apperror.New(apperror.CodeInternalError, "unexpected error")
+		return apperror.Wrap(apperror.CodeInternalError, "unexpected error", err)
 	}
 }
 
@@ -421,7 +421,7 @@ func mapDeleteSleepSessionError(err error) apperror.AppError {
 	if errors.As(err, &appErr) {
 		return appErr
 	}
-	return apperror.New(apperror.CodeInternalError, "unexpected error")
+	return apperror.Wrap(apperror.CodeInternalError, "unexpected error", err)
 }
 
 type activeSleepSessionResponse struct {
@@ -531,7 +531,7 @@ func mapDashboardSummaryError(err error) apperror.AppError {
 		if errors.As(err, &appErr) {
 			return appErr
 		}
-		return apperror.New(apperror.CodeInternalError, "unexpected error")
+		return apperror.Wrap(apperror.CodeInternalError, "unexpected error", err)
 	}
 }
 
@@ -549,6 +549,6 @@ func mapSleepProfileError(err error) apperror.AppError {
 		if errors.As(err, &appErr) {
 			return appErr
 		}
-		return apperror.New(apperror.CodeInternalError, "unexpected error")
+		return apperror.Wrap(apperror.CodeInternalError, "unexpected error", err)
 	}
 }

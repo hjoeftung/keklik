@@ -140,6 +140,6 @@ func mapFamilyError(err error) apperror.AppError {
 		if errors.As(err, &appErr) {
 			return appErr
 		}
-		return apperror.New(apperror.CodeInternalError, "unexpected error")
+		return apperror.Wrap(apperror.CodeInternalError, "unexpected error", err)
 	}
 }

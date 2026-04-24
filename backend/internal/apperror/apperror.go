@@ -23,15 +23,25 @@ const (
 type AppError struct {
 	Code    Code
 	Message string
+	Cause   error
 }
 
 func (e AppError) Error() string {
 	return e.Message
 }
 
+func (e AppError) Unwrap() error {
+	return e.Cause
+}
+
 // New creates an AppError with the given code and message.
 func New(code Code, message string) AppError {
 	return AppError{Code: code, Message: message}
+}
+
+// Wrap creates an AppError that preserves the underlying cause for logging.
+func Wrap(code Code, message string, cause error) AppError {
+	return AppError{Code: code, Message: message, Cause: cause}
 }
 
 // HTTPStatus maps an error code to the appropriate HTTP status code.

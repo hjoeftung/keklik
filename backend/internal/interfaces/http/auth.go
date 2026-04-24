@@ -296,7 +296,7 @@ func requireBabyAccess(checker babyAccessChecker, next http.Handler) http.Handle
 			if asErr, ok2 := err.(apperror.AppError); ok2 {
 				appErr = asErr
 			} else {
-				appErr = apperror.New(apperror.CodeInternalError, "unexpected error")
+				appErr = apperror.Wrap(apperror.CodeInternalError, "unexpected error", err)
 			}
 			writeError(w, r, appErr)
 			return

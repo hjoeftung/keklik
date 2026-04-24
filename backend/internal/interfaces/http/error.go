@@ -22,6 +22,9 @@ func writeError(w http.ResponseWriter, r *http.Request, err apperror.AppError) {
 		"status", status,
 	}
 	if status >= 500 {
+		if err.Cause != nil {
+			attrs = append(attrs, "error", err.Cause.Error())
+		}
 		slog.ErrorContext(r.Context(), "request_failed", attrs...)
 	} else {
 		slog.WarnContext(r.Context(), "request_error", attrs...)

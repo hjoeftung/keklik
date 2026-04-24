@@ -31,7 +31,7 @@ func (c *PostgresBabyAccessChecker) CheckBabyAccess(ctx context.Context, account
 	err := c.db.QueryRowContext(ctx, `
 		SELECT b.id, fm.id
 		FROM babies b
-		LEFT JOIN family_members fm ON fm.family_id = b.family_id AND fm.google_subject_id = $1
+		LEFT JOIN family_members fm ON fm.family_id = b.family_id AND fm.account_id = $1
 		WHERE b.id = $2`,
 		string(accountID), string(babyID)).
 		Scan(&babyRowID, &memberID)
