@@ -170,32 +170,3 @@ export function createSleepProfile(
   return api.post(`/babies/${babyId}/sleep-profiles`, req)
 }
 
-// --- Dashboard summary ---
-
-export interface ActiveSessionSummary {
-  id: string
-  started_at: string
-}
-
-export interface DayStats {
-  total_sleep_seconds: number
-  total_active_seconds: number
-}
-
-export interface RollingStats {
-  avg_daily_sleep_seconds: number
-  avg_daily_active_seconds: number
-}
-
-export interface DashboardSummary {
-  active_session: ActiveSessionSummary | null
-  time_since_sleep_start_seconds: number | null
-  time_since_awakening_seconds: number | null
-  today: DayStats
-  rolling_7d: RollingStats
-  rolling_14d: RollingStats
-}
-
-export function getDashboardSummary(babyId: string, timezone: string): Promise<DashboardSummary> {
-  return api.get(`/babies/${babyId}/dashboard?timezone=${encodeURIComponent(timezone)}`)
-}

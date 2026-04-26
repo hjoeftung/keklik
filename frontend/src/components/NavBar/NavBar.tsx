@@ -106,9 +106,9 @@ export function NavBar() {
       <span className="navbar__brand">Keklik</span>
 
       <div className="navbar__links">
-        <NavLink to="/dashboard" className={getLinkClass} end>
+        <NavLink to="/sleep" className={getLinkClass} end>
           <IconHome />
-          <span className="navbar__label">Dashboard</span>
+          <span className="navbar__label">Sleep</span>
         </NavLink>
 
         <NavLink to="/timeline" className={getLinkClass}>

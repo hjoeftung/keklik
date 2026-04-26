@@ -7,7 +7,7 @@ export function RequireNoFamily({ children }: { children: ReactNode }) {
 
   if (isLoading) return null
   if (!user) return <Navigate to="/" replace />
-  if (family) return <Navigate to="/dashboard" replace />
+  if (family) return <Navigate to="/sleep" replace />
 
   return <>{children}</>
 }

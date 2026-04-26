@@ -37,7 +37,7 @@ export default function AuthCallbackScreen() {
 
       try {
         await getFamily()
-        navigate('/dashboard', { replace: true })
+        navigate('/sleep', { replace: true })
       } catch (err) {
         if (err instanceof ApiError && err.status === 404) {
           navigate('/onboarding', { replace: true })

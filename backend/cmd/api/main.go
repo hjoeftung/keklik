@@ -87,8 +87,7 @@ func run(ctx context.Context, getenv func(string) string) error {
 	editSleepSession := sleep.NewEditSleepSessionHandler(sleepSessionRepo, sleepProfileRepo)
 	deleteSleepSession := sleep.NewDeleteSleepSessionHandler(sleepSessionRepo)
 	getSleepHistory := sleep.NewGetSleepHistoryHandler(sleepSessionRepo, sleepProfileRepo)
-	getDashboardSummary := sleep.NewGetDashboardSummaryHandler(sleepSessionRepo)
-	jwtValidator := auth.NewJWTValidator(config.Auth.JWTSigningKey)
+jwtValidator := auth.NewJWTValidator(config.Auth.JWTSigningKey)
 	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, refreshTokenRepo, config.Auth.JWTSigningKey, config.Auth.AccessTokenDuration, config.Auth.RefreshTokenDuration)
 	testLogin := auth.NewHandleTestLoginHandler(accountRepo, refreshTokenRepo, config.Auth.JWTSigningKey, config.Auth.AccessTokenDuration, config.Auth.RefreshTokenDuration)
 	refreshTokenHandler := auth.NewHandleRefreshTokenHandler(refreshTokenRepo, config.Auth.JWTSigningKey, config.Auth.AccessTokenDuration, config.Auth.RefreshTokenDuration)
@@ -113,7 +112,6 @@ func run(ctx context.Context, getenv func(string) string) error {
 		EditSleepSession:    editSleepSession,
 		DeleteSleepSession:  deleteSleepSession,
 		GetSleepHistory:     getSleepHistory,
-		GetDashboardSummary: getDashboardSummary,
 	})
 
 	slog.Info("starting HTTP server", "addr", config.Address())

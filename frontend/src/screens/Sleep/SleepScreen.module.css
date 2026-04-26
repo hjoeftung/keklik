@@ -1,9 +1,9 @@
-.control {
+.screen {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 32px 24px;
+  gap: 24px;
+  padding: 48px 24px;
 }
 
 .button {
@@ -52,6 +52,45 @@
   font-weight: 500;
   color: var(--text-h);
   letter-spacing: -0.5px;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fieldName {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-s);
+}
+
+.fieldInput {
+  font-family: var(--sans);
+  font-size: 16px;
+  color: var(--text-h);
+  background: none;
+  border: none;
+  border-bottom: 1.5px solid var(--border);
+  padding: 6px 0;
+  width: 100%;
+  cursor: pointer;
+}
+
+.fieldInput:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
 }
 
 .error {

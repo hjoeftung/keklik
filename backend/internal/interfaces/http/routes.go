@@ -87,8 +87,5 @@ func addRoutes(mux *http.ServeMux, config infrastructure.Config, deps Dependenci
 	protected.Handle("GET /babies/{baby_id}/sleep-sessions", withBaby(func(w http.ResponseWriter, r *http.Request) {
 		getSleepHistoryHandler(w, r, deps.GetSleepHistory)
 	}))
-	protected.Handle("GET /babies/{baby_id}/dashboard", withBaby(func(w http.ResponseWriter, r *http.Request) {
-		getDashboardSummaryHandler(w, r, deps.GetDashboardSummary)
-	}))
-	mux.Handle("/", requireAuth(deps.Validator, protected))
+mux.Handle("/", requireAuth(deps.Validator, protected))
 }

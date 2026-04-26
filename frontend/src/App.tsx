@@ -7,7 +7,7 @@ import SignInScreen from '@/screens/SignIn/SignInScreen'
 import AuthCallbackScreen from '@/screens/AuthCallback/AuthCallbackScreen'
 import OnboardingScreen from '@/screens/Onboarding/OnboardingScreen'
 import InviteScreen from '@/screens/Invite/InviteScreen'
-import DashboardScreen from '@/screens/Dashboard/DashboardScreen'
+import SleepScreen from '@/screens/Sleep/SleepScreen'
 import TimelineScreen from '@/screens/Timeline/TimelineScreen'
 import SettingsScreen from '@/screens/Settings/SettingsScreen'
 
@@ -18,7 +18,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<SignInScreen />} />
           <Route path="/auth/callback" element={<AuthCallbackScreen />} />
-          <Route path="/dashboard" element={<RequireAuth><AuthenticatedLayout><DashboardScreen /></AuthenticatedLayout></RequireAuth>} />
+          <Route path="/sleep" element={<RequireAuth><AuthenticatedLayout><SleepScreen /></AuthenticatedLayout></RequireAuth>} />
           <Route path="/onboarding" element={<RequireNoFamily><OnboardingScreen /></RequireNoFamily>} />
           <Route path="/invite/:token" element={<InviteScreen />} />
           <Route path="/timeline" element={<RequireAuth><AuthenticatedLayout><TimelineScreen /></AuthenticatedLayout></RequireAuth>} />

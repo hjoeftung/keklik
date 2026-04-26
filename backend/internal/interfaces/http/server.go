@@ -29,7 +29,6 @@ type Dependencies struct {
 	EditSleepSession    *sleep.EditSleepSessionHandler
 	DeleteSleepSession  *sleep.DeleteSleepSessionHandler
 	GetSleepHistory     *sleep.GetSleepHistoryHandler
-	GetDashboardSummary *sleep.GetDashboardSummaryHandler
 }
 
 // NewServer wires the HTTP transport and returns a ready-to-start server.

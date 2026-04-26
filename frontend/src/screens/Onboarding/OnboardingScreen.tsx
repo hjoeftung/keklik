@@ -20,8 +20,8 @@ export default function OnboardingScreen() {
   const [yourName, setYourName] = useState('')
   const [babyName, setBabyName] = useState('')
   const [timezone, setTimezone] = useState(DEFAULT_TZ)
-  const [nightStart, setNightStart] = useState('21:00')
-  const [nightEnd, setNightEnd] = useState('06:00')
+  const [nightStart, setNightStart] = useState('22:00')
+  const [nightEnd, setNightEnd] = useState('08:00')
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -48,7 +48,7 @@ export default function OnboardingScreen() {
       })
 
       await refreshFamily()
-      navigate('/dashboard')
+      navigate('/sleep')
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)
