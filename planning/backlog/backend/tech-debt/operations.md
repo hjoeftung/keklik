@@ -18,18 +18,6 @@
   - Multi-row write operations rollback cleanly on failure
   - Tests prove atomic behavior for core commands
 
-### TASK-022: Add structured logging and request tracing basics
-- Size: `S`
-- Goal: Make failures diagnosable in local development and production.
-- Scope:
-  - Add structured logs for command failures and validation errors
-  - Attach request identifier to logs
-  - Avoid logging secrets or OAuth credentials
-- Acceptance criteria:
-  - Logs include request context and stable error code where possible
-  - Validation failures are visible in logs without leaking sensitive data
-  - Logging is used consistently in handlers and application services
-
 ### TASK-023: Add integration test path for core MVP flows
 - Size: `S`
 - Goal: Cover the main end-to-end backend behaviors with automated tests.

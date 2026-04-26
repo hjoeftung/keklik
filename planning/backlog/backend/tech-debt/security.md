@@ -1,7 +1,5 @@
 ## Story 6: Security Hardening
 
-
-
 ### TASK-043: Gate `sslmode=disable` on an explicit dev-only flag
 - Size: `XS`
 - Goal: Prevent accidental unencrypted DB connections in production.
