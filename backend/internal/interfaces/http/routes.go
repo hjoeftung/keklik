@@ -69,8 +69,8 @@ func addRoutes(mux *http.ServeMux, config infrastructure.Config, deps Dependenci
 	withBaby := func(h http.HandlerFunc) http.Handler {
 		return requireBabyAccess(deps.BabyAccess, h)
 	}
-	protected.Handle("POST /babies/{baby_id}/sleep-profiles", withBaby(func(w http.ResponseWriter, r *http.Request) {
-		createSleepProfileHandler(w, r, deps.CreateSleepProfile)
+	protected.Handle("POST /babies/{baby_id}/night-windows", withBaby(func(w http.ResponseWriter, r *http.Request) {
+		setNightWindowHandler(w, r, deps.SetNightWindow)
 	}))
 	protected.Handle("POST /babies/{baby_id}/sleep-sessions/active", withBaby(func(w http.ResponseWriter, r *http.Request) {
 		startSleepHandler(w, r, deps.StartSleep)
@@ -87,5 +87,5 @@ func addRoutes(mux *http.ServeMux, config infrastructure.Config, deps Dependenci
 	protected.Handle("GET /babies/{baby_id}/sleep-sessions", withBaby(func(w http.ResponseWriter, r *http.Request) {
 		getSleepHistoryHandler(w, r, deps.GetSleepHistory)
 	}))
-mux.Handle("/", requireAuth(deps.Validator, protected))
+	mux.Handle("/", requireAuth(deps.Validator, protected))
 }

@@ -15,12 +15,11 @@ type EditSleepSessionCommand struct {
 // EditSleepSessionHandler executes the EditSleepSession use case.
 type EditSleepSessionHandler struct {
 	sessions EditableSleepSessionRepository
-	profiles SleepProfileRepository
 }
 
 // NewEditSleepSessionHandler returns an EditSleepSessionHandler backed by the given repositories.
-func NewEditSleepSessionHandler(sessions EditableSleepSessionRepository, profiles SleepProfileRepository) *EditSleepSessionHandler {
-	return &EditSleepSessionHandler{sessions: sessions, profiles: profiles}
+func NewEditSleepSessionHandler(sessions EditableSleepSessionRepository) *EditSleepSessionHandler {
+	return &EditSleepSessionHandler{sessions: sessions}
 }
 
 // Handle updates the requested sleep session and reclassifies it when the
@@ -46,7 +45,7 @@ func (h *EditSleepSessionHandler) Handle(ctx context.Context, cmd EditSleepSessi
 		completed = true
 	}
 
-	updated, err := rebuildSleepSession(ctx, existing, startedAt, stoppedAt, completed, h.profiles)
+	updated, err := rebuildSleepSession(existing, startedAt, stoppedAt, completed)
 	if err != nil {
 		return SleepSession{}, err
 	}
@@ -58,33 +57,9 @@ func (h *EditSleepSessionHandler) Handle(ctx context.Context, cmd EditSleepSessi
 	return updated, nil
 }
 
-func rebuildSleepSession(ctx context.Context, existing SleepSession, startedAt, stoppedAt time.Time, completed bool, profiles SleepProfileRepository) (SleepSession, error) {
+func rebuildSleepSession(existing SleepSession, startedAt, stoppedAt time.Time, completed bool) (SleepSession, error) {
 	if !completed {
 		return NewSleepSession(existing.ID(), existing.BabyID(), existing.CreatedByMemberID(), startedAt)
-	}
-
-	profile, err := profiles.FindByBabyID(ctx, existing.BabyID())
-	if err != nil {
-		return SleepSession{}, err
-	}
-
-	tentative, err := NewCompletedSleepSession(
-		existing.ID(),
-		existing.BabyID(),
-		existing.CreatedByMemberID(),
-		startedAt,
-		stoppedAt,
-		SleepClassificationNap,
-		nil,
-	)
-	if err != nil {
-		return SleepSession{}, err
-	}
-
-	nightWindow := profile.NightWindow()
-	classification, err := Classify(tentative, profile.Timezone(), nightWindow)
-	if err != nil {
-		return SleepSession{}, err
 	}
 
 	return NewCompletedSleepSession(
@@ -93,7 +68,5 @@ func rebuildSleepSession(ctx context.Context, existing SleepSession, startedAt, 
 		existing.CreatedByMemberID(),
 		startedAt,
 		stoppedAt,
-		classification,
-		&nightWindow,
 	)
 }

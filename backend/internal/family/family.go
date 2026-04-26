@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hjoeftung/keklik/internal/auth"
+	"github.com/hjoeftung/keklik/internal/sleep"
 )
 
 var (
@@ -48,9 +49,10 @@ type FamilyMember struct {
 }
 
 type Baby struct {
-	ID       BabyID
-	FamilyID FamilyID
-	Name     string
+	ID           BabyID
+	FamilyID     FamilyID
+	Name         string
+	NightWindows []sleep.NightWindow // ordered by effective_from ASC
 }
 
 type InviteLink struct {

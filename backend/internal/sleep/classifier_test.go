@@ -14,7 +14,7 @@ func mustCompletedSession(t *testing.T, start, stop time.Time) SleepSession {
 		t.Fatalf("NewSleepSession: %v", err)
 	}
 
-	if err := session.Stop(stop, SleepClassificationNap, mustNightWindow(t, 21, 0, 7, 0)); err != nil {
+	if err := session.Stop(stop); err != nil {
 		t.Fatalf("Stop: %v", err)
 	}
 
@@ -208,11 +208,6 @@ func TestClassifyDSTFallBackNightSleep(t *testing.T) {
 
 // --- forward-only night-window changes ---
 
-// TestClassifyForwardOnlyWindowChange documents that Classify operates purely
-// on the supplied window — it has no memory of prior classifications.
-// The version stored with a session is the mechanism a use-case layer uses to
-// detect whether a past session needs reclassification; sessions whose version
-// predates the current window version are left untouched.
 func TestClassifyForwardOnlyWindowChange(t *testing.T) {
 	t.Parallel()
 
@@ -225,7 +220,7 @@ func TestClassifyForwardOnlyWindowChange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSleepSession: %v", err)
 	}
-	if err := session.Stop(stop, SleepClassificationNap, oldWindow); err != nil {
+	if err := session.Stop(stop); err != nil {
 		t.Fatalf("Stop: %v", err)
 	}
 
@@ -250,11 +245,4 @@ func TestClassifyForwardOnlyWindowChange(t *testing.T) {
 		t.Fatalf("expected nap with narrow window, got %q", gotNarrow)
 	}
 
-	// The snapshot night window on the session signals which window was active
-	// when it was classified. A use-case layer compares the current window to
-	// ClassifiedWithNightWindow() to detect whether reclassification is needed.
-	snapped := session.ClassifiedWithNightWindow()
-	if snapped == nil || *snapped != oldWindow {
-		t.Fatalf("expected session to carry oldWindow as its classification snapshot, got %v", snapped)
-	}
 }

@@ -125,15 +125,7 @@ func includeInDay(s SleepSession, dayStart, dayEnd time.Time) bool {
 		return start.Before(dayEnd)
 	}
 	stoppedAt, _ := s.StoppedAt()
-	switch s.Classification() {
-	case SleepClassificationNap:
-		return start.Before(dayEnd) && stoppedAt.After(dayStart)
-	case SleepClassificationNight:
-		return !start.Before(dayStart) && start.Before(dayEnd)
-	default:
-		// Completed but unclassified: use overlap rule.
-		return start.Before(dayEnd) && stoppedAt.After(dayStart)
-	}
+	return start.Before(dayEnd) && stoppedAt.After(dayStart)
 }
 
 // attributedDuration returns the full duration to credit to s in the daily sleep

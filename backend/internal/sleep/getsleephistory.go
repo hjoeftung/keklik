@@ -9,35 +9,35 @@ import (
 // GetSleepHistoryQuery holds the inputs for querying a baby's sleep history.
 type GetSleepHistoryQuery struct {
 	BabyID   BabyID
-	Timezone string // IANA timezone name; if empty, resolved from the sleep profile
+	Timezone string // IANA timezone name
 	Period   string // "today", "7d", or "14d"
+}
+
+type SleepHistoryEntry struct {
+	Session        SleepSession
+	Classification SleepClassification
 }
 
 // GetSleepHistoryHandler executes the GetSleepHistory use case.
 type GetSleepHistoryHandler struct {
 	sessions SleepSessionHistoryRepository
-	profiles SleepProfileRepository
+	windows  NightWindowRepository
 }
 
 // NewGetSleepHistoryHandler returns a GetSleepHistoryHandler backed by the given repositories.
-func NewGetSleepHistoryHandler(sessions SleepSessionHistoryRepository, profiles SleepProfileRepository) *GetSleepHistoryHandler {
-	return &GetSleepHistoryHandler{sessions: sessions, profiles: profiles}
+func NewGetSleepHistoryHandler(sessions SleepSessionHistoryRepository, windows NightWindowRepository) *GetSleepHistoryHandler {
+	return &GetSleepHistoryHandler{sessions: sessions, windows: windows}
 }
 
 // Handle returns sleep sessions for the given baby and period, ordered by
 // started_at descending. It always returns a non-nil slice (empty when there
 // are no results).
-func (h *GetSleepHistoryHandler) Handle(ctx context.Context, q GetSleepHistoryQuery) ([]SleepSession, error) {
-	tz := q.Timezone
-	if tz == "" {
-		profile, err := h.profiles.FindByBabyID(ctx, q.BabyID)
-		if err != nil {
-			return nil, fmt.Errorf("load sleep profile for timezone: %w", err)
-		}
-		tz = profile.Timezone()
+func (h *GetSleepHistoryHandler) Handle(ctx context.Context, q GetSleepHistoryQuery) ([]SleepHistoryEntry, error) {
+	if q.Timezone == "" {
+		return nil, ErrInvalidTimezone
 	}
 
-	dateRange, err := periodToDateRange(q.Period, tz, time.Now().UTC())
+	dateRange, err := periodToDateRange(q.Period, q.Timezone, time.Now().UTC())
 	if err != nil {
 		return nil, err
 	}
@@ -47,11 +47,32 @@ func (h *GetSleepHistoryHandler) Handle(ctx context.Context, q GetSleepHistoryQu
 		return nil, fmt.Errorf("get sleep history: %w", err)
 	}
 
-	if sessions == nil {
-		sessions = []SleepSession{}
+	windows, err := h.windows.FindByBabyID(ctx, q.BabyID)
+	if err != nil {
+		return nil, fmt.Errorf("load night windows: %w", err)
 	}
 
-	return sessions, nil
+	if sessions == nil {
+		return []SleepHistoryEntry{}, nil
+	}
+
+	result := make([]SleepHistoryEntry, 0, len(sessions))
+	for _, session := range sessions {
+		classification := SleepClassificationUnknown
+		if window, ok := FindWindowForSession(windows, session); ok {
+			classification, err = Classify(session, q.Timezone, window)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		result = append(result, SleepHistoryEntry{
+			Session:        session,
+			Classification: classification,
+		})
+	}
+
+	return result, nil
 }
 
 // periodToDateRange converts a period string and IANA timezone name into a

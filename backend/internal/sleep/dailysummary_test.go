@@ -11,7 +11,7 @@ func mustNap(t *testing.T, id string, start, stop time.Time) SleepSession {
 	t.Helper()
 	s, err := NewCompletedSleepSession(
 		SleepSessionID(id), BabyID("baby-1"), FamilyMemberID("member-1"),
-		start, stop, SleepClassificationNap, nil,
+		start, stop,
 	)
 	if err != nil {
 		t.Fatalf("mustNap: %v", err)
@@ -22,10 +22,9 @@ func mustNap(t *testing.T, id string, start, stop time.Time) SleepSession {
 // mustNight builds a completed night-sleep session between start and stop.
 func mustNight(t *testing.T, id string, start, stop time.Time) SleepSession {
 	t.Helper()
-	nw := mustNightWindow(t, 21, 0, 7, 0)
 	s, err := NewCompletedSleepSession(
 		SleepSessionID(id), BabyID("baby-1"), FamilyMemberID("member-1"),
-		start, stop, SleepClassificationNight, &nw,
+		start, stop,
 	)
 	if err != nil {
 		t.Fatalf("mustNight: %v", err)
@@ -114,21 +113,21 @@ func TestComputeDailySummaryNightSleepStartingTodayFullDurationCredited(t *testi
 	}
 }
 
-func TestComputeDailySummaryNightSleepStartingYesterdayExcluded(t *testing.T) {
+func TestComputeDailySummaryOverlappingCompletedSleepFromPreviousDayIsIncluded(t *testing.T) {
 	t.Parallel()
 
 	dayStart, dayEnd := day(2026, time.April, 10)
-	// Night started yesterday, ends 06:00 today — must not appear in today's total.
+	// Completed sleep started yesterday and overlaps today.
 	night := mustNight(t, "night-1", dayStart.Add(-9*time.Hour), dayStart.Add(6*time.Hour))
 	now := dayStart.Add(18 * time.Hour)
 
 	got := ComputeDailySummary([]SleepSession{night}, dayStart, dayEnd, now)
 
-	if got.TotalSleep != 0 {
-		t.Errorf("TotalSleep: want 0, got %v", got.TotalSleep)
+	if got.TotalSleep != 15*time.Hour {
+		t.Errorf("TotalSleep: want 15h, got %v", got.TotalSleep)
 	}
-	if got.TotalActive != 18*time.Hour {
-		t.Errorf("TotalActive: want 18h, got %v", got.TotalActive)
+	if got.TotalActive != 12*time.Hour {
+		t.Errorf("TotalActive: want 12h, got %v", got.TotalActive)
 	}
 }
 

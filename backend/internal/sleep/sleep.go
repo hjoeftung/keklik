@@ -15,7 +15,6 @@ var (
 	ErrMissingSleepSessionEdit      = errors.New("sleep session edit requires started_at or stopped_at")
 	ErrSleepSessionAlreadyStopped   = errors.New("sleep session already stopped")
 	ErrInvalidSleepSessionStop      = errors.New("sleep session stop must not be before start")
-	ErrUnknownSleepClassification   = errors.New("unknown sleep classification")
 	ErrInvalidSleepSessionDateRange = errors.New("sleep session date range is invalid")
 	ErrActiveSleepSessionExists     = errors.New("active sleep session already exists for this baby")
 	ErrInvalidSleepHistoryPeriod    = errors.New("period must be one of: today, 7d, 14d")
@@ -24,6 +23,7 @@ var (
 	ErrInvalidTimezone    = errors.New("invalid timezone")
 	ErrInvalidLocalTime   = errors.New("invalid local time")
 	ErrInvalidNightWindow = errors.New("invalid night window")
+	ErrEmptyNightWindowID = errors.New("night window id must not be empty")
 )
 
 type SleepSessionID string
@@ -31,6 +31,8 @@ type SleepSessionID string
 type BabyID string
 
 type FamilyMemberID string
+
+type NightWindowID string
 
 type SleepClassification string
 
@@ -41,13 +43,11 @@ const (
 )
 
 type SleepSession struct {
-	id                        SleepSessionID
-	babyID                    BabyID
-	createdByMemberID         FamilyMemberID
-	startedAt                 time.Time
-	stoppedAt                 *time.Time
-	classification            SleepClassification
-	classifiedWithNightWindow *NightWindow
+	id                SleepSessionID
+	babyID            BabyID
+	createdByMemberID FamilyMemberID
+	startedAt         time.Time
+	stoppedAt         *time.Time
 }
 
 type DateRange struct {
@@ -61,14 +61,12 @@ type LocalTime struct {
 }
 
 type NightWindow struct {
-	start LocalTime
-	end   LocalTime
-}
-
-type SleepProfile struct {
-	babyID      BabyID
-	timezone    string
-	nightWindow NightWindow
+	id            NightWindowID
+	babyID        BabyID
+	start         LocalTime
+	end           LocalTime
+	effectiveFrom time.Time
+	effectiveTo   *time.Time
 }
 
 type SleepSessionRepository interface {
@@ -96,9 +94,10 @@ type SleepSessionHistoryRepository interface {
 	FindByBabyIDAndDateRange(ctx context.Context, babyID BabyID, dateRange DateRange) ([]SleepSession, error)
 }
 
-type SleepProfileRepository interface {
-	Save(ctx context.Context, profile SleepProfile) error
-	FindByBabyID(ctx context.Context, babyID BabyID) (SleepProfile, error)
+type NightWindowRepository interface {
+	Save(ctx context.Context, nw NightWindow) error
+	DeleteByIDs(ctx context.Context, ids []NightWindowID) error
+	FindByBabyID(ctx context.Context, babyID BabyID) ([]NightWindow, error)
 }
 
 // CompletedSleepSessionsSinceRepository finds completed (stopped) sessions from a given point in time.
@@ -114,11 +113,11 @@ type SleepElapsedTimeRepository interface {
 }
 
 func NewSleepSession(id SleepSessionID, babyID BabyID, createdByMemberID FamilyMemberID, startedAt time.Time) (SleepSession, error) {
-	return newSleepSession(id, babyID, createdByMemberID, startedAt, nil, SleepClassificationUnknown, nil)
+	return newSleepSession(id, babyID, createdByMemberID, startedAt, nil)
 }
 
-func NewCompletedSleepSession(id SleepSessionID, babyID BabyID, createdByMemberID FamilyMemberID, startedAt time.Time, stoppedAt time.Time, classification SleepClassification, classifiedWith *NightWindow) (SleepSession, error) {
-	return newSleepSession(id, babyID, createdByMemberID, startedAt, &stoppedAt, classification, classifiedWith)
+func NewCompletedSleepSession(id SleepSessionID, babyID BabyID, createdByMemberID FamilyMemberID, startedAt time.Time, stoppedAt time.Time) (SleepSession, error) {
+	return newSleepSession(id, babyID, createdByMemberID, startedAt, &stoppedAt)
 }
 
 func NewDateRange(start time.Time, end time.Time) (DateRange, error) {
@@ -137,30 +136,50 @@ func NewLocalTime(hour int, minute int) (LocalTime, error) {
 	return LocalTime{hour: hour, minute: minute}, nil
 }
 
-func NewNightWindow(start LocalTime, end LocalTime) (NightWindow, error) {
+func NewNightWindow(id NightWindowID, babyID BabyID, start LocalTime, end LocalTime, effectiveFrom time.Time, effectiveTo *time.Time) (NightWindow, error) {
+	trimmedID := strings.TrimSpace(string(id))
+	if trimmedID == "" {
+		return NightWindow{}, ErrEmptyNightWindowID
+	}
+
+	trimmedBabyID := strings.TrimSpace(string(babyID))
+	if trimmedBabyID == "" {
+		return NightWindow{}, ErrEmptyBabyID
+	}
+
 	if start == end {
 		return NightWindow{}, ErrInvalidNightWindow
 	}
 
-	return NightWindow{start: start, end: end}, nil
+	if effectiveTo != nil && !effectiveTo.After(effectiveFrom) {
+		return NightWindow{}, ErrInvalidNightWindow
+	}
+
+	return NightWindow{
+		id:            NightWindowID(trimmedID),
+		babyID:        BabyID(trimmedBabyID),
+		start:         start,
+		end:           end,
+		effectiveFrom: effectiveFrom,
+		effectiveTo:   effectiveTo,
+	}, nil
 }
 
-func NewSleepProfile(babyID BabyID, timezone string, nightWindow NightWindow) (SleepProfile, error) {
-	trimmedBabyID := strings.TrimSpace(string(babyID))
-	if trimmedBabyID == "" {
-		return SleepProfile{}, ErrEmptyBabyID
+// FindWindowForSession returns the NightWindow whose effective range covers
+// session.StartedAt. windows must be ordered by effective_from ASC.
+func FindWindowForSession(windows []NightWindow, session SleepSession) (NightWindow, bool) {
+	sessionStart := session.StartedAt()
+	var best NightWindow
+	found := false
+	for _, w := range windows {
+		if !w.effectiveFrom.After(sessionStart) {
+			if w.effectiveTo == nil || w.effectiveTo.After(sessionStart) {
+				best = w
+				found = true
+			}
+		}
 	}
-
-	trimmedTimezone := strings.TrimSpace(timezone)
-	if _, err := time.LoadLocation(trimmedTimezone); err != nil {
-		return SleepProfile{}, ErrInvalidTimezone
-	}
-
-	return SleepProfile{
-		babyID:      BabyID(trimmedBabyID),
-		timezone:    trimmedTimezone,
-		nightWindow: nightWindow,
-	}, nil
+	return best, found
 }
 
 func (s SleepSession) ID() SleepSessionID {
@@ -187,14 +206,6 @@ func (s SleepSession) StoppedAt() (time.Time, bool) {
 	return *s.stoppedAt, true
 }
 
-func (s SleepSession) Classification() SleepClassification {
-	return s.classification
-}
-
-func (s SleepSession) ClassifiedWithNightWindow() *NightWindow {
-	return s.classifiedWithNightWindow
-}
-
 func (s SleepSession) IsActive() bool {
 	return s.stoppedAt == nil
 }
@@ -207,14 +218,9 @@ func (s SleepSession) Duration() (time.Duration, bool) {
 	return s.stoppedAt.Sub(s.startedAt), true
 }
 
-func (s *SleepSession) Stop(stoppedAt time.Time, classification SleepClassification, classifiedWith NightWindow) error {
+func (s *SleepSession) Stop(stoppedAt time.Time) error {
 	if s.stoppedAt != nil {
 		return ErrSleepSessionAlreadyStopped
-	}
-
-	normalizedClassification, err := normalizeClassification(classification)
-	if err != nil {
-		return err
 	}
 
 	if stoppedAt.Before(s.startedAt) {
@@ -222,8 +228,6 @@ func (s *SleepSession) Stop(stoppedAt time.Time, classification SleepClassificat
 	}
 
 	s.stoppedAt = &stoppedAt
-	s.classification = normalizedClassification
-	s.classifiedWithNightWindow = &classifiedWith
 
 	return nil
 }
@@ -244,6 +248,14 @@ func (t LocalTime) Minute() int {
 	return t.minute
 }
 
+func (n NightWindow) ID() NightWindowID {
+	return n.id
+}
+
+func (n NightWindow) BabyID() BabyID {
+	return n.babyID
+}
+
 func (n NightWindow) Start() LocalTime {
 	return n.start
 }
@@ -252,19 +264,15 @@ func (n NightWindow) End() LocalTime {
 	return n.end
 }
 
-func (p SleepProfile) BabyID() BabyID {
-	return p.babyID
+func (n NightWindow) EffectiveFrom() time.Time {
+	return n.effectiveFrom
 }
 
-func (p SleepProfile) Timezone() string {
-	return p.timezone
+func (n NightWindow) EffectiveTo() *time.Time {
+	return n.effectiveTo
 }
 
-func (p SleepProfile) NightWindow() NightWindow {
-	return p.nightWindow
-}
-
-func newSleepSession(id SleepSessionID, babyID BabyID, createdByMemberID FamilyMemberID, startedAt time.Time, stoppedAt *time.Time, classification SleepClassification, classifiedWith *NightWindow) (SleepSession, error) {
+func newSleepSession(id SleepSessionID, babyID BabyID, createdByMemberID FamilyMemberID, startedAt time.Time, stoppedAt *time.Time) (SleepSession, error) {
 	trimmedID := strings.TrimSpace(string(id))
 	if trimmedID == "" {
 		return SleepSession{}, ErrEmptySleepSessionID
@@ -284,26 +292,15 @@ func newSleepSession(id SleepSessionID, babyID BabyID, createdByMemberID FamilyM
 		return SleepSession{}, ErrZeroSleepSessionStart
 	}
 
-	normalizedClassification, err := normalizeClassification(classification)
-	if err != nil {
-		return SleepSession{}, err
-	}
-
 	if stoppedAt != nil && stoppedAt.Before(startedAt) {
 		return SleepSession{}, ErrInvalidSleepSessionStop
 	}
 
-	if stoppedAt == nil {
-		normalizedClassification = SleepClassificationUnknown
-	}
-
 	session := SleepSession{
-		id:                        SleepSessionID(trimmedID),
-		babyID:                    BabyID(trimmedBabyID),
-		createdByMemberID:         FamilyMemberID(trimmedMemberID),
-		startedAt:                 startedAt,
-		classification:            normalizedClassification,
-		classifiedWithNightWindow: classifiedWith,
+		id:                SleepSessionID(trimmedID),
+		babyID:            BabyID(trimmedBabyID),
+		createdByMemberID: FamilyMemberID(trimmedMemberID),
+		startedAt:         startedAt,
 	}
 
 	if stoppedAt != nil {
@@ -312,13 +309,4 @@ func newSleepSession(id SleepSessionID, babyID BabyID, createdByMemberID FamilyM
 	}
 
 	return session, nil
-}
-
-func normalizeClassification(classification SleepClassification) (SleepClassification, error) {
-	switch classification {
-	case SleepClassificationUnknown, SleepClassificationNap, SleepClassificationNight:
-		return classification, nil
-	default:
-		return SleepClassificationUnknown, ErrUnknownSleepClassification
-	}
 }

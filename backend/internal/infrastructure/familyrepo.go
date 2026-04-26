@@ -4,12 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sort"
+	"time"
 
 	"github.com/lib/pq"
 
 	"github.com/hjoeftung/keklik/internal/apperror"
 	"github.com/hjoeftung/keklik/internal/auth"
 	"github.com/hjoeftung/keklik/internal/family"
+	"github.com/hjoeftung/keklik/internal/sleep"
 )
 
 // PostgresFamilyRepository implements family.FamilyRepository using PostgreSQL.
@@ -167,8 +170,15 @@ func (r *PostgresFamilyRepository) FindByInviteToken(ctx context.Context, token 
 	return r.reconstruct(ctx, familyID)
 }
 
-// reconstruct builds a Family aggregate from a single JOIN across family_members, babies, and invite_links.
-// The JOIN produces a Cartesian product (member × baby × invite_link), so each entity is deduplicated by ID.
+// babyMeta holds the scalar fields for a baby row, collected before NightWindows are attached.
+type babyMeta struct {
+	familyID family.FamilyID
+	name     string
+}
+
+// reconstruct builds a Family aggregate from a single JOIN across family_members, babies,
+// baby_night_windows, and invite_links.  The JOIN produces a Cartesian product, so each
+// entity is deduplicated by ID.
 func (r *PostgresFamilyRepository) reconstruct(
 	ctx context.Context,
 	id family.FamilyID,
@@ -182,13 +192,21 @@ func (r *PostgresFamilyRepository) reconstruct(
 			b.id                    AS baby_id,
 			b.family_id             AS baby_family_id,
 			b.name                  AS baby_name,
+			nw.id                   AS nw_id,
+			nw.start_hour,
+			nw.start_minute,
+			nw.end_hour,
+			nw.end_minute,
+			nw.effective_from,
+			nw.effective_to,
 			il.token                AS invite_token,
 			il.created_by_member_id AS invite_created_by,
 			il.expires_at           AS invite_expires_at
 		FROM families f
-		LEFT JOIN family_members fm ON fm.family_id = f.id
-		LEFT JOIN babies b          ON b.family_id  = f.id
-		LEFT JOIN invite_links il   ON il.family_id = f.id
+		LEFT JOIN family_members fm      ON fm.family_id = f.id
+		LEFT JOIN babies b               ON b.family_id  = f.id
+		LEFT JOIN baby_night_windows nw  ON nw.baby_id   = b.id
+		LEFT JOIN invite_links il        ON il.family_id = f.id
 		WHERE f.id = $1`, string(id))
 	if err != nil {
 		return family.Family{}, fmt.Errorf("query family: %w", err)
@@ -196,22 +214,32 @@ func (r *PostgresFamilyRepository) reconstruct(
 	defer rows.Close()
 
 	seenMembers := make(map[family.FamilyMemberID]struct{})
-	seenBabies := make(map[family.BabyID]struct{})
+	seenNightWindows := make(map[sleep.NightWindowID]struct{})
 	seenLinks := make(map[family.InviteToken]struct{})
+
 	var members []family.FamilyMember
-	var babies []family.Baby
 	var links []family.InviteLink
+
+	// Collect baby metadata and night windows separately so we can sort before assembling.
+	babiesOrder := []family.BabyID{}
+	babiesMeta := make(map[family.BabyID]babyMeta)
+	babyNightWindows := make(map[family.BabyID][]sleep.NightWindow)
 
 	for rows.Next() {
 		var (
 			memberID, memberFamilyID, memberName, memberAccountID sql.NullString
 			babyID, babyFamilyID, babyName                        sql.NullString
+			nwID                                                  sql.NullString
+			nwStartHour, nwStartMinute, nwEndHour, nwEndMinute    sql.NullInt32
+			nwEffectiveFrom, nwEffectiveTo                        sql.NullTime
 			inviteToken, inviteCreatedBy                          sql.NullString
 			inviteExpiresAt                                       sql.NullTime
 		)
 		if err := rows.Scan(
 			&memberID, &memberFamilyID, &memberName, &memberAccountID,
 			&babyID, &babyFamilyID, &babyName,
+			&nwID, &nwStartHour, &nwStartMinute, &nwEndHour, &nwEndMinute,
+			&nwEffectiveFrom, &nwEffectiveTo,
 			&inviteToken, &inviteCreatedBy, &inviteExpiresAt,
 		); err != nil {
 			return family.Family{}, fmt.Errorf("scan family row: %w", err)
@@ -232,13 +260,40 @@ func (r *PostgresFamilyRepository) reconstruct(
 
 		if babyID.Valid {
 			bid := family.BabyID(babyID.String)
-			if _, seen := seenBabies[bid]; !seen {
-				seenBabies[bid] = struct{}{}
-				babies = append(babies, family.Baby{
-					ID:       bid,
-					FamilyID: family.FamilyID(babyFamilyID.String),
-					Name:     babyName.String,
-				})
+			if _, seen := babiesMeta[bid]; !seen {
+				babiesMeta[bid] = babyMeta{
+					familyID: family.FamilyID(babyFamilyID.String),
+					name:     babyName.String,
+				}
+				babiesOrder = append(babiesOrder, bid)
+			}
+
+			if nwID.Valid {
+				nwid := sleep.NightWindowID(nwID.String)
+				if _, seen := seenNightWindows[nwid]; !seen {
+					seenNightWindows[nwid] = struct{}{}
+
+					start, err := sleep.NewLocalTime(int(nwStartHour.Int32), int(nwStartMinute.Int32))
+					if err != nil {
+						return family.Family{}, fmt.Errorf("reconstruct night window start: %w", err)
+					}
+					end, err := sleep.NewLocalTime(int(nwEndHour.Int32), int(nwEndMinute.Int32))
+					if err != nil {
+						return family.Family{}, fmt.Errorf("reconstruct night window end: %w", err)
+					}
+
+					var effectiveTo *time.Time
+					if nwEffectiveTo.Valid {
+						t := nwEffectiveTo.Time
+						effectiveTo = &t
+					}
+
+					nw, err := sleep.NewNightWindow(nwid, sleep.BabyID(bid), start, end, nwEffectiveFrom.Time, effectiveTo)
+					if err != nil {
+						return family.Family{}, fmt.Errorf("reconstruct night window: %w", err)
+					}
+					babyNightWindows[bid] = append(babyNightWindows[bid], nw)
+				}
 			}
 		}
 
@@ -257,6 +312,25 @@ func (r *PostgresFamilyRepository) reconstruct(
 	}
 	if err := rows.Err(); err != nil {
 		return family.Family{}, fmt.Errorf("iterate family rows: %w", err)
+	}
+
+	// Sort each baby's windows by effective_from ASC before assembling.
+	for bid, nws := range babyNightWindows {
+		sort.Slice(nws, func(i, j int) bool {
+			return nws[i].EffectiveFrom().Before(nws[j].EffectiveFrom())
+		})
+		babyNightWindows[bid] = nws
+	}
+
+	babies := make([]family.Baby, 0, len(babiesOrder))
+	for _, bid := range babiesOrder {
+		meta := babiesMeta[bid]
+		babies = append(babies, family.Baby{
+			ID:           bid,
+			FamilyID:     meta.familyID,
+			Name:         meta.name,
+			NightWindows: babyNightWindows[bid],
+		})
 	}
 
 	f, err := family.NewFamily(id, members, babies)

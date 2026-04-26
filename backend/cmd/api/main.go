@@ -33,7 +33,7 @@ import (
 func main() {
 	ctx := context.Background()
 	if err := run(ctx, os.Getenv); err != nil {
-        fmt.Fprintf(os.Stderr, "%s\n", err)
+		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
 }
@@ -66,7 +66,7 @@ func run(ctx context.Context, getenv func(string) string) error {
 	familyRepo := infrastructure.NewPostgresFamilyRepository(db)
 	familyMemberRepo := infrastructure.NewPostgresFamilyMemberRepository(db)
 	accountRepo := infrastructure.NewPostgresAccountRepository(db)
-	sleepProfileRepo := infrastructure.NewPostgresSleepProfileRepository(db)
+	nightWindowRepo := infrastructure.NewPostgresNightWindowRepository(db)
 	sleepSessionRepo := infrastructure.NewPostgresSleepSessionRepository(db)
 	babyAccessChecker := infrastructure.NewPostgresBabyAccessChecker(db)
 
@@ -81,37 +81,37 @@ func run(ctx context.Context, getenv func(string) string) error {
 	joinFamilyByInvite := family.NewJoinFamilyByInviteLinkHandler(familyRepo, familyMemberRepo)
 	revokeInviteLink := family.NewRevokeInviteLinkHandler(familyRepo, familyMemberRepo)
 	transactor := infrastructure.NewPostgresTransactor(db)
-	createSleepProfile := sleep.NewCreateSleepProfileHandler(sleepProfileRepo, sleepSessionRepo, sleepSessionRepo, transactor)
+	setNightWindow := sleep.NewSetNightWindowHandler(nightWindowRepo, transactor)
 	startSleep := sleep.NewStartSleepHandler(sleepSessionRepo)
-	stopSleep := sleep.NewStopSleepHandler(sleepSessionRepo, sleepProfileRepo)
-	editSleepSession := sleep.NewEditSleepSessionHandler(sleepSessionRepo, sleepProfileRepo)
+	stopSleep := sleep.NewStopSleepHandler(sleepSessionRepo)
+	editSleepSession := sleep.NewEditSleepSessionHandler(sleepSessionRepo)
 	deleteSleepSession := sleep.NewDeleteSleepSessionHandler(sleepSessionRepo)
-	getSleepHistory := sleep.NewGetSleepHistoryHandler(sleepSessionRepo, sleepProfileRepo)
-jwtValidator := auth.NewJWTValidator(config.Auth.JWTSigningKey)
+	getSleepHistory := sleep.NewGetSleepHistoryHandler(sleepSessionRepo, nightWindowRepo)
+	jwtValidator := auth.NewJWTValidator(config.Auth.JWTSigningKey)
 	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, refreshTokenRepo, config.Auth.JWTSigningKey, config.Auth.AccessTokenDuration, config.Auth.RefreshTokenDuration)
 	testLogin := auth.NewHandleTestLoginHandler(accountRepo, refreshTokenRepo, config.Auth.JWTSigningKey, config.Auth.AccessTokenDuration, config.Auth.RefreshTokenDuration)
 	refreshTokenHandler := auth.NewHandleRefreshTokenHandler(refreshTokenRepo, config.Auth.JWTSigningKey, config.Auth.AccessTokenDuration, config.Auth.RefreshTokenDuration)
 	logoutHandler := auth.NewHandleLogoutHandler(refreshTokenRepo)
 
 	server := httpapi.NewServer(config, httpapi.Dependencies{
-		Accounts:            accountRepo,
-		Validator:           jwtValidator,
-		OAuthCallback:       oauthCallback,
-		TestLogin:           testLogin,
-		RefreshToken:        refreshTokenHandler,
-		Logout:              logoutHandler,
-		CreateFamily:        createFamily,
-		GetFamily:           getFamily,
-		CreateInviteLink:    createInviteLink,
-		RevokeInviteLink:    revokeInviteLink,
-		JoinFamilyByInvite:  joinFamilyByInvite,
-		BabyAccess:          babyAccessChecker,
-		CreateSleepProfile:  createSleepProfile,
-		StartSleep:          startSleep,
-		StopSleep:           stopSleep,
-		EditSleepSession:    editSleepSession,
-		DeleteSleepSession:  deleteSleepSession,
-		GetSleepHistory:     getSleepHistory,
+		Accounts:           accountRepo,
+		Validator:          jwtValidator,
+		OAuthCallback:      oauthCallback,
+		TestLogin:          testLogin,
+		RefreshToken:       refreshTokenHandler,
+		Logout:             logoutHandler,
+		CreateFamily:       createFamily,
+		GetFamily:          getFamily,
+		CreateInviteLink:   createInviteLink,
+		RevokeInviteLink:   revokeInviteLink,
+		JoinFamilyByInvite: joinFamilyByInvite,
+		BabyAccess:         babyAccessChecker,
+		SetNightWindow:     setNightWindow,
+		StartSleep:         startSleep,
+		StopSleep:          stopSleep,
+		EditSleepSession:   editSleepSession,
+		DeleteSleepSession: deleteSleepSession,
+		GetSleepHistory:    getSleepHistory,
 	})
 
 	slog.Info("starting HTTP server", "addr", config.Address())

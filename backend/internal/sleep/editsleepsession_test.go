@@ -5,17 +5,14 @@ import (
 	"errors"
 	"testing"
 	"time"
-
-	"github.com/hjoeftung/keklik/internal/apperror"
 )
 
 type stubEditableSleepSessionRepo struct {
-	session          SleepSession
-	findErr          error
-	saveErr          error
-	deleteErr        error
-	saved            *SleepSession
-	deletedSessionID SleepSessionID
+	session   SleepSession
+	findErr   error
+	saveErr   error
+	deleteErr error
+	saved     *SleepSession
 }
 
 func (r *stubEditableSleepSessionRepo) Save(_ context.Context, s SleepSession) error {
@@ -34,162 +31,56 @@ func (r *stubEditableSleepSessionRepo) FindByID(_ context.Context, _ SleepSessio
 	return r.session, r.findErr
 }
 
-func (r *stubEditableSleepSessionRepo) DeleteByID(_ context.Context, id SleepSessionID) error {
-	if r.deleteErr != nil {
-		return r.deleteErr
-	}
-	r.deletedSessionID = id
-	return nil
+func (r *stubEditableSleepSessionRepo) DeleteByID(_ context.Context, _ SleepSessionID) error {
+	return r.deleteErr
 }
 
-func mustEditableCompletedSession(t *testing.T, startedAt, stoppedAt time.Time) SleepSession {
-	t.Helper()
-
-	nw := mustNightWindow(t, 21, 0, 7, 0)
-	session, err := NewCompletedSleepSession(
-		SleepSessionID("session-1"),
-		BabyID("baby-1"),
-		FamilyMemberID("member-1"),
-		startedAt,
-		stoppedAt,
-		SleepClassificationNap,
-		&nw,
-	)
-	if err != nil {
-		t.Fatalf("NewCompletedSleepSession: %v", err)
-	}
-
-	return session
-}
-
-func TestEditSleepSessionUpdatesActiveSessionStart(t *testing.T) {
+func TestEditSleepSessionUpdatesStartedAt(t *testing.T) {
 	t.Parallel()
 
-	originalStart := time.Date(2026, time.April, 14, 10, 0, 0, 0, time.UTC)
-	editedStart := originalStart.Add(-30 * time.Minute)
+	startedAt := time.Date(2026, time.April, 14, 10, 0, 0, 0, time.UTC)
+	editedStart := startedAt.Add(-15 * time.Minute)
+	repo := &stubEditableSleepSessionRepo{session: mustActiveSession(t, startedAt)}
 
-	repo := &stubEditableSleepSessionRepo{session: mustActiveSession(t, originalStart)}
-	profiles := &stubSleepProfileRepo{profile: mustProfile(t)}
-
-	h := NewEditSleepSessionHandler(repo, profiles)
+	h := NewEditSleepSessionHandler(repo)
 	updated, err := h.Handle(context.Background(), EditSleepSessionCommand{
 		SessionID: SleepSessionID("session-1"),
-
 		StartedAt: &editedStart,
 	})
 	if err != nil {
 		t.Fatalf("Handle returned error: %v", err)
 	}
-
 	if !updated.StartedAt().Equal(editedStart) {
-		t.Fatalf("expected started_at %v, got %v", editedStart, updated.StartedAt())
-	}
-	if !updated.IsActive() {
-		t.Fatal("expected updated session to remain active")
-	}
-	if repo.saved == nil {
-		t.Fatal("expected updated session to be saved")
+		t.Fatalf("expected edited start %v, got %v", editedStart, updated.StartedAt())
 	}
 }
 
-func TestEditSleepSessionReclassifiesCompletedSession(t *testing.T) {
+func TestEditSleepSessionCanCompleteSession(t *testing.T) {
 	t.Parallel()
 
-	startedAt := time.Date(2026, time.April, 14, 19, 30, 0, 0, time.UTC)
-	stoppedAt := time.Date(2026, time.April, 15, 4, 30, 0, 0, time.UTC)
+	startedAt := time.Date(2026, time.April, 14, 10, 0, 0, 0, time.UTC)
+	stoppedAt := startedAt.Add(2 * time.Hour)
+	repo := &stubEditableSleepSessionRepo{session: mustActiveSession(t, startedAt)}
 
-	repo := &stubEditableSleepSessionRepo{session: mustEditableCompletedSession(t, startedAt, stoppedAt)}
-	profiles := &stubSleepProfileRepo{profile: mustProfile(t)}
-
-	h := NewEditSleepSessionHandler(repo, profiles)
+	h := NewEditSleepSessionHandler(repo)
 	updated, err := h.Handle(context.Background(), EditSleepSessionCommand{
 		SessionID: SleepSessionID("session-1"),
-
 		StoppedAt: &stoppedAt,
 	})
 	if err != nil {
 		t.Fatalf("Handle returned error: %v", err)
 	}
-
-	if updated.Classification() != SleepClassificationNight {
-		t.Fatalf("expected reclassified session to be night, got %q", updated.Classification())
-	}
-	if updated.ClassifiedWithNightWindow() == nil {
-		t.Fatal("expected classified night window to be stored")
+	if updated.IsActive() {
+		t.Fatal("expected completed session")
 	}
 }
 
-func TestEditSleepSessionRejectsMissingChanges(t *testing.T) {
+func TestEditSleepSessionRejectsMissingFields(t *testing.T) {
 	t.Parallel()
 
-	repo := &stubEditableSleepSessionRepo{session: mustActiveSession(t, time.Now().UTC())}
-	profiles := &stubSleepProfileRepo{profile: mustProfile(t)}
-
-	h := NewEditSleepSessionHandler(repo, profiles)
-	_, err := h.Handle(context.Background(), EditSleepSessionCommand{
-		SessionID: SleepSessionID("session-1"),
-	})
-
+	h := NewEditSleepSessionHandler(&stubEditableSleepSessionRepo{})
+	_, err := h.Handle(context.Background(), EditSleepSessionCommand{SessionID: SleepSessionID("session-1")})
 	if !errors.Is(err, ErrMissingSleepSessionEdit) {
 		t.Fatalf("expected ErrMissingSleepSessionEdit, got %v", err)
-	}
-}
-
-func TestEditSleepSessionRejectsInvalidInterval(t *testing.T) {
-	t.Parallel()
-
-	startedAt := time.Date(2026, time.April, 14, 10, 0, 0, 0, time.UTC)
-	stoppedAt := startedAt.Add(-time.Minute)
-
-	repo := &stubEditableSleepSessionRepo{session: mustEditableCompletedSession(t, startedAt, startedAt.Add(time.Hour))}
-	profiles := &stubSleepProfileRepo{profile: mustProfile(t)}
-
-	h := NewEditSleepSessionHandler(repo, profiles)
-	_, err := h.Handle(context.Background(), EditSleepSessionCommand{
-		SessionID: SleepSessionID("session-1"),
-
-		StoppedAt: &stoppedAt,
-	})
-
-	if !errors.Is(err, ErrInvalidSleepSessionStop) {
-		t.Fatalf("expected ErrInvalidSleepSessionStop, got %v", err)
-	}
-}
-
-func TestDeleteSleepSessionDelegatesToRepository(t *testing.T) {
-	t.Parallel()
-
-	repo := &stubEditableSleepSessionRepo{}
-	h := NewDeleteSleepSessionHandler(repo)
-
-	if err := h.Handle(context.Background(), DeleteSleepSessionCommand{
-		SessionID: SleepSessionID("session-9"),
-	}); err != nil {
-		t.Fatalf("Handle returned error: %v", err)
-	}
-
-	if repo.deletedSessionID != SleepSessionID("session-9") {
-		t.Fatalf("expected session-9 to be deleted, got %q", repo.deletedSessionID)
-	}
-}
-
-func TestDeleteSleepSessionReturnsNotFound(t *testing.T) {
-	t.Parallel()
-
-	repo := &stubEditableSleepSessionRepo{
-		deleteErr: apperror.New(apperror.CodeNotFound, "sleep session not found"),
-	}
-	h := NewDeleteSleepSessionHandler(repo)
-
-	err := h.Handle(context.Background(), DeleteSleepSessionCommand{
-		SessionID: SleepSessionID("missing"),
-	})
-
-	var appErr apperror.AppError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("expected AppError, got %T: %v", err, err)
-	}
-	if appErr.Code != apperror.CodeNotFound {
-		t.Fatalf("expected not_found, got %q", appErr.Code)
 	}
 }

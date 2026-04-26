@@ -37,12 +37,12 @@ type sleepSessionResponse struct {
 	DurationSeconds *float64 `json:"duration_seconds,omitempty"`
 }
 
-func toSleepSessionResponse(s sleep.SleepSession) sleepSessionResponse {
+func toSleepSessionResponse(s sleep.SleepSession, classification sleep.SleepClassification) sleepSessionResponse {
 	resp := sleepSessionResponse{
 		ID:             string(s.ID()),
 		BabyID:         string(s.BabyID()),
 		StartedAt:      s.StartedAt().UTC().Format(time.RFC3339),
-		Classification: string(s.Classification()),
+		Classification: string(classification),
 	}
 	if t, ok := s.StoppedAt(); ok {
 		ts := t.UTC().Format(time.RFC3339)
@@ -63,6 +63,7 @@ func toSleepSessionResponse(s sleep.SleepSession) sleepSessionResponse {
 // @Security  BearerAuth
 // @Param     baby_id  path      string  true   "Baby ID"
 // @Param     period   query     string  false  "History window: today, 7d (default), or 14d"
+// @Param     timezone query     string  true   "IANA timezone, e.g. America/New_York"
 // @Success   200      {array}   sleepSessionResponse
 // @Failure   400      {object}  errorResponse
 // @Failure   401      {object}  errorResponse
@@ -80,6 +81,11 @@ func getSleepHistoryHandler(w http.ResponseWriter, r *http.Request, h *sleep.Get
 	if period == "" {
 		period = "7d"
 	}
+	timezone := r.URL.Query().Get("timezone")
+	if timezone == "" {
+		writeError(w, r, apperror.New(apperror.CodeInvalidTimezone, sleep.ErrInvalidTimezone.Error()))
+		return
+	}
 	switch period {
 	case "today", "7d", "14d":
 		// valid
@@ -89,8 +95,9 @@ func getSleepHistoryHandler(w http.ResponseWriter, r *http.Request, h *sleep.Get
 	}
 
 	sessions, err := h.Handle(r.Context(), sleep.GetSleepHistoryQuery{
-		BabyID: bc.BabyID,
-		Period: period,
+		BabyID:   bc.BabyID,
+		Timezone: timezone,
+		Period:   period,
 	})
 	if err != nil {
 		writeError(w, r, mapSleepHistoryError(err))
@@ -99,7 +106,7 @@ func getSleepHistoryHandler(w http.ResponseWriter, r *http.Request, h *sleep.Get
 
 	resp := make([]sleepSessionResponse, len(sessions))
 	for i, s := range sessions {
-		resp[i] = toSleepSessionResponse(s)
+		resp[i] = toSleepSessionResponse(s.Session, s.Classification)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -122,41 +129,36 @@ func mapSleepHistoryError(err error) apperror.AppError {
 	}
 }
 
-type nightWindowRequest struct {
-	StartHour   int `json:"start_hour"`
-	StartMinute int `json:"start_minute"`
-	EndHour     int `json:"end_hour"`
-	EndMinute   int `json:"end_minute"`
+type setNightWindowRequest struct {
+	StartHour     int       `json:"start_hour"`
+	StartMinute   int       `json:"start_minute"`
+	EndHour       int       `json:"end_hour"`
+	EndMinute     int       `json:"end_minute"`
+	EffectiveFrom time.Time `json:"effective_from"`
 }
 
-type createSleepProfileRequest struct {
-	Timezone      string             `json:"timezone"`
-	NightWindow   nightWindowRequest `json:"night_window"`
-	EffectiveFrom *time.Time         `json:"effective_from,omitempty"`
-}
-
-// createSleepProfileHandler creates or updates the sleep profile (timezone + night window) for a baby.
+// setNightWindowHandler creates or updates the baby's night-window timeline.
 //
-// @Summary   Create sleep profile
+// @Summary   Set night window
 // @Tags      sleep
 // @Accept    json
 // @Security  BearerAuth
-// @Param     baby_id  path  string                     true  "Baby ID"
-// @Param     body     body  createSleepProfileRequest  true  "Sleep profile configuration. Set effective_from to retroactively reclassify completed sessions whose started_at >= effective_from (max 30 days back)."
+// @Param     baby_id  path  string                true  "Baby ID"
+// @Param     body     body  setNightWindowRequest true  "Night window configuration"
 // @Success   204
-// @Failure   400  {object}  errorResponse  "Invalid input or effective_from earlier than 30 days ago"
+// @Failure   400  {object}  errorResponse
 // @Failure   401  {object}  errorResponse
 // @Failure   403  {object}  errorResponse
 // @Failure   404  {object}  errorResponse
-// @Router    /babies/{baby_id}/sleep-profiles [post]
-func createSleepProfileHandler(w http.ResponseWriter, r *http.Request, h *sleep.CreateSleepProfileHandler) {
+// @Router    /babies/{baby_id}/night-windows [post]
+func setNightWindowHandler(w http.ResponseWriter, r *http.Request, h *sleep.SetNightWindowHandler) {
 	bc, ok := babyContextFromContext(r.Context())
 	if !ok {
 		writeError(w, r, apperror.New(apperror.CodeInternalError, "baby context missing"))
 		return
 	}
 
-	var req createSleepProfileRequest
+	var req setNightWindowRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		var timeErr *time.ParseError
 		if errors.As(err, &timeErr) {
@@ -167,17 +169,16 @@ func createSleepProfileHandler(w http.ResponseWriter, r *http.Request, h *sleep.
 		return
 	}
 
-	err := h.Handle(r.Context(), sleep.CreateSleepProfileCommand{
+	err := h.Handle(r.Context(), sleep.SetNightWindowCommand{
 		BabyID:                 bc.BabyID,
-		Timezone:               req.Timezone,
-		NightWindowStartHour:   req.NightWindow.StartHour,
-		NightWindowStartMinute: req.NightWindow.StartMinute,
-		NightWindowEndHour:     req.NightWindow.EndHour,
-		NightWindowEndMinute:   req.NightWindow.EndMinute,
+		NightWindowStartHour:   req.StartHour,
+		NightWindowStartMinute: req.StartMinute,
+		NightWindowEndHour:     req.EndHour,
+		NightWindowEndMinute:   req.EndMinute,
 		EffectiveFrom:          req.EffectiveFrom,
 	})
 	if err != nil {
-		writeError(w, r, mapSleepProfileError(err))
+		writeError(w, r, mapNightWindowError(err))
 		return
 	}
 
@@ -259,10 +260,9 @@ type stopSleepRequest struct {
 }
 
 type stopSleepResponse struct {
-	ID             string    `json:"id"`
-	StartedAt      time.Time `json:"started_at"`
-	StoppedAt      time.Time `json:"stopped_at"`
-	Classification string    `json:"classification"`
+	ID        string    `json:"id"`
+	StartedAt time.Time `json:"started_at"`
+	StoppedAt time.Time `json:"stopped_at"`
 }
 
 type editSleepSessionRequest struct {
@@ -307,10 +307,9 @@ func stopSleepHandler(w http.ResponseWriter, r *http.Request, h *sleep.StopSleep
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(stopSleepResponse{
-		ID:             string(result.ID),
-		StartedAt:      result.StartedAt,
-		StoppedAt:      result.StoppedAt,
-		Classification: string(result.Classification),
+		ID:        string(result.ID),
+		StartedAt: result.StartedAt,
+		StoppedAt: result.StoppedAt,
 	})
 }
 
@@ -368,7 +367,7 @@ func editSleepSessionHandler(w http.ResponseWriter, r *http.Request, h *sleep.Ed
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(toSleepSessionResponse(session))
+	_ = json.NewEncoder(w).Encode(toSleepSessionResponse(session, sleep.SleepClassificationUnknown))
 }
 
 // deleteSleepSessionHandler permanently removes a sleep session.
@@ -424,14 +423,12 @@ func mapDeleteSleepSessionError(err error) apperror.AppError {
 	return apperror.Wrap(apperror.CodeInternalError, "unexpected error", err)
 }
 
-func mapSleepProfileError(err error) apperror.AppError {
+func mapNightWindowError(err error) apperror.AppError {
 	switch {
-	case errors.Is(err, sleep.ErrInvalidTimezone):
-		return apperror.New(apperror.CodeInvalidTimezone, err.Error())
 	case errors.Is(err, sleep.ErrInvalidNightWindow),
 		errors.Is(err, sleep.ErrInvalidLocalTime),
 		errors.Is(err, sleep.ErrEmptyBabyID),
-		errors.Is(err, sleep.ErrEffectiveFromTooOld):
+		errors.Is(err, sleep.ErrZeroNightWindowEffectiveFrom):
 		return apperror.New(apperror.CodeInvalidArgument, err.Error())
 	default:
 		var appErr apperror.AppError

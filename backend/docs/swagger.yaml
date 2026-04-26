@@ -1,14 +1,5 @@
 basePath: /
 definitions:
-  httpapi.activeSleepSessionResponse:
-    properties:
-      duration_seconds:
-        type: number
-      id:
-        type: string
-      started_at:
-        type: string
-    type: object
   httpapi.authSessionResponse:
     properties:
       access_token:
@@ -42,37 +33,6 @@ definitions:
         type: string
       member_id:
         type: string
-    type: object
-  httpapi.createSleepProfileRequest:
-    properties:
-      effective_from:
-        type: string
-      night_window:
-        $ref: '#/definitions/httpapi.nightWindowRequest'
-      timezone:
-        type: string
-    type: object
-  httpapi.dailySummaryResponse:
-    properties:
-      total_active_seconds:
-        type: number
-      total_sleep_seconds:
-        type: number
-    type: object
-  httpapi.dashboardSummaryResponse:
-    properties:
-      active_session:
-        $ref: '#/definitions/httpapi.activeSleepSessionResponse'
-      rolling_7d:
-        $ref: '#/definitions/httpapi.rollingAverageResponse'
-      rolling_14d:
-        $ref: '#/definitions/httpapi.rollingAverageResponse'
-      time_since_awakening_seconds:
-        type: number
-      time_since_sleep_start_seconds:
-        type: number
-      today:
-        $ref: '#/definitions/httpapi.dailySummaryResponse'
     type: object
   httpapi.editSleepSessionRequest:
     properties:
@@ -132,8 +92,15 @@ definitions:
       member_id:
         type: string
     type: object
-  httpapi.nightWindowRequest:
+  httpapi.refreshTokenRequest:
     properties:
+      refresh_token:
+        type: string
+    type: object
+  httpapi.setNightWindowRequest:
+    properties:
+      effective_from:
+        type: string
       end_hour:
         type: integer
       end_minute:
@@ -142,18 +109,6 @@ definitions:
         type: integer
       start_minute:
         type: integer
-    type: object
-  httpapi.refreshTokenRequest:
-    properties:
-      refresh_token:
-        type: string
-    type: object
-  httpapi.rollingAverageResponse:
-    properties:
-      avg_daily_active_seconds:
-        type: number
-      avg_daily_sleep_seconds:
-        type: number
     type: object
   httpapi.sleepSessionResponse:
     properties:
@@ -189,8 +144,6 @@ definitions:
     type: object
   httpapi.stopSleepResponse:
     properties:
-      classification:
-        type: string
       id:
         type: string
       started_at:
@@ -230,17 +183,9 @@ paths:
         name: state
         required: true
         type: string
-      produces:
-      - application/json
       responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/httpapi.authSessionResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
+        "302":
+          description: Found
       summary: Google OAuth callback
       tags:
       - auth
@@ -322,39 +267,7 @@ paths:
       summary: Test login (dev/staging only)
       tags:
       - auth
-  /babies/{baby_id}/dashboard:
-    get:
-      parameters:
-      - description: Baby ID
-        in: path
-        name: baby_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/httpapi.dashboardSummaryResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get dashboard summary
-      tags:
-      - sleep
-  /babies/{baby_id}/sleep-profiles:
+  /babies/{baby_id}/night-windows:
     post:
       consumes:
       - application/json
@@ -364,19 +277,17 @@ paths:
         name: baby_id
         required: true
         type: string
-      - description: Sleep profile configuration. Set effective_from to retroactively
-          reclassify completed sessions whose started_at >= effective_from (max 30
-          days back).
+      - description: Night window configuration
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/httpapi.createSleepProfileRequest'
+          $ref: '#/definitions/httpapi.setNightWindowRequest'
       responses:
         "204":
           description: No Content
         "400":
-          description: Invalid input or effective_from earlier than 30 days ago
+          description: Bad Request
           schema:
             $ref: '#/definitions/httpapi.errorResponse'
         "401":
@@ -393,7 +304,7 @@ paths:
             $ref: '#/definitions/httpapi.errorResponse'
       security:
       - BearerAuth: []
-      summary: Create sleep profile
+      summary: Set night window
       tags:
       - sleep
   /babies/{baby_id}/sleep-sessions:
@@ -407,6 +318,11 @@ paths:
       - description: 'History window: today, 7d (default), or 14d'
         in: query
         name: period
+        type: string
+      - description: IANA timezone, e.g. America/New_York
+        in: query
+        name: timezone
+        required: true
         type: string
       produces:
       - application/json

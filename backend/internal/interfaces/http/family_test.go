@@ -178,19 +178,6 @@ func (v *stubTokenValidator) Validate(_ context.Context, token string) (auth.Ide
 	return v.identity, nil
 }
 
-// stubSleepProfileRepository is a minimal SleepProfileRepository test double.
-type stubSleepProfileRepository struct {
-	err error
-}
-
-func (r *stubSleepProfileRepository) Save(_ context.Context, _ sleep.SleepProfile) error {
-	return r.err
-}
-
-func (r *stubSleepProfileRepository) FindByBabyID(_ context.Context, _ sleep.BabyID) (sleep.SleepProfile, error) {
-	return sleep.SleepProfile{}, errors.New("not implemented")
-}
-
 type stubCompletedSessionsRepo struct{}
 
 func (r *stubCompletedSessionsRepo) FindCompletedByBabyIDSince(_ context.Context, _ sleep.BabyID, _ time.Time) ([]sleep.SleepSession, error) {
@@ -226,7 +213,6 @@ func newTestServer(familyRepo family.FamilyRepository, memberRepo family.FamilyM
 		24*time.Hour,
 	)
 	joinByInvite := family.NewJoinFamilyByInviteLinkHandler(familyRepo, memberRepo)
-	createSleepProfile := sleep.NewCreateSleepProfileHandler(&stubSleepProfileRepository{}, &stubCompletedSessionsRepo{}, &stubSleepSessionWriter{}, &stubTransactor{})
 	account := auth.Account{
 		ID:              "test-account-id",
 		GoogleSubjectID: "google-subject-123",
@@ -243,7 +229,6 @@ func newTestServer(familyRepo family.FamilyRepository, memberRepo family.FamilyM
 			CreateFamily:       createFamily,
 			CreateInviteLink:   createInviteLink,
 			JoinFamilyByInvite: joinByInvite,
-			CreateSleepProfile: createSleepProfile,
 		},
 	)
 }

@@ -11,24 +11,24 @@ import (
 
 // Dependencies holds all handler and repository dependencies for the HTTP server.
 type Dependencies struct {
-	Accounts            auth.AccountRepository
-	Validator           auth.TokenValidator
-	OAuthCallback       *auth.HandleOAuthCallbackHandler
-	TestLogin           *auth.HandleTestLoginHandler
-	RefreshToken        *auth.HandleRefreshTokenHandler
-	Logout              *auth.HandleLogoutHandler
-	CreateFamily        *family.CreateFamilyHandler
-	GetFamily           *family.GetFamilyHandler
-	CreateInviteLink    *family.CreateFamilyInviteLinkHandler
-	RevokeInviteLink    *family.RevokeInviteLinkHandler
-	JoinFamilyByInvite  *family.JoinFamilyByInviteLinkHandler
-	BabyAccess          babyAccessChecker
-	CreateSleepProfile  *sleep.CreateSleepProfileHandler
-	StartSleep          *sleep.StartSleepHandler
-	StopSleep           *sleep.StopSleepHandler
-	EditSleepSession    *sleep.EditSleepSessionHandler
-	DeleteSleepSession  *sleep.DeleteSleepSessionHandler
-	GetSleepHistory     *sleep.GetSleepHistoryHandler
+	Accounts           auth.AccountRepository
+	Validator          auth.TokenValidator
+	OAuthCallback      *auth.HandleOAuthCallbackHandler
+	TestLogin          *auth.HandleTestLoginHandler
+	RefreshToken       *auth.HandleRefreshTokenHandler
+	Logout             *auth.HandleLogoutHandler
+	CreateFamily       *family.CreateFamilyHandler
+	GetFamily          *family.GetFamilyHandler
+	CreateInviteLink   *family.CreateFamilyInviteLinkHandler
+	RevokeInviteLink   *family.RevokeInviteLinkHandler
+	JoinFamilyByInvite *family.JoinFamilyByInviteLinkHandler
+	BabyAccess         babyAccessChecker
+	SetNightWindow     *sleep.SetNightWindowHandler
+	StartSleep         *sleep.StartSleepHandler
+	StopSleep          *sleep.StopSleepHandler
+	EditSleepSession   *sleep.EditSleepSessionHandler
+	DeleteSleepSession *sleep.DeleteSleepSessionHandler
+	GetSleepHistory    *sleep.GetSleepHistoryHandler
 }
 
 // NewServer wires the HTTP transport and returns a ready-to-start server.
