@@ -244,6 +244,26 @@ func (r *PostgresSleepSessionRepository) FindCompletedByBabyIDSince(ctx context.
 	return sessions, nil
 }
 
+// HasOverlappingByBabyID reports whether any existing session for the baby
+// intersects the interval [startedAt, stoppedAt). Active sessions (stopped_at IS NULL)
+// are treated as open-ended and always overlap if they started before stoppedAt.
+func (r *PostgresSleepSessionRepository) HasOverlappingByBabyID(ctx context.Context, babyID sleep.BabyID, startedAt time.Time, stoppedAt time.Time) (bool, error) {
+	var count int
+	err := querierFromContext(ctx, r.db).QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM sleep_sessions
+		WHERE baby_id = $1
+		  AND started_at < $3
+		  AND (stopped_at IS NULL OR stopped_at > $2)`,
+		string(babyID),
+		startedAt.UTC(),
+		stoppedAt.UTC(),
+	).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("check overlapping sleep sessions: %w", err)
+	}
+	return count > 0, nil
+}
+
 func scanSleepSession(row *sql.Row) (sleep.SleepSession, error) {
 	var (
 		id, babyID, memberID string

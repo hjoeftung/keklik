@@ -24,6 +24,7 @@ type Dependencies struct {
 	JoinFamilyByInvite *family.JoinFamilyByInviteLinkHandler
 	BabyAccess         babyAccessChecker
 	SetNightWindow     *sleep.SetNightWindowHandler
+	LogPastSleep       *sleep.LogPastSleepHandler
 	StartSleep         *sleep.StartSleepHandler
 	StopSleep          *sleep.StopSleepHandler
 	EditSleepSession   *sleep.EditSleepSessionHandler

@@ -82,6 +82,7 @@ func run(ctx context.Context, getenv func(string) string) error {
 	revokeInviteLink := family.NewRevokeInviteLinkHandler(familyRepo, familyMemberRepo)
 	transactor := infrastructure.NewPostgresTransactor(db)
 	setNightWindow := sleep.NewSetNightWindowHandler(nightWindowRepo, transactor)
+	logPastSleep := sleep.NewLogPastSleepHandler(sleepSessionRepo)
 	startSleep := sleep.NewStartSleepHandler(sleepSessionRepo)
 	stopSleep := sleep.NewStopSleepHandler(sleepSessionRepo)
 	editSleepSession := sleep.NewEditSleepSessionHandler(sleepSessionRepo)
@@ -107,6 +108,7 @@ func run(ctx context.Context, getenv func(string) string) error {
 		JoinFamilyByInvite: joinFamilyByInvite,
 		BabyAccess:         babyAccessChecker,
 		SetNightWindow:     setNightWindow,
+		LogPastSleep:       logPastSleep,
 		StartSleep:         startSleep,
 		StopSleep:          stopSleep,
 		EditSleepSession:   editSleepSession,

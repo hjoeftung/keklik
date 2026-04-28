@@ -423,6 +423,88 @@ func mapDeleteSleepSessionError(err error) apperror.AppError {
 	return apperror.Wrap(apperror.CodeInternalError, "unexpected error", err)
 }
 
+type logPastSleepRequest struct {
+	StartedAt time.Time `json:"started_at"`
+	StoppedAt time.Time `json:"stopped_at"`
+}
+
+type logPastSleepResponse struct {
+	ID        string    `json:"id"`
+	StartedAt time.Time `json:"started_at"`
+	StoppedAt time.Time `json:"stopped_at"`
+}
+
+// logPastSleepHandler creates a completed sleep session from explicit start and end times.
+//
+// @Summary   Log past sleep session
+// @Tags      sleep
+// @Accept    json
+// @Produce   json
+// @Security  BearerAuth
+// @Param     baby_id  path      string               true  "Baby ID"
+// @Param     body     body      logPastSleepRequest  true  "Start and end times of the completed session"
+// @Success   201      {object}  logPastSleepResponse
+// @Failure   400      {object}  errorResponse
+// @Failure   401      {object}  errorResponse
+// @Failure   403      {object}  errorResponse
+// @Failure   409      {object}  errorResponse  "Session overlaps an existing session"
+// @Router    /babies/{baby_id}/sleep-sessions [post]
+func logPastSleepHandler(w http.ResponseWriter, r *http.Request, h *sleep.LogPastSleepHandler) {
+	bc, ok := babyContextFromContext(r.Context())
+	if !ok {
+		writeError(w, r, apperror.New(apperror.CodeInternalError, "baby context missing"))
+		return
+	}
+
+	var req logPastSleepRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		var timeErr *time.ParseError
+		if errors.As(err, &timeErr) {
+			writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "started_at and stopped_at must be valid RFC3339 timestamps"))
+		} else {
+			writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
+		}
+		return
+	}
+
+	result, err := h.Handle(r.Context(), sleep.LogPastSleepCommand{
+		BabyID:            bc.BabyID,
+		CreatedByMemberID: bc.MemberID,
+		StartedAt:         req.StartedAt,
+		StoppedAt:         req.StoppedAt,
+	})
+	if err != nil {
+		writeError(w, r, mapLogPastSleepError(err))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(logPastSleepResponse{
+		ID:        string(result.ID),
+		StartedAt: result.StartedAt,
+		StoppedAt: result.StoppedAt,
+	})
+}
+
+func mapLogPastSleepError(err error) apperror.AppError {
+	switch {
+	case errors.Is(err, sleep.ErrZeroSleepSessionStart),
+		errors.Is(err, sleep.ErrInvalidSleepSessionStop),
+		errors.Is(err, sleep.ErrEmptyBabyID),
+		errors.Is(err, sleep.ErrEmptyFamilyMemberID):
+		return apperror.New(apperror.CodeInvalidArgument, err.Error())
+	case errors.Is(err, sleep.ErrSleepSessionOverlap):
+		return apperror.New(apperror.CodeConflict, err.Error())
+	default:
+		var appErr apperror.AppError
+		if errors.As(err, &appErr) {
+			return appErr
+		}
+		return apperror.Wrap(apperror.CodeInternalError, "unexpected error", err)
+	}
+}
+
 func mapNightWindowError(err error) apperror.AppError {
 	switch {
 	case errors.Is(err, sleep.ErrInvalidNightWindow),

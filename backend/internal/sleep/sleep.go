@@ -17,6 +17,7 @@ var (
 	ErrInvalidSleepSessionStop      = errors.New("sleep session stop must not be before start")
 	ErrInvalidSleepSessionDateRange = errors.New("sleep session date range is invalid")
 	ErrActiveSleepSessionExists     = errors.New("active sleep session already exists for this baby")
+	ErrSleepSessionOverlap          = errors.New("sleep session overlaps an existing session")
 	ErrInvalidSleepHistoryPeriod    = errors.New("period must be one of: today, 7d, 14d")
 	ErrEffectiveFromTooOld          = errors.New("effective_from must not be earlier than 30 days ago")
 

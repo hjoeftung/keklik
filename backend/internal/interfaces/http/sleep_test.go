@@ -79,6 +79,25 @@ func (r *stubStartSleepSessionRepo) FindByID(_ context.Context, _ sleep.SleepSes
 	return sleep.SleepSession{}, nil
 }
 
+type stubLogPastSleepSessionRepo struct {
+	hasOverlap bool
+	overlapErr error
+	saveErr    error
+}
+
+func (r *stubLogPastSleepSessionRepo) Save(_ context.Context, _ sleep.SleepSession) error {
+	return r.saveErr
+}
+func (r *stubLogPastSleepSessionRepo) SaveAll(_ context.Context, _ []sleep.SleepSession) error {
+	return nil
+}
+func (r *stubLogPastSleepSessionRepo) FindByID(_ context.Context, _ sleep.SleepSessionID) (sleep.SleepSession, error) {
+	return sleep.SleepSession{}, nil
+}
+func (r *stubLogPastSleepSessionRepo) HasOverlappingByBabyID(_ context.Context, _ sleep.BabyID, _, _ time.Time) (bool, error) {
+	return r.hasOverlap, r.overlapErr
+}
+
 type stubSleepHistoryRepo struct {
 	sessions []sleep.SleepSession
 	err      error
@@ -156,6 +175,16 @@ func newStartSleepTestServer(checker babyAccessChecker, sessRepo *stubStartSleep
 		Validator:  validator,
 		BabyAccess: checker,
 		StartSleep: sleep.NewStartSleepHandler(sessRepo),
+	})
+}
+
+func newLogPastSleepTestServer(checker babyAccessChecker, sessRepo *stubLogPastSleepSessionRepo) *http.Server {
+	account, validator := newServerDeps()
+	return NewServer(infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}}, Dependencies{
+		Accounts:     &stubAccountRepository{account: account},
+		Validator:    validator,
+		BabyAccess:   checker,
+		LogPastSleep: sleep.NewLogPastSleepHandler(sessRepo),
 	})
 }
 
@@ -275,6 +304,72 @@ func TestStartSleepReturns201WithResult(t *testing.T) {
 	}, true)
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestLogPastSleepReturns201WithResult(t *testing.T) {
+	t.Parallel()
+
+	startedAt := time.Date(2026, time.April, 14, 22, 0, 0, 0, time.UTC)
+	stoppedAt := startedAt.Add(8 * time.Hour)
+	server := newLogPastSleepTestServer(&stubBabyAccessChecker{memberID: "member-1"}, &stubLogPastSleepSessionRepo{})
+
+	rec := requestJSON(t, server, http.MethodPost, "/babies/"+testBabyID+"/sleep-sessions", map[string]any{
+		"started_at": startedAt,
+		"stopped_at": stoppedAt,
+	}, true)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp logPastSleepResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.ID == "" {
+		t.Fatal("expected non-empty id")
+	}
+}
+
+func TestLogPastSleepReturns401WhenUnauthenticated(t *testing.T) {
+	t.Parallel()
+
+	server := newLogPastSleepTestServer(&stubBabyAccessChecker{memberID: "member-1"}, &stubLogPastSleepSessionRepo{})
+	rec := requestJSON(t, server, http.MethodPost, "/babies/"+testBabyID+"/sleep-sessions", nil, false)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestLogPastSleepReturns409WhenOverlapping(t *testing.T) {
+	t.Parallel()
+
+	startedAt := time.Date(2026, time.April, 14, 22, 0, 0, 0, time.UTC)
+	stoppedAt := startedAt.Add(8 * time.Hour)
+	server := newLogPastSleepTestServer(&stubBabyAccessChecker{memberID: "member-1"}, &stubLogPastSleepSessionRepo{hasOverlap: true})
+
+	rec := requestJSON(t, server, http.MethodPost, "/babies/"+testBabyID+"/sleep-sessions", map[string]any{
+		"started_at": startedAt,
+		"stopped_at": stoppedAt,
+	}, true)
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected 409, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestLogPastSleepReturns400WhenStopBeforeStart(t *testing.T) {
+	t.Parallel()
+
+	startedAt := time.Date(2026, time.April, 14, 22, 0, 0, 0, time.UTC)
+	stoppedAt := startedAt.Add(-1 * time.Hour)
+	server := newLogPastSleepTestServer(&stubBabyAccessChecker{memberID: "member-1"}, &stubLogPastSleepSessionRepo{})
+
+	rec := requestJSON(t, server, http.MethodPost, "/babies/"+testBabyID+"/sleep-sessions", map[string]any{
+		"started_at": startedAt,
+		"stopped_at": stoppedAt,
+	}, true)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
 }
 

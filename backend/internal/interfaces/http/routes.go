@@ -72,6 +72,9 @@ func addRoutes(mux *http.ServeMux, config infrastructure.Config, deps Dependenci
 	protected.Handle("POST /babies/{baby_id}/night-windows", withBaby(func(w http.ResponseWriter, r *http.Request) {
 		setNightWindowHandler(w, r, deps.SetNightWindow)
 	}))
+	protected.Handle("POST /babies/{baby_id}/sleep-sessions", withBaby(func(w http.ResponseWriter, r *http.Request) {
+		logPastSleepHandler(w, r, deps.LogPastSleep)
+	}))
 	protected.Handle("POST /babies/{baby_id}/sleep-sessions/active", withBaby(func(w http.ResponseWriter, r *http.Request) {
 		startSleepHandler(w, r, deps.StartSleep)
 	}))
