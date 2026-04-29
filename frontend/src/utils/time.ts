@@ -35,7 +35,6 @@ export function getLocalDayBoundaries(
     timeZone: familyTimezone,
   })
   const localDateStr = fmt.format(date) // "YYYY-MM-DD"
-  const start = new Date(`${localDateStr}T00:00:00`)
   // Interpret that local midnight in the family timezone
   const startUtc = zonedMidnightToUtc(localDateStr, '00:00', familyTimezone)
   const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000)
