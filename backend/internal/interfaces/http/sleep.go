@@ -497,6 +497,105 @@ func mapLogPastSleepError(err error) apperror.AppError {
 	}
 }
 
+type diaryWindowResponse struct {
+	Start string `json:"start"`
+	End   string `json:"end"`
+}
+
+type todayStatsResponse struct {
+	TotalSleepSeconds  float64 `json:"total_sleep_seconds"`
+	TotalNapSeconds    float64 `json:"total_nap_seconds"`
+	TotalActiveSeconds float64 `json:"total_active_seconds"`
+}
+
+type periodAvgResponse struct {
+	AvgSleepSeconds  float64 `json:"avg_sleep_seconds"`
+	AvgNapSeconds    float64 `json:"avg_nap_seconds"`
+	AvgActiveSeconds float64 `json:"avg_active_seconds"`
+}
+
+type sleepStatsResponse struct {
+	DiaryWindow diaryWindowResponse       `json:"diary_window"`
+	Today       todayStatsResponse        `json:"today"`
+	Summary     map[string]periodAvgResponse `json:"summary"`
+}
+
+// getSleepStatsHandler returns diary-window totals and rolling period averages.
+//
+// @Summary   Get sleep stats
+// @Tags      sleep
+// @Produce   json
+// @Security  BearerAuth
+// @Param     baby_id   path      string  true  "Baby ID"
+// @Param     timezone  query     string  true  "IANA timezone, e.g. America/New_York"
+// @Success   200       {object}  sleepStatsResponse
+// @Failure   400       {object}  errorResponse
+// @Failure   401       {object}  errorResponse
+// @Failure   403       {object}  errorResponse
+// @Failure   404       {object}  errorResponse
+// @Router    /babies/{baby_id}/sleep-stats [get]
+func getSleepStatsHandler(w http.ResponseWriter, r *http.Request, h *sleep.GetSleepStatsHandler) {
+	bc, ok := babyContextFromContext(r.Context())
+	if !ok {
+		writeError(w, r, apperror.New(apperror.CodeInternalError, "baby context missing"))
+		return
+	}
+
+	timezone := r.URL.Query().Get("timezone")
+	if timezone == "" {
+		writeError(w, r, apperror.New(apperror.CodeInvalidTimezone, sleep.ErrInvalidTimezone.Error()))
+		return
+	}
+
+	stats, err := h.Handle(r.Context(), sleep.GetSleepStatsQuery{
+		BabyID:   bc.BabyID,
+		Timezone: timezone,
+	})
+	if err != nil {
+		writeError(w, r, mapSleepStatsError(err))
+		return
+	}
+
+	summary := make(map[string]periodAvgResponse, len(stats.Summary))
+	for k, v := range stats.Summary {
+		summary[k] = periodAvgResponse{
+			AvgSleepSeconds:  v.AvgSleepSeconds,
+			AvgNapSeconds:    v.AvgNapSeconds,
+			AvgActiveSeconds: v.AvgActiveSeconds,
+		}
+	}
+
+	resp := sleepStatsResponse{
+		DiaryWindow: diaryWindowResponse{
+			Start: stats.DiaryWindow.Start.UTC().Format(time.RFC3339),
+			End:   stats.DiaryWindow.End.UTC().Format(time.RFC3339),
+		},
+		Today: todayStatsResponse{
+			TotalSleepSeconds:  stats.Today.TotalSleepSeconds,
+			TotalNapSeconds:    stats.Today.TotalNapSeconds,
+			TotalActiveSeconds: stats.Today.TotalActiveSeconds,
+		},
+		Summary: summary,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func mapSleepStatsError(err error) apperror.AppError {
+	switch {
+	case errors.Is(err, sleep.ErrInvalidTimezone):
+		return apperror.New(apperror.CodeInvalidTimezone, err.Error())
+	default:
+		var appErr apperror.AppError
+		if errors.As(err, &appErr) {
+			return appErr
+		}
+		return apperror.Wrap(apperror.CodeInternalError, "unexpected error", err)
+	}
+}
+
 func mapNightWindowError(err error) apperror.AppError {
 	switch {
 	case errors.Is(err, sleep.ErrInvalidNightWindow),

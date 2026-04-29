@@ -373,6 +373,79 @@ func TestLogPastSleepReturns400WhenStopBeforeStart(t *testing.T) {
 	}
 }
 
+func newGetSleepStatsTestServer(checker babyAccessChecker, sessRepo *stubSleepHistoryRepo, nwRepo *stubNightWindowRepo) *http.Server {
+	account, validator := newServerDeps()
+	return NewServer(infrastructure.Config{HTTP: infrastructure.HTTPConfig{Port: 8080}}, Dependencies{
+		Accounts:      &stubAccountRepository{account: account},
+		Validator:     validator,
+		BabyAccess:    checker,
+		GetSleepStats: sleep.NewGetSleepStatsHandler(sessRepo, nwRepo),
+	})
+}
+
+func TestGetSleepStatsRequiresTimezone(t *testing.T) {
+	t.Parallel()
+
+	server := newGetSleepStatsTestServer(&stubBabyAccessChecker{memberID: "member-1"}, &stubSleepHistoryRepo{}, &stubNightWindowRepo{})
+	rec := requestJSON(t, server, http.MethodGet, "/babies/"+testBabyID+"/sleep-stats", nil, true)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestGetSleepStatsReturns401WhenUnauthenticated(t *testing.T) {
+	t.Parallel()
+
+	server := newGetSleepStatsTestServer(&stubBabyAccessChecker{memberID: "member-1"}, &stubSleepHistoryRepo{}, &stubNightWindowRepo{})
+	rec := requestJSON(t, server, http.MethodGet, "/babies/"+testBabyID+"/sleep-stats?timezone=UTC", nil, false)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestGetSleepStatsReturns200(t *testing.T) {
+	t.Parallel()
+
+	nap, err := sleep.NewCompletedSleepSession("nap-1", "baby-1", "member-1",
+		time.Date(2026, time.April, 28, 10, 0, 0, 0, time.UTC),
+		time.Date(2026, time.April, 28, 11, 0, 0, 0, time.UTC),
+	)
+	if err != nil {
+		t.Fatalf("NewCompletedSleepSession: %v", err)
+	}
+
+	server := newGetSleepStatsTestServer(
+		&stubBabyAccessChecker{memberID: "member-1"},
+		&stubSleepHistoryRepo{sessions: []sleep.SleepSession{nap}},
+		&stubNightWindowRepo{windows: []sleep.NightWindow{mustNightWindow(t)}},
+	)
+	rec := requestJSON(t, server, http.MethodGet, "/babies/"+testBabyID+"/sleep-stats?timezone=UTC", nil, true)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp struct {
+		DiaryWindow struct {
+			Start string `json:"start"`
+			End   string `json:"end"`
+		} `json:"diary_window"`
+		Summary map[string]struct {
+			AvgSleepSeconds float64 `json:"avg_sleep_seconds"`
+		} `json:"summary"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.DiaryWindow.Start == "" || resp.DiaryWindow.End == "" {
+		t.Fatalf("expected non-empty diary_window, got %+v", resp.DiaryWindow)
+	}
+	for _, key := range []string{"7d", "14d", "30d", "90d"} {
+		if _, ok := resp.Summary[key]; !ok {
+			t.Fatalf("missing summary key %q", key)
+		}
+	}
+}
+
 func TestGetSleepHistoryRequiresTimezone(t *testing.T) {
 	t.Parallel()
 

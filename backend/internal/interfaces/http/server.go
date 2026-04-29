@@ -30,6 +30,7 @@ type Dependencies struct {
 	EditSleepSession   *sleep.EditSleepSessionHandler
 	DeleteSleepSession *sleep.DeleteSleepSessionHandler
 	GetSleepHistory    *sleep.GetSleepHistoryHandler
+	GetSleepStats      *sleep.GetSleepStatsHandler
 }
 
 // NewServer wires the HTTP transport and returns a ready-to-start server.

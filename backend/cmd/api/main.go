@@ -88,6 +88,7 @@ func run(ctx context.Context, getenv func(string) string) error {
 	editSleepSession := sleep.NewEditSleepSessionHandler(sleepSessionRepo)
 	deleteSleepSession := sleep.NewDeleteSleepSessionHandler(sleepSessionRepo)
 	getSleepHistory := sleep.NewGetSleepHistoryHandler(sleepSessionRepo, nightWindowRepo)
+	getSleepStats := sleep.NewGetSleepStatsHandler(sleepSessionRepo, nightWindowRepo)
 	jwtValidator := auth.NewJWTValidator(config.Auth.JWTSigningKey)
 	oauthCallback := auth.NewHandleOAuthCallbackHandler(accountRepo, refreshTokenRepo, config.Auth.JWTSigningKey, config.Auth.AccessTokenDuration, config.Auth.RefreshTokenDuration)
 	testLogin := auth.NewHandleTestLoginHandler(accountRepo, refreshTokenRepo, config.Auth.JWTSigningKey, config.Auth.AccessTokenDuration, config.Auth.RefreshTokenDuration)
@@ -114,6 +115,7 @@ func run(ctx context.Context, getenv func(string) string) error {
 		EditSleepSession:   editSleepSession,
 		DeleteSleepSession: deleteSleepSession,
 		GetSleepHistory:    getSleepHistory,
+		GetSleepStats:      getSleepStats,
 	})
 
 	slog.Info("starting HTTP server", "addr", config.Address())
