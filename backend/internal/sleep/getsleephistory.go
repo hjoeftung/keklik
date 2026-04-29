@@ -3,6 +3,8 @@ package sleep
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -79,10 +81,7 @@ func (h *GetSleepHistoryHandler) Handle(ctx context.Context, q GetSleepHistoryQu
 // DateRange expressed in UTC, using the local calendar in the given timezone.
 //
 //   - "today" → local midnight today .. local midnight tomorrow
-//   - "7d"    → local midnight 7 days ago .. now (UTC)
-//   - "14d"   → local midnight 14 days ago .. now (UTC)
-//   - "30d"   → local midnight 30 days ago .. now (UTC)
-//   - "90d"   → local midnight 90 days ago .. now (UTC)
+//   - "Nd"    → local midnight N days ago .. now (UTC), where 1 ≤ N ≤ 120
 func periodToDateRange(period, timezone string, now time.Time) (DateRange, error) {
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
@@ -91,38 +90,20 @@ func periodToDateRange(period, timezone string, now time.Time) (DateRange, error
 
 	localNow := now.In(loc)
 
-	switch period {
-	case "today":
-		// Midnight at start of today in local time.
+	if period == "today" {
 		startLocal := time.Date(localNow.Year(), localNow.Month(), localNow.Day(), 0, 0, 0, 0, loc)
 		endLocal := startLocal.AddDate(0, 0, 1)
 		return NewDateRange(startLocal.UTC(), endLocal.UTC())
-
-	case "7d":
-		// Midnight 7 days ago in local time.
-		daysAgoLocal := localNow.AddDate(0, 0, -7)
-		startLocal := time.Date(daysAgoLocal.Year(), daysAgoLocal.Month(), daysAgoLocal.Day(), 0, 0, 0, 0, loc)
-		return NewDateRange(startLocal.UTC(), now)
-
-	case "14d":
-		// Midnight 14 days ago in local time.
-		daysAgoLocal := localNow.AddDate(0, 0, -14)
-		startLocal := time.Date(daysAgoLocal.Year(), daysAgoLocal.Month(), daysAgoLocal.Day(), 0, 0, 0, 0, loc)
-		return NewDateRange(startLocal.UTC(), now)
-
-	case "30d":
-		// Midnight 30 days ago in local time.
-		daysAgoLocal := localNow.AddDate(0, 0, -30)
-		startLocal := time.Date(daysAgoLocal.Year(), daysAgoLocal.Month(), daysAgoLocal.Day(), 0, 0, 0, 0, loc)
-		return NewDateRange(startLocal.UTC(), now)
-
-	case "90d":
-		// Midnight 90 days ago in local time.
-		daysAgoLocal := localNow.AddDate(0, 0, -90)
-		startLocal := time.Date(daysAgoLocal.Year(), daysAgoLocal.Month(), daysAgoLocal.Day(), 0, 0, 0, 0, loc)
-		return NewDateRange(startLocal.UTC(), now)
-
-	default:
-		return DateRange{}, ErrInvalidSleepHistoryPeriod
 	}
+
+	if strings.HasSuffix(period, "d") {
+		n, parseErr := strconv.Atoi(strings.TrimSuffix(period, "d"))
+		if parseErr == nil && n >= 1 && n <= 120 {
+			daysAgoLocal := localNow.AddDate(0, 0, -n)
+			startLocal := time.Date(daysAgoLocal.Year(), daysAgoLocal.Month(), daysAgoLocal.Day(), 0, 0, 0, 0, loc)
+			return NewDateRange(startLocal.UTC(), now)
+		}
+	}
+
+	return DateRange{}, ErrInvalidSleepHistoryPeriod
 }
