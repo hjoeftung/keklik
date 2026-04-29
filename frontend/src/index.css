@@ -1,111 +1,134 @@
+/* ── Design tokens ──────────────────────────────────────────── */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* Colour palette */
+  --kk-bg:           #FBF6EE;
+  --kk-surface:      #FFFFFF;
+  --kk-surface-soft: #F4ECDD;
+  --kk-border:       #EADFCB;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --kk-ink:          #2E2A33;
+  --kk-ink-soft:     #6E6776;
+  --kk-ink-muted:    #9A93A2;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --kk-primary:      #E59B6A;
+  --kk-primary-deep: #C97B4D;
+  --kk-primary-soft: #FBE4D1;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  --kk-night:        #5B7BB8;
+  --kk-night-soft:   #D9E2F3;
+  --kk-nap:          #E8B86E;
+  --kk-nap-soft:     #F8E4B8;
+
+  --kk-accent:       #A38FC4;
+  --kk-night-sky:    #2C2745;
+
+  /* Typography */
+  --kk-sans:    'Quicksand', system-ui, sans-serif;
+  --kk-serif:   'Fraunces', Georgia, serif;
+
+  /* Shadows */
+  --kk-shadow-sm: 0 1px 3px rgba(46, 42, 51, 0.08), 0 1px 2px rgba(46, 42, 51, 0.04);
+  --kk-shadow-md: 0 4px 12px rgba(46, 42, 51, 0.10), 0 2px 4px rgba(46, 42, 51, 0.06);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+/* ── Legacy aliases (kept until per-screen migration is done) ── */
+:root {
+  --text:          var(--kk-ink-soft);
+  --text-h:        var(--kk-ink);
+  --text-s:        var(--kk-ink-muted);
+  --bg:            var(--kk-bg);
+  --border:        var(--kk-border);
+  --accent:        var(--kk-primary);
+  --accent-bg:     var(--kk-primary-soft);
+  --accent-border: var(--kk-primary-deep);
+  --sans:          var(--kk-sans);
+  --heading:       var(--kk-serif);
+  --mono:          ui-monospace, Consolas, monospace;
+  --shadow:        var(--kk-shadow-md);
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+  /* old social/code vars — map to closest warm equivalents */
+  --code-bg:       var(--kk-surface-soft);
+  --social-bg:     var(--kk-surface-soft);
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+/* ── Base reset & baseline typography ───────────────────────── */
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  font-family: var(--kk-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--kk-ink);
+  background: var(--kk-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-family: var(--kk-serif);
+  font-weight: 600;
+  color: var(--kk-ink);
+  line-height: 1.2;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
 p {
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/* ── Utility classes ────────────────────────────────────────── */
+
+/* Large display text — serif, used for hero numbers / screen titles */
+.kk-display {
+  font-family: var(--kk-serif);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--kk-ink);
+}
+
+/* Numeric readout — tabular figures, monospaced feel within Quicksand */
+.kk-num {
+  font-family: var(--kk-sans);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Scrollable container that hides the native scrollbar */
+.kk-scroll {
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.kk-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Keyframe animations ────────────────────────────────────── */
+
+/* Gentle pulsing scale — for the moon / active-state indicators */
+@keyframes breathe {
+  0%, 100% { transform: scale(1);    opacity: 1;    }
+  50%       { transform: scale(1.06); opacity: 0.88; }
+}
+
+/* Slow vertical drift — for floating decorative elements */
+@keyframes float {
+  0%, 100% { transform: translateY(0);    }
+  50%       { transform: translateY(-8px); }
+}
+
+/* Random opacity flicker — for star / sparkle accents */
+@keyframes twinkle {
+  0%, 100% { opacity: 1;    }
+  40%       { opacity: 0.3;  }
+  60%       { opacity: 0.9;  }
 }
