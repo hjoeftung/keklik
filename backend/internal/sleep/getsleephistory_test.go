@@ -128,9 +128,45 @@ func TestGetSleepHistoryHandlerInvalidPeriodReturnsError(t *testing.T) {
 	_, err := h.Handle(context.Background(), GetSleepHistoryQuery{
 		BabyID:   BabyID("baby-1"),
 		Timezone: "UTC",
-		Period:   "30d",
+		Period:   "999d",
 	})
 	if !errors.Is(err, ErrInvalidSleepHistoryPeriod) {
 		t.Fatalf("expected ErrInvalidSleepHistoryPeriod, got %v", err)
+	}
+}
+
+func TestPeriodToDateRange30d(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, time.April, 16, 14, 30, 0, 0, time.UTC)
+	dr, err := periodToDateRange("30d", "UTC", now)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := time.Date(2026, time.March, 17, 0, 0, 0, 0, time.UTC)
+	if !dr.Start().Equal(want) {
+		t.Fatalf("expected start %v, got %v", want, dr.Start())
+	}
+	if !dr.End().Equal(now) {
+		t.Fatalf("expected end %v, got %v", now, dr.End())
+	}
+}
+
+func TestPeriodToDateRange90d(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, time.April, 16, 14, 30, 0, 0, time.UTC)
+	dr, err := periodToDateRange("90d", "UTC", now)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := time.Date(2026, time.January, 16, 0, 0, 0, 0, time.UTC)
+	if !dr.Start().Equal(want) {
+		t.Fatalf("expected start %v, got %v", want, dr.Start())
+	}
+	if !dr.End().Equal(now) {
+		t.Fatalf("expected end %v, got %v", now, dr.End())
 	}
 }

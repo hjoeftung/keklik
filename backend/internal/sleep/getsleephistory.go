@@ -10,7 +10,7 @@ import (
 type GetSleepHistoryQuery struct {
 	BabyID   BabyID
 	Timezone string // IANA timezone name
-	Period   string // "today", "7d", or "14d"
+	Period   string // "today", "7d", "14d", "30d", or "90d"
 }
 
 type SleepHistoryEntry struct {
@@ -81,6 +81,8 @@ func (h *GetSleepHistoryHandler) Handle(ctx context.Context, q GetSleepHistoryQu
 //   - "today" → local midnight today .. local midnight tomorrow
 //   - "7d"    → local midnight 7 days ago .. now (UTC)
 //   - "14d"   → local midnight 14 days ago .. now (UTC)
+//   - "30d"   → local midnight 30 days ago .. now (UTC)
+//   - "90d"   → local midnight 90 days ago .. now (UTC)
 func periodToDateRange(period, timezone string, now time.Time) (DateRange, error) {
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
@@ -105,6 +107,18 @@ func periodToDateRange(period, timezone string, now time.Time) (DateRange, error
 	case "14d":
 		// Midnight 14 days ago in local time.
 		daysAgoLocal := localNow.AddDate(0, 0, -14)
+		startLocal := time.Date(daysAgoLocal.Year(), daysAgoLocal.Month(), daysAgoLocal.Day(), 0, 0, 0, 0, loc)
+		return NewDateRange(startLocal.UTC(), now)
+
+	case "30d":
+		// Midnight 30 days ago in local time.
+		daysAgoLocal := localNow.AddDate(0, 0, -30)
+		startLocal := time.Date(daysAgoLocal.Year(), daysAgoLocal.Month(), daysAgoLocal.Day(), 0, 0, 0, 0, loc)
+		return NewDateRange(startLocal.UTC(), now)
+
+	case "90d":
+		// Midnight 90 days ago in local time.
+		daysAgoLocal := localNow.AddDate(0, 0, -90)
 		startLocal := time.Date(daysAgoLocal.Year(), daysAgoLocal.Month(), daysAgoLocal.Day(), 0, 0, 0, 0, loc)
 		return NewDateRange(startLocal.UTC(), now)
 

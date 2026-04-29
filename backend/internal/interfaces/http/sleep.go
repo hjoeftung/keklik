@@ -62,7 +62,7 @@ func toSleepSessionResponse(s sleep.SleepSession, classification sleep.SleepClas
 // @Produce   json
 // @Security  BearerAuth
 // @Param     baby_id  path      string  true   "Baby ID"
-// @Param     period   query     string  false  "History window: today, 7d (default), or 14d"
+// @Param     period   query     string  false  "History window: today, 7d (default), 14d, 30d, or 90d"
 // @Param     timezone query     string  true   "IANA timezone, e.g. America/New_York"
 // @Success   200      {array}   sleepSessionResponse
 // @Failure   400      {object}  errorResponse
@@ -87,7 +87,7 @@ func getSleepHistoryHandler(w http.ResponseWriter, r *http.Request, h *sleep.Get
 		return
 	}
 	switch period {
-	case "today", "7d", "14d":
+	case "today", "7d", "14d", "30d", "90d":
 		// valid
 	default:
 		writeError(w, r, apperror.New(apperror.CodeInvalidArgument, sleep.ErrInvalidSleepHistoryPeriod.Error()))
