@@ -23,10 +23,21 @@ func NewPostgresSleepSessionRepository(db *sql.DB) *PostgresSleepSessionReposito
 	return &PostgresSleepSessionRepository{db: db}
 }
 
-// Save persists a SleepSession. When an active session already exists for the
-// same baby (unique partial index violation), it returns an AppError with
-// CodeActiveSleepExists so the use case can surface the correct conflict response.
+// Save persists a SleepSession using optimistic concurrency control.
+//
+// New sessions (Version == 0) are inserted with version=1. Existing sessions
+// (Version > 0) are updated only when the stored version matches; if another
+// writer incremented the version first, Save returns ErrSleepSessionConflict.
+// An overlap exclusion-constraint violation is mapped to ErrSleepSessionOverlap,
+// and a duplicate-active-session violation is mapped to ErrActiveSleepSessionExists.
 func (r *PostgresSleepSessionRepository) Save(ctx context.Context, s sleep.SleepSession) error {
+	if s.Version() == 0 {
+		return r.insert(ctx, s)
+	}
+	return r.update(ctx, s)
+}
+
+func (r *PostgresSleepSessionRepository) insert(ctx context.Context, s sleep.SleepSession) error {
 	var stoppedAt *time.Time
 	if t, ok := s.StoppedAt(); ok {
 		ts := t.UTC()
@@ -36,13 +47,8 @@ func (r *PostgresSleepSessionRepository) Save(ctx context.Context, s sleep.Sleep
 	_, err := querierFromContext(ctx, r.db).ExecContext(ctx, `
 		INSERT INTO sleep_sessions (
 			id, baby_id, created_by_member_id,
-			started_at, stopped_at
-		) VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (id) DO UPDATE SET
-			started_at           = EXCLUDED.started_at,
-			stopped_at           = EXCLUDED.stopped_at,
-			updated_by_member_id = EXCLUDED.created_by_member_id,
-			updated_at           = now()`,
+			started_at, stopped_at, version
+		) VALUES ($1, $2, $3, $4, $5, 1)`,
 		string(s.ID()),
 		string(s.BabyID()),
 		string(s.CreatedByMemberID()),
@@ -50,61 +56,67 @@ func (r *PostgresSleepSessionRepository) Save(ctx context.Context, s sleep.Sleep
 		stoppedAt,
 	)
 	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == pgUniqueViolation {
-			return apperror.New(apperror.CodeActiveSleepExists, sleep.ErrActiveSleepSessionExists.Error())
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code {
+			case pgUniqueViolation:
+				return apperror.New(apperror.CodeActiveSleepExists, sleep.ErrActiveSleepSessionExists.Error())
+			case pgExclusionViolation:
+				return apperror.New(apperror.CodeConflict, sleep.ErrSleepSessionOverlap.Error())
+			}
 		}
-		return fmt.Errorf("upsert sleep session: %w", err)
+		return fmt.Errorf("insert sleep session: %w", err)
 	}
 	return nil
 }
 
-// SaveAll persists multiple SleepSessions in a single batch upsert.
-func (r *PostgresSleepSessionRepository) SaveAll(ctx context.Context, sessions []sleep.SleepSession) error {
-	if len(sessions) == 0 {
-		return nil
+func (r *PostgresSleepSessionRepository) update(ctx context.Context, s sleep.SleepSession) error {
+	var stoppedAt *time.Time
+	if t, ok := s.StoppedAt(); ok {
+		ts := t.UTC()
+		stoppedAt = &ts
 	}
 
-	n := len(sessions)
-	ids := make([]string, n)
-	babyIDs := make([]string, n)
-	memberIDs := make([]string, n)
-	startedAts := make([]time.Time, n)
-	stoppedAts := make([]*time.Time, n)
-
-	for i, s := range sessions {
-		ids[i] = string(s.ID())
-		babyIDs[i] = string(s.BabyID())
-		memberIDs[i] = string(s.CreatedByMemberID())
-		startedAts[i] = s.StartedAt().UTC()
-
-		if t, ok := s.StoppedAt(); ok {
-			ts := t.UTC()
-			stoppedAts[i] = &ts
-		}
-	}
-
-	_, err := querierFromContext(ctx, r.db).ExecContext(ctx, `
-		INSERT INTO sleep_sessions (
-			id, baby_id, created_by_member_id,
-			started_at, stopped_at
-		)
-		SELECT * FROM unnest(
-			$1::text[], $2::text[], $3::text[],
-			$4::timestamptz[], $5::timestamptz[]
-		)
-		ON CONFLICT (id) DO UPDATE SET
-			started_at           = EXCLUDED.started_at,
-			stopped_at           = EXCLUDED.stopped_at,
-			updated_by_member_id = EXCLUDED.created_by_member_id,
-			updated_at           = now()`,
-		pq.Array(ids), pq.Array(babyIDs), pq.Array(memberIDs),
-		pq.Array(startedAts), pq.Array(stoppedAts),
+	result, err := querierFromContext(ctx, r.db).ExecContext(ctx, `
+		UPDATE sleep_sessions
+		SET started_at           = $2,
+		    stopped_at           = $3,
+		    updated_by_member_id = $4,
+		    updated_at           = now(),
+		    version              = version + 1
+		WHERE id = $1
+		  AND version = $5`,
+		string(s.ID()),
+		s.StartedAt().UTC(),
+		stoppedAt,
+		string(s.CreatedByMemberID()),
+		s.Version(),
 	)
 	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == pgUniqueViolation {
-			return apperror.New(apperror.CodeActiveSleepExists, sleep.ErrActiveSleepSessionExists.Error())
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == pgExclusionViolation {
+			return apperror.New(apperror.CodeConflict, sleep.ErrSleepSessionOverlap.Error())
 		}
-		return fmt.Errorf("batch upsert sleep sessions: %w", err)
+		return fmt.Errorf("update sleep session: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("update sleep session rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return apperror.New(apperror.CodeConflict, sleep.ErrSleepSessionConflict.Error())
+	}
+	return nil
+}
+
+// SaveAll persists multiple SleepSessions. Each session must already exist in
+// the database (Version > 0); it is updated with a conditional version check
+// and the version counter is incremented. Returns ErrSleepSessionConflict if
+// any row was concurrently modified.
+func (r *PostgresSleepSessionRepository) SaveAll(ctx context.Context, sessions []sleep.SleepSession) error {
+	for _, s := range sessions {
+		if err := r.Save(ctx, s); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -112,7 +124,7 @@ func (r *PostgresSleepSessionRepository) SaveAll(ctx context.Context, sessions [
 // FindByID loads a SleepSession by its ID.
 func (r *PostgresSleepSessionRepository) FindByID(ctx context.Context, id sleep.SleepSessionID) (sleep.SleepSession, error) {
 	row := querierFromContext(ctx, r.db).QueryRowContext(ctx, `
-		SELECT id, baby_id, created_by_member_id, started_at, stopped_at
+		SELECT id, baby_id, created_by_member_id, started_at, stopped_at, version
 		FROM sleep_sessions WHERE id = $1`, string(id))
 
 	return scanSleepSession(row)
@@ -122,7 +134,7 @@ func (r *PostgresSleepSessionRepository) FindByID(ctx context.Context, id sleep.
 // Returns apperror with CodeNotFound when no active session exists.
 func (r *PostgresSleepSessionRepository) FindActiveByBabyID(ctx context.Context, babyID sleep.BabyID) (sleep.SleepSession, error) {
 	row := querierFromContext(ctx, r.db).QueryRowContext(ctx, `
-		SELECT id, baby_id, created_by_member_id, started_at, stopped_at
+		SELECT id, baby_id, created_by_member_id, started_at, stopped_at, version
 		FROM sleep_sessions
 		WHERE baby_id = $1 AND stopped_at IS NULL`, string(babyID))
 
@@ -133,7 +145,7 @@ func (r *PostgresSleepSessionRepository) FindActiveByBabyID(ctx context.Context,
 // within [dateRange.Start, dateRange.End), ordered by started_at descending.
 func (r *PostgresSleepSessionRepository) FindByBabyIDAndDateRange(ctx context.Context, babyID sleep.BabyID, dateRange sleep.DateRange) ([]sleep.SleepSession, error) {
 	rows, err := querierFromContext(ctx, r.db).QueryContext(ctx, `
-		SELECT id, baby_id, created_by_member_id, started_at, stopped_at
+		SELECT id, baby_id, created_by_member_id, started_at, stopped_at, version
 		FROM sleep_sessions
 		WHERE baby_id = $1 AND started_at >= $2 AND started_at < $3
 		ORDER BY started_at DESC`,
@@ -188,7 +200,7 @@ func (r *PostgresSleepSessionRepository) DeleteByID(ctx context.Context, id slee
 // Returns apperror with CodeNotFound when no sessions exist.
 func (r *PostgresSleepSessionRepository) FindMostRecentByBabyID(ctx context.Context, babyID sleep.BabyID) (sleep.SleepSession, error) {
 	row := querierFromContext(ctx, r.db).QueryRowContext(ctx, `
-		SELECT id, baby_id, created_by_member_id, started_at, stopped_at
+		SELECT id, baby_id, created_by_member_id, started_at, stopped_at, version
 		FROM sleep_sessions
 		WHERE baby_id = $1
 		ORDER BY started_at DESC
@@ -202,7 +214,7 @@ func (r *PostgresSleepSessionRepository) FindMostRecentByBabyID(ctx context.Cont
 // Returns apperror with CodeNotFound when no completed sessions exist.
 func (r *PostgresSleepSessionRepository) FindMostRecentCompletedByBabyID(ctx context.Context, babyID sleep.BabyID) (sleep.SleepSession, error) {
 	row := querierFromContext(ctx, r.db).QueryRowContext(ctx, `
-		SELECT id, baby_id, created_by_member_id, started_at, stopped_at
+		SELECT id, baby_id, created_by_member_id, started_at, stopped_at, version
 		FROM sleep_sessions
 		WHERE baby_id = $1 AND stopped_at IS NOT NULL
 		ORDER BY stopped_at DESC
@@ -215,7 +227,7 @@ func (r *PostgresSleepSessionRepository) FindMostRecentCompletedByBabyID(ctx con
 // for a baby whose started_at is >= since, ordered by started_at ascending.
 func (r *PostgresSleepSessionRepository) FindCompletedByBabyIDSince(ctx context.Context, babyID sleep.BabyID, since time.Time) ([]sleep.SleepSession, error) {
 	rows, err := querierFromContext(ctx, r.db).QueryContext(ctx, `
-		SELECT id, baby_id, created_by_member_id, started_at, stopped_at
+		SELECT id, baby_id, created_by_member_id, started_at, stopped_at, version
 		FROM sleep_sessions
 		WHERE baby_id = $1
 		  AND started_at >= $2
@@ -268,9 +280,10 @@ func scanSleepSession(row *sql.Row) (sleep.SleepSession, error) {
 	var (
 		id, babyID, memberID string
 		startedAt, stoppedAt sql.NullTime
+		version              int
 	)
 
-	err := row.Scan(&id, &babyID, &memberID, &startedAt, &stoppedAt)
+	err := row.Scan(&id, &babyID, &memberID, &startedAt, &stoppedAt, &version)
 	if err == sql.ErrNoRows {
 		return sleep.SleepSession{}, apperror.New(apperror.CodeNotFound, "sleep session not found")
 	}
@@ -278,37 +291,35 @@ func scanSleepSession(row *sql.Row) (sleep.SleepSession, error) {
 		return sleep.SleepSession{}, fmt.Errorf("scan sleep session: %w", err)
 	}
 
-	return assembleSleepSession(id, babyID, memberID, startedAt, stoppedAt)
+	return assembleSleepSession(id, babyID, memberID, startedAt, stoppedAt, version)
 }
 
 func scanSleepSessionRows(rows *sql.Rows) (sleep.SleepSession, error) {
 	var (
 		id, babyID, memberID string
 		startedAt, stoppedAt sql.NullTime
+		version              int
 	)
 
-	if err := rows.Scan(&id, &babyID, &memberID, &startedAt, &stoppedAt); err != nil {
+	if err := rows.Scan(&id, &babyID, &memberID, &startedAt, &stoppedAt, &version); err != nil {
 		return sleep.SleepSession{}, fmt.Errorf("scan sleep session row: %w", err)
 	}
 
-	return assembleSleepSession(id, babyID, memberID, startedAt, stoppedAt)
+	return assembleSleepSession(id, babyID, memberID, startedAt, stoppedAt, version)
 }
 
-func assembleSleepSession(id, babyID, memberID string, startedAt, stoppedAt sql.NullTime) (sleep.SleepSession, error) {
+func assembleSleepSession(id, babyID, memberID string, startedAt, stoppedAt sql.NullTime, version int) (sleep.SleepSession, error) {
+	var stoppedAtPtr *time.Time
 	if stoppedAt.Valid {
-		return sleep.NewCompletedSleepSession(
-			sleep.SleepSessionID(id),
-			sleep.BabyID(babyID),
-			sleep.FamilyMemberID(memberID),
-			startedAt.Time,
-			stoppedAt.Time,
-		)
+		t := stoppedAt.Time
+		stoppedAtPtr = &t
 	}
-
-	return sleep.NewSleepSession(
+	return sleep.RestoreSleepSession(
 		sleep.SleepSessionID(id),
 		sleep.BabyID(babyID),
 		sleep.FamilyMemberID(memberID),
 		startedAt.Time,
+		stoppedAtPtr,
+		version,
 	)
 }

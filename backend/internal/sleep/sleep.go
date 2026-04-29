@@ -18,6 +18,7 @@ var (
 	ErrInvalidSleepSessionDateRange = errors.New("sleep session date range is invalid")
 	ErrActiveSleepSessionExists     = errors.New("active sleep session already exists for this baby")
 	ErrSleepSessionOverlap          = errors.New("sleep session overlaps an existing session")
+	ErrSleepSessionConflict         = errors.New("sleep session was modified concurrently")
 	ErrInvalidSleepHistoryPeriod    = errors.New("period must be one of: today, 7d, 14d")
 	ErrEffectiveFromTooOld          = errors.New("effective_from must not be earlier than 30 days ago")
 
@@ -49,6 +50,7 @@ type SleepSession struct {
 	createdByMemberID FamilyMemberID
 	startedAt         time.Time
 	stoppedAt         *time.Time
+	version           int
 }
 
 type DateRange struct {
@@ -121,6 +123,17 @@ func NewCompletedSleepSession(id SleepSessionID, babyID BabyID, createdByMemberI
 	return newSleepSession(id, babyID, createdByMemberID, startedAt, &stoppedAt)
 }
 
+// RestoreSleepSession recreates a SleepSession from persisted data, including
+// the version counter required for optimistic concurrency control.
+func RestoreSleepSession(id SleepSessionID, babyID BabyID, createdByMemberID FamilyMemberID, startedAt time.Time, stoppedAt *time.Time, version int) (SleepSession, error) {
+	s, err := newSleepSession(id, babyID, createdByMemberID, startedAt, stoppedAt)
+	if err != nil {
+		return SleepSession{}, err
+	}
+	s.version = version
+	return s, nil
+}
+
 func NewDateRange(start time.Time, end time.Time) (DateRange, error) {
 	if start.IsZero() || end.IsZero() || end.Before(start) {
 		return DateRange{}, ErrInvalidSleepSessionDateRange
@@ -185,6 +198,10 @@ func FindWindowForSession(windows []NightWindow, session SleepSession) (NightWin
 
 func (s SleepSession) ID() SleepSessionID {
 	return s.id
+}
+
+func (s SleepSession) Version() int {
+	return s.version
 }
 
 func (s SleepSession) BabyID() BabyID {
