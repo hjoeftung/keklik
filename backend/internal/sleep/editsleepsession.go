@@ -58,15 +58,16 @@ func (h *EditSleepSessionHandler) Handle(ctx context.Context, cmd EditSleepSessi
 }
 
 func rebuildSleepSession(existing SleepSession, startedAt, stoppedAt time.Time, completed bool) (SleepSession, error) {
-	if !completed {
-		return NewSleepSession(existing.ID(), existing.BabyID(), existing.CreatedByMemberID(), startedAt)
+	var stoppedAtPtr *time.Time
+	if completed {
+		stoppedAtPtr = &stoppedAt
 	}
-
-	return NewCompletedSleepSession(
+	return RestoreSleepSession(
 		existing.ID(),
 		existing.BabyID(),
 		existing.CreatedByMemberID(),
 		startedAt,
-		stoppedAt,
+		stoppedAtPtr,
+		existing.Version(),
 	)
 }
