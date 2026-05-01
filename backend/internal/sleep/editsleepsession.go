@@ -36,6 +36,14 @@ func (h *EditSleepSessionHandler) Handle(ctx context.Context, cmd EditSleepSessi
 		return SleepSession{}, ErrMissingSleepSessionEdit
 	}
 
+	now := time.Now()
+	if cmd.StartedAt != nil && cmd.StartedAt.After(now) {
+		return SleepSession{}, ErrSleepSessionInFuture
+	}
+	if cmd.StoppedAt != nil && cmd.StoppedAt.After(now) {
+		return SleepSession{}, ErrSleepSessionInFuture
+	}
+
 	existing, err := h.sessions.FindByID(ctx, cmd.SessionID)
 	if err != nil {
 		return SleepSession{}, err

@@ -414,7 +414,8 @@ func mapEditSleepSessionError(err error) apperror.AppError {
 	case errors.Is(err, sleep.ErrMissingSleepSessionEdit),
 		errors.Is(err, sleep.ErrMissingSleepSessionVersion),
 		errors.Is(err, sleep.ErrZeroSleepSessionStart),
-		errors.Is(err, sleep.ErrInvalidSleepSessionStop):
+		errors.Is(err, sleep.ErrInvalidSleepSessionStop),
+		errors.Is(err, sleep.ErrSleepSessionInFuture):
 		return apperror.New(apperror.CodeInvalidArgument, err.Error())
 	case errors.Is(err, sleep.ErrActiveSleepSessionExists):
 		return apperror.New(apperror.CodeActiveSleepExists, err.Error())
