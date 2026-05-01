@@ -1,56 +1,15 @@
-const SESSION_KEY = 'keklik_session'
+const ACCOUNT_ID_KEY = 'keklik_account_id'
 
-export interface Session {
-  accessToken: string
-  refreshToken: string
-  accountId: string
+export function getAccountId(): string | null {
+  return localStorage.getItem(ACCOUNT_ID_KEY)
 }
 
-export function getSession(): Session | null {
-  const raw = localStorage.getItem(SESSION_KEY)
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as Session
-  } catch {
-    return null
-  }
+export function setAccountId(id: string): void {
+  localStorage.setItem(ACCOUNT_ID_KEY, id)
 }
 
-let refreshTimer: ReturnType<typeof setTimeout> | null = null
-
-function scheduleProactiveRefresh(accessToken: string): void {
-  if (refreshTimer !== null) {
-    clearTimeout(refreshTimer)
-    refreshTimer = null
-  }
-  try {
-    const payload = JSON.parse(atob(accessToken.split('.')[1])) as { exp?: number }
-    if (!payload.exp) return
-    const delay = payload.exp * 1000 - Date.now() - 60_000
-    if (delay <= 0) return
-    refreshTimer = setTimeout(async () => {
-      const newSession = await tryRefreshSession()
-      if (!newSession) {
-        clearSession()
-        window.location.replace('/')
-      }
-    }, delay)
-  } catch {
-    // malformed token — fall back to reactive 401 refresh
-  }
-}
-
-export function saveSession(session: Session): void {
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-  scheduleProactiveRefresh(session.accessToken)
-}
-
-export function clearSession(): void {
-  if (refreshTimer !== null) {
-    clearTimeout(refreshTimer)
-    refreshTimer = null
-  }
-  localStorage.removeItem(SESSION_KEY)
+export function clearAccountId(): void {
+  localStorage.removeItem(ACCOUNT_ID_KEY)
 }
 
 export class ApiError extends Error {
@@ -84,16 +43,12 @@ async function executeRequest(
   method: string,
   path: string,
   body: unknown,
-  accessToken?: string,
 ): Promise<Response> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`
-  }
   try {
     return await fetch(`${BASE_URL}${path}`, {
       method,
-      headers,
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
   } catch {
@@ -101,40 +56,28 @@ async function executeRequest(
   }
 }
 
-async function tryRefreshSession(): Promise<Session | null> {
-  const session = getSession()
-  if (!session) return null
+async function tryRefreshSession(): Promise<boolean> {
   try {
     const resp = await fetch(`${BASE_URL}/auth/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: session.refreshToken }),
+      credentials: 'include',
     })
-    if (!resp.ok) return null
-    const data = (await resp.json()) as { access_token: string; refresh_token: string }
-    const newSession: Session = {
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      accountId: session.accountId,
-    }
-    saveSession(newSession)
-    return newSession
+    return resp.ok
   } catch {
-    return null
+    return false
   }
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const session = getSession()
-  let response = await executeRequest(method, path, body, session?.accessToken)
+  let response = await executeRequest(method, path, body)
 
   if (response.status === 401) {
     const refreshed = await tryRefreshSession()
     if (refreshed) {
-      response = await executeRequest(method, path, body, refreshed.accessToken)
+      response = await executeRequest(method, path, body)
     }
     if (response.status === 401) {
-      clearSession()
+      clearAccountId()
       window.location.replace('/')
       throw new ApiError('Session expired. Please sign in again.', 'unauthenticated', 401)
     }
@@ -167,10 +110,4 @@ export const api = {
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   delete: <T>(path: string, body?: unknown) => request<T>('DELETE', path, body),
-}
-
-// Schedule proactive refresh for any session already in storage on page load
-const _existingSession = getSession()
-if (_existingSession) {
-  scheduleProactiveRefresh(_existingSession.accessToken)
 }

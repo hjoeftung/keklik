@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { getSession, clearSession, ApiError } from '@/api/client'
+import { getAccountId, clearAccountId, ApiError } from '@/api/client'
 import { logout, getFamily, type GetFamilyResponse } from '@/api/endpoints'
 
 export interface User {
@@ -23,12 +23,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function init() {
-      const session = getSession()
-      if (!session) {
+      const accountId = getAccountId()
+      if (!accountId) {
         setIsLoading(false)
         return
       }
-      setUser({ accountId: session.accountId })
+      setUser({ accountId })
       try {
         const familyData = await getFamily()
         setFamily(familyData)
@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // proceed regardless of API failure
     }
-    clearSession()
+    clearAccountId()
     setUser(null)
     setFamily(null)
   }

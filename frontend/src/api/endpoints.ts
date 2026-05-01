@@ -2,17 +2,6 @@ import { api } from './client'
 
 // --- Auth ---
 
-export interface AuthSessionResponse {
-  access_token: string
-  refresh_token: string
-  account_id: string
-}
-
-export interface TokenRefreshResponse {
-  access_token: string
-  refresh_token: string
-}
-
 export function logout(): Promise<void> {
   return api.post('/auth/logout')
 }

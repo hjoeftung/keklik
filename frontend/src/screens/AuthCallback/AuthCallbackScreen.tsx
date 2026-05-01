@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate, Link } from 'react-router-dom'
-import { saveSession, ApiError } from '@/api/client'
+import { setAccountId, ApiError } from '@/api/client'
 import { getFamily } from '@/api/endpoints'
 import styles from './AuthCallbackScreen.module.css'
 
@@ -11,22 +11,15 @@ export default function AuthCallbackScreen() {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
 
-  const accessToken = searchParams.get('access_token')
-  const refreshToken = searchParams.get('refresh_token')
   const accountId = searchParams.get('account_id')
 
-  const hasMissingParams = !accessToken || !refreshToken || !accountId
+  const hasMissingParams = !accountId
 
   useEffect(() => {
     if (hasMissingParams) return
 
     async function processCallback() {
-      // At this point we've already verified params are non-null above
-      saveSession({
-        accessToken: accessToken!,
-        refreshToken: refreshToken!,
-        accountId: accountId!,
-      })
+      setAccountId(accountId!)
 
       const savedInviteToken = sessionStorage.getItem(INVITE_TOKEN_KEY)
       if (savedInviteToken) {
@@ -55,7 +48,7 @@ export default function AuthCallbackScreen() {
       <div className={styles.screen}>
         <div className={styles.card}>
           <p className={styles.errorTitle}>Sign-in failed</p>
-          <p className={styles.message}>Missing required parameters from the sign-in response.</p>
+          <p className={styles.message}>Missing account information from the sign-in response.</p>
           <Link to="/" className={styles.link}>Back to sign in</Link>
         </div>
       </div>
