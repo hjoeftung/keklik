@@ -33,7 +33,13 @@ func (r *stubSleepSessionRepo) FindByID(_ context.Context, _ SleepSessionID) (Sl
 }
 
 func (r *stubSleepSessionRepo) FindActiveByBabyID(_ context.Context, _ BabyID) (SleepSession, error) {
-	return r.active, r.findErr
+	if r.findErr != nil {
+		return SleepSession{}, r.findErr
+	}
+	if r.active.id == "" {
+		return SleepSession{}, apperror.New(apperror.CodeNotFound, "no active session")
+	}
+	return r.active, nil
 }
 
 func mustActiveSession(t *testing.T, startedAt time.Time) SleepSession {

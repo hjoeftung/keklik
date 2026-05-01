@@ -221,7 +221,7 @@ func startSleepHandler(w http.ResponseWriter, r *http.Request, h *sleep.StartSle
 		StartedAt:         req.StartedAt,
 	})
 	if err != nil {
-		writeError(w, r, mapStartSleepError(err))
+		writeSleepSessionError(w, r, err, mapStartSleepError(err))
 		return
 	}
 

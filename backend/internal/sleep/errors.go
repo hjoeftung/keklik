@@ -27,8 +27,9 @@ var (
 type SleepSessionConflictType string
 
 const (
-	SleepSessionConflictStaleVersion SleepSessionConflictType = "stale_version"
-	SleepSessionConflictOverlap      SleepSessionConflictType = "overlap"
+	SleepSessionConflictStaleVersion   SleepSessionConflictType = "stale_version"
+	SleepSessionConflictOverlap        SleepSessionConflictType = "overlap"
+	SleepSessionConflictActiveExists   SleepSessionConflictType = "active_session_exists"
 )
 
 type SleepSessionConflictError struct {
@@ -54,11 +55,23 @@ func NewOverlapSleepSessionConflict(conflicting SleepSession) SleepSessionConfli
 	}
 }
 
-func (e SleepSessionConflictError) Error() string {
-	if e.Type == SleepSessionConflictOverlap {
-		return ErrSleepSessionOverlap.Error()
+func NewActiveSessionConflict(active SleepSession) SleepSessionConflictError {
+	return SleepSessionConflictError{
+		Type:           SleepSessionConflictActiveExists,
+		CurrentSession: &active,
+		cause:          ErrActiveSleepSessionExists,
 	}
-	return ErrSleepSessionConflict.Error()
+}
+
+func (e SleepSessionConflictError) Error() string {
+	switch e.Type {
+	case SleepSessionConflictOverlap:
+		return ErrSleepSessionOverlap.Error()
+	case SleepSessionConflictActiveExists:
+		return ErrActiveSleepSessionExists.Error()
+	default:
+		return ErrSleepSessionConflict.Error()
+	}
 }
 
 func (e SleepSessionConflictError) Unwrap() error {

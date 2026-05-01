@@ -84,6 +84,9 @@ func (r *stubStartSleepSessionRepo) SaveAll(_ context.Context, _ []sleep.SleepSe
 func (r *stubStartSleepSessionRepo) FindByID(_ context.Context, _ sleep.SleepSessionID) (sleep.SleepSession, error) {
 	return sleep.SleepSession{}, nil
 }
+func (r *stubStartSleepSessionRepo) FindActiveByBabyID(_ context.Context, _ sleep.BabyID) (sleep.SleepSession, error) {
+	return sleep.SleepSession{}, apperror.New(apperror.CodeNotFound, "no active session")
+}
 
 type stubLogPastSleepSessionRepo struct {
 	hasOverlap bool
