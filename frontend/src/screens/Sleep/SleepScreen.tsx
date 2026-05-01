@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuthContext } from '@/context/AuthContext'
 import {
   startSleep,
@@ -16,9 +16,21 @@ function fmtTime(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
-function toTimeInput(iso: string): string {
-  const d = new Date(iso)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+function toDatetimeLocal(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function formatDisplayTime(datetimeLocal: string): string {
+  if (!datetimeLocal) return ''
+  const d = new Date(datetimeLocal)
+  const today = new Date()
+  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+  if (d.toDateString() === today.toDateString()) return `Today, ${timeStr}`
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+  if (d.toDateString() === yesterday.toDateString()) return `Yesterday, ${timeStr}`
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + `, ${timeStr}`
 }
 
 function elapsedSecs(from: string): number {
@@ -49,8 +61,10 @@ export default function SleepScreen() {
   const [tick, setTick] = useState(0)
   const [showLogPast, setShowLogPast] = useState(false)
   const [showEditStart, setShowEditStart] = useState(false)
-  const [editStartTime, setEditStartTime] = useState('')
+  const [editStartInput, setEditStartInput] = useState('')
+  const [showStartPicker, setShowStartPicker] = useState(false)
   const [isSavingStart, setIsSavingStart] = useState(false)
+  const pickerRef = useRef<HTMLInputElement>(null)
 
   const session = sessions.find(s => !s.stopped_at) ?? null
   const isActive = session !== null
@@ -108,20 +122,25 @@ export default function SleepScreen() {
 
   function openEditStart() {
     if (!session) return
-    setEditStartTime(toTimeInput(session.started_at))
+    setEditStartInput(toDatetimeLocal(new Date(session.started_at)))
+    setShowStartPicker(false)
     setShowEditStart(true)
   }
 
+  useEffect(() => {
+    if (showStartPicker && pickerRef.current) {
+      pickerRef.current.focus()
+      pickerRef.current.showPicker?.()
+    }
+  }, [showStartPicker])
+
   async function handleSaveStartTime() {
-    if (!session || !babyId || !editStartTime || isSavingStart) return
+    if (!session || !babyId || !editStartInput || isSavingStart) return
     setIsSavingStart(true)
     setError(null)
     try {
-      const [h, m] = editStartTime.split(':').map(Number)
-      const d = new Date(session.started_at)
-      d.setHours(h, m, 0, 0)
       const updated = await editSleepSession(babyId, session.id, {
-        started_at: d.toISOString(),
+        started_at: new Date(editStartInput).toISOString(),
         version: session.version,
       })
       setSessions(prev => [updated, ...prev.filter(s => s.id !== updated.id)])
@@ -199,20 +218,41 @@ export default function SleepScreen() {
                 </div>
                 <div>
                   <div className={styles.editSheetTitle}>Sleep in progress</div>
-                  <div className={styles.editSheetSubtitle}>Started at {startedAtStr}</div>
+                  <div className={styles.editSheetSubtitle}>Today</div>
                 </div>
               </div>
 
-              <div className={styles.editSheetTimeCard}>
-                <div className={styles.editSheetTimeLabel}>START</div>
-                <input
-                  type="time"
-                  className={styles.editSheetTimeInput}
-                  value={editStartTime}
-                  onChange={e => setEditStartTime(e.target.value)}
-                  autoFocus
-                />
+              {showStartPicker && (
+                <div className={styles.editSheetPickerPanel}>
+                  <div className={styles.editSheetPickerLabel}>SET START TIME</div>
+                  <input
+                    ref={pickerRef}
+                    type="datetime-local"
+                    className={styles.editSheetPickerInput}
+                    value={editStartInput}
+                    onChange={e => setEditStartInput(e.target.value)}
+                  />
+                  <button className={styles.editSheetPickerDone} onClick={() => setShowStartPicker(false)}>Done</button>
+                </div>
+              )}
+
+              <div className={styles.editSheetTimeRows}>
+                <button
+                  type="button"
+                  className={`${styles.editSheetTimeRow} ${showStartPicker ? styles.editSheetTimeRowActive : ''}`}
+                  onClick={() => setShowStartPicker(p => !p)}
+                >
+                  <div className={styles.editSheetTimeRowInner}>
+                    <div>
+                      <div className={styles.editSheetTimeRowLabel}>STARTED</div>
+                      <div className={styles.editSheetTimeRowValue}>{formatDisplayTime(editStartInput)}</div>
+                    </div>
+                    <span className={styles.editSheetTimeRowAction}>Change</span>
+                  </div>
+                </button>
               </div>
+
+              {error && <p className={styles.error} role="alert">{error}</p>}
 
               <div className={styles.editSheetActions}>
                 <button
@@ -225,9 +265,9 @@ export default function SleepScreen() {
                 <button
                   className={styles.editSheetSaveBtn}
                   onClick={handleSaveStartTime}
-                  disabled={isSavingStart}
+                  disabled={isSavingStart || !editStartInput}
                 >
-                  {isSavingStart ? <span className={styles.spinner} /> : 'Save'}
+                  {isSavingStart ? <span className={styles.spinner} /> : 'Save changes'}
                 </button>
               </div>
             </div>

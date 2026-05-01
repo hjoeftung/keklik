@@ -8,6 +8,7 @@ import {
 } from '@/api/endpoints'
 import { ApiError } from '@/api/client'
 import TodayTab from './TodayTab'
+import WeekTab from './WeekTab'
 import styles from './TimelineScreen.module.css'
 
 type Tab = 'today' | 'week' | 'summary'
@@ -27,6 +28,10 @@ export default function TimelineScreen() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const [weekSessions, setWeekSessions] = useState<SleepSession[]>([])
+  const [isLoadingWeek, setIsLoadingWeek] = useState(false)
+  const [weekLoaded, setWeekLoaded] = useState(false)
+
   const load = useCallback(async () => {
     if (!babyId) return
     setIsLoading(true)
@@ -45,9 +50,29 @@ export default function TimelineScreen() {
     }
   }, [babyId])
 
+  const loadWeek = useCallback(async () => {
+    if (!babyId) return
+    setIsLoadingWeek(true)
+    try {
+      const data = await getSleepHistory(babyId, '7d')
+      setWeekSessions(data)
+      setWeekLoaded(true)
+    } catch {
+      // show empty state in WeekTab
+    } finally {
+      setIsLoadingWeek(false)
+    }
+  }, [babyId])
+
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    if (activeTab === 'week' && !weekLoaded) {
+      loadWeek()
+    }
+  }, [activeTab, weekLoaded, loadWeek])
 
   return (
     <div className={styles.screen}>
@@ -77,7 +102,10 @@ export default function TimelineScreen() {
           onRefresh={load}
         />
       )}
-      {!isLoading && !error && activeTab !== 'today' && (
+      {!isLoading && !error && activeTab === 'week' && (
+        <WeekTab sessions={weekSessions} isLoading={isLoadingWeek} />
+      )}
+      {!isLoading && !error && activeTab === 'summary' && (
         <div className={styles.comingSoon}>Coming soon</div>
       )}
     </div>

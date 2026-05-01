@@ -1,0 +1,161 @@
+/* ── Tab shell ──────────────────────────────────────────────── */
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 14px 16px 0;
+  overflow: hidden;
+}
+
+/* ── Legend ─────────────────────────────────────────────────── */
+
+.legend {
+  display: flex;
+  gap: 14px;
+  padding: 0 4px 10px;
+  flex-shrink: 0;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--kk-ink-soft);
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* ── Column headers ─────────────────────────────────────────── */
+
+.headerRow {
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.axisGutter {
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.dayHeader {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.dayName {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--kk-ink-soft);
+}
+
+.dayNum {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--kk-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Grid scroll ────────────────────────────────────────────── */
+
+.gridScroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  padding-top: 8px;
+  padding-bottom: 24px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.gridScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.gridInner {
+  display: flex;
+  position: relative;
+}
+
+/* ── Axis ───────────────────────────────────────────────────── */
+
+.axis {
+  width: 24px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.axisTick {
+  position: absolute;
+  right: 2px;
+  transform: translateY(-50%);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--kk-ink-muted);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Columns area ───────────────────────────────────────────── */
+
+.columnsArea {
+  flex: 1;
+  position: relative;
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* ── Grid lines ─────────────────────────────────────────────── */
+
+.gridLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--kk-border);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ── Day columns ────────────────────────────────────────────── */
+
+.dayCol {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+/* ── Session blocks ─────────────────────────────────────────── */
+
+.block {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+}
+
+/* ── Loading state ──────────────────────────────────────────── */
+
+.loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--kk-ink-muted);
+}
