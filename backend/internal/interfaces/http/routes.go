@@ -22,6 +22,11 @@ func addRoutes(mux *http.ServeMux, config infrastructure.Config, deps Dependenci
 		Endpoint:     google.Endpoint,
 	}
 	stateSecret := config.GoogleOAuth.ClientSecret
+	cookieCfg := authCookieConfig{
+		Secure:          !config.App.IsDev,
+		AccessDuration:  config.Auth.AccessTokenDuration,
+		RefreshDuration: config.Auth.RefreshTokenDuration,
+	}
 
 	// Public endpoints.
 	mux.HandleFunc("GET /healthz", healthHandler)
@@ -29,13 +34,13 @@ func addRoutes(mux *http.ServeMux, config infrastructure.Config, deps Dependenci
 		oauthStartHandler(w, r, oauthCfg, stateSecret, !config.App.IsDev)
 	})
 	mux.HandleFunc("GET /auth/google/callback", func(w http.ResponseWriter, r *http.Request) {
-		oauthCallbackHandler(w, r, oauthCfg, stateSecret, config.App.FrontendURL, deps.OAuthCallback)
+		oauthCallbackHandler(w, r, oauthCfg, stateSecret, config.App.FrontendURL, deps.OAuthCallback, cookieCfg)
 	})
 	mux.Handle("/auth/test/login", rateLimitByIP(testLoginLimiter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		testLoginHandler(w, r, config.Auth.EnableTestAuth, deps.TestLogin)
+		testLoginHandler(w, r, config.Auth.EnableTestAuth, deps.TestLogin, cookieCfg)
 	})))
 	mux.HandleFunc("POST /auth/refresh", func(w http.ResponseWriter, r *http.Request) {
-		refreshTokenHandler(w, r, deps.RefreshToken)
+		refreshTokenHandler(w, r, deps.RefreshToken, cookieCfg)
 	})
 	mux.HandleFunc("GET /swagger/index.html", func(w http.ResponseWriter, r *http.Request) {
 		swaggerUIHandler(w, r, config.App.EnableSwaggerUI)

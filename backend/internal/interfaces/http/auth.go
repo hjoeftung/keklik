@@ -37,23 +37,47 @@ type googleUserInfo struct {
 	Email string `json:"email"`
 }
 
-type authSessionResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	AccountID    string `json:"account_id"`
-}
-
-type tokenRefreshResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+type accountIDResponse struct {
+	AccountID string `json:"account_id"`
 }
 
 type testLoginRequest struct {
 	Identifier string `json:"identifier"`
 }
 
-type refreshTokenRequest struct {
-	RefreshToken string `json:"refresh_token"`
+const accessCookieName = "keklik_access"
+const refreshCookieName = "keklik_refresh"
+
+type authCookieConfig struct {
+	Secure          bool
+	AccessDuration  time.Duration
+	RefreshDuration time.Duration
+}
+
+func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string, cfg authCookieConfig) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     accessCookieName,
+		Value:    accessToken,
+		MaxAge:   int(cfg.AccessDuration.Seconds()),
+		HttpOnly: true,
+		Secure:   cfg.Secure,
+		SameSite: http.SameSiteStrictMode,
+		Path:     "/",
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     refreshCookieName,
+		Value:    refreshToken,
+		MaxAge:   int(cfg.RefreshDuration.Seconds()),
+		HttpOnly: true,
+		Secure:   cfg.Secure,
+		SameSite: http.SameSiteStrictMode,
+		Path:     "/auth/refresh",
+	})
+}
+
+func clearAuthCookies(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{Name: accessCookieName, Value: "", MaxAge: -1, Path: "/"})
+	http.SetCookie(w, &http.Cookie{Name: refreshCookieName, Value: "", MaxAge: -1, Path: "/auth/refresh"})
 }
 
 // oauthStartHandler generates a random state, stores it in a signed cookie, and
@@ -87,7 +111,7 @@ func oauthStartHandler(w http.ResponseWriter, r *http.Request, cfg *oauth2.Confi
 
 // oauthCallbackHandler verifies the state, exchanges the code for a Google token,
 // fetches the user's identity from Google, then resolves or provisions an internal
-// Account and redirects the browser to the frontend with session tokens.
+// Account and redirects the browser to the frontend with session cookies.
 //
 // @Summary   Google OAuth callback
 // @Tags      auth
@@ -103,6 +127,7 @@ func oauthCallbackHandler(
 	stateSecret string,
 	frontendURL string,
 	h *auth.HandleOAuthCallbackHandler,
+	cookieCfg authCookieConfig,
 ) {
 	redirectError := func(code string) {
 		dest, _ := url.Parse(frontendURL + "/")
@@ -164,10 +189,10 @@ func oauthCallbackHandler(
 		Path:     "/",
 	})
 
+	setAuthCookies(w, result.AccessToken, result.RefreshToken, cookieCfg)
+
 	dest, _ := url.Parse(frontendURL + "/auth/callback")
 	q := dest.Query()
-	q.Set("access_token", result.AccessToken)
-	q.Set("refresh_token", result.RefreshToken)
 	q.Set("account_id", string(result.Account.ID))
 	dest.RawQuery = q.Encode()
 	http.Redirect(w, r, dest.String(), http.StatusFound)
@@ -181,10 +206,10 @@ func oauthCallbackHandler(
 // @Accept    json
 // @Produce   json
 // @Param     body  body      testLoginRequest  true  "Test login credentials"
-// @Success   200   {object}  authSessionResponse
+// @Success   200   {object}  accountIDResponse
 // @Failure   400   {object}  errorResponse
 // @Router    /auth/test/login [post]
-func testLoginHandler(w http.ResponseWriter, r *http.Request, enabled bool, h *auth.HandleTestLoginHandler) {
+func testLoginHandler(w http.ResponseWriter, r *http.Request, enabled bool, h *auth.HandleTestLoginHandler, cfg authCookieConfig) {
 	if !enabled {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -213,7 +238,10 @@ func testLoginHandler(w http.ResponseWriter, r *http.Request, enabled bool, h *a
 		return
 	}
 
-	writeAuthSessionResponse(w, result)
+	setAuthCookies(w, result.AccessToken, result.RefreshToken, cfg)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(accountIDResponse{AccountID: string(result.Account.ID)})
 }
 
 // refreshTokenHandler exchanges a valid refresh token for a new access token and rotated
@@ -221,32 +249,26 @@ func testLoginHandler(w http.ResponseWriter, r *http.Request, enabled bool, h *a
 //
 // @Summary   Refresh access token
 // @Tags      auth
-// @Accept    json
-// @Produce   json
-// @Param     body  body      refreshTokenRequest  true  "Refresh token"
-// @Success   200   {object}  tokenRefreshResponse
-// @Failure   400   {object}  errorResponse
+// @Success   204
 // @Failure   401   {object}  errorResponse
 // @Router    /auth/refresh [post]
-func refreshTokenHandler(w http.ResponseWriter, r *http.Request, h *auth.HandleRefreshTokenHandler) {
-	var req refreshTokenRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "invalid JSON body"))
-		return
-	}
-
-	result, err := h.Handle(r.Context(), auth.HandleRefreshTokenCommand{Token: req.RefreshToken})
+func refreshTokenHandler(w http.ResponseWriter, r *http.Request, h *auth.HandleRefreshTokenHandler, cfg authCookieConfig) {
+	cookie, err := r.Cookie(refreshCookieName)
 	if err != nil {
+		clearAuthCookies(w)
 		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "invalid or expired refresh token"))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(tokenRefreshResponse{
-		AccessToken:  result.AccessToken,
-		RefreshToken: result.RefreshToken,
-	})
+	result, err := h.Handle(r.Context(), auth.HandleRefreshTokenCommand{Token: cookie.Value})
+	if err != nil {
+		clearAuthCookies(w)
+		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "invalid or expired refresh token"))
+		return
+	}
+
+	setAuthCookies(w, result.AccessToken, result.RefreshToken, cfg)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // logoutHandler revokes all refresh tokens for the authenticated account.
@@ -269,6 +291,7 @@ func logoutHandler(w http.ResponseWriter, r *http.Request, h *auth.HandleLogoutH
 		return
 	}
 
+	clearAuthCookies(w)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -307,20 +330,18 @@ func requireBabyAccess(checker babyAccessChecker, next http.Handler) http.Handle
 	})
 }
 
-// requireAuth is middleware that validates the Bearer session token in the Authorization
-// header and attaches the account ID to the request context.
+// requireAuth is middleware that validates the keklik_access cookie and attaches
+// the account ID to the request context.
 // Protected handlers retrieve the account ID via auth.AccountIDFromContext.
 func requireAuth(validator auth.TokenValidator, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bearer := r.Header.Get("Authorization")
-		if !strings.HasPrefix(bearer, "Bearer ") {
+		cookie, err := r.Cookie(accessCookieName)
+		if err != nil {
 			writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
 			return
 		}
 
-		token := strings.TrimPrefix(bearer, "Bearer ")
-
-		identity, err := validator.Validate(r.Context(), token)
+		identity, err := validator.Validate(r.Context(), cookie.Value)
 		if err != nil {
 			writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "invalid or expired session"))
 			return
@@ -350,16 +371,6 @@ func fetchGoogleUserInfo(ctx context.Context, cfg *oauth2.Config, token *oauth2.
 	}
 
 	return info, nil
-}
-
-func writeAuthSessionResponse(w http.ResponseWriter, result auth.HandleOAuthCallbackResult) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(authSessionResponse{
-		AccessToken:  result.AccessToken,
-		RefreshToken: result.RefreshToken,
-		AccountID:    string(result.Account.ID),
-	})
 }
 
 // signState returns "state.HMAC" where HMAC is computed over state using secret.

@@ -1,12 +1,8 @@
 basePath: /
 definitions:
-  httpapi.authSessionResponse:
+  httpapi.accountIDResponse:
     properties:
-      access_token:
-        type: string
       account_id:
-        type: string
-      refresh_token:
         type: string
     type: object
   httpapi.createFamilyInviteLinkResponse:
@@ -32,13 +28,6 @@ definitions:
       family_id:
         type: string
       member_id:
-        type: string
-    type: object
-  httpapi.diaryWindowResponse:
-    properties:
-      end:
-        type: string
-      start:
         type: string
     type: object
   httpapi.editSleepSessionRequest:
@@ -129,11 +118,6 @@ definitions:
       avg_sleep_seconds:
         type: number
     type: object
-  httpapi.refreshTokenRequest:
-    properties:
-      refresh_token:
-        type: string
-    type: object
   httpapi.setNightWindowRequest:
     properties:
       effective_from:
@@ -166,8 +150,6 @@ definitions:
     type: object
   httpapi.sleepStatsResponse:
     properties:
-      diary_window:
-        $ref: '#/definitions/httpapi.diaryWindowResponse'
       summary:
         additionalProperties:
           $ref: '#/definitions/httpapi.periodAvgResponse'
@@ -218,13 +200,6 @@ definitions:
         type: number
       total_sleep_seconds:
         type: number
-    type: object
-  httpapi.tokenRefreshResponse:
-    properties:
-      access_token:
-        type: string
-      refresh_token:
-        type: string
     type: object
 host: localhost:8080
 info:
@@ -278,26 +253,9 @@ paths:
       - auth
   /auth/refresh:
     post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Refresh token
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/httpapi.refreshTokenRequest'
-      produces:
-      - application/json
       responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/httpapi.tokenRefreshResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/httpapi.errorResponse'
+        "204":
+          description: No Content
         "401":
           description: Unauthorized
           schema:
@@ -322,7 +280,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/httpapi.authSessionResponse'
+            $ref: '#/definitions/httpapi.accountIDResponse'
         "400":
           description: Bad Request
           schema:

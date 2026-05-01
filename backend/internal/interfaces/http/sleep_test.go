@@ -226,7 +226,7 @@ func requestJSON(t *testing.T, server *http.Server, method, path string, body an
 		req.Header.Set("Content-Type", "application/json")
 	}
 	if authz {
-		req.Header.Set("Authorization", "Bearer "+testSessionToken)
+		req.AddCookie(&http.Cookie{Name: accessCookieName, Value: testSessionToken})
 	}
 	rec := httptest.NewRecorder()
 	server.Handler.ServeHTTP(rec, req)

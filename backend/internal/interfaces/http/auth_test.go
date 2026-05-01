@@ -21,26 +21,12 @@ const testRefreshTokenDuration = 30 * 24 * time.Hour
 
 // --- requireAuth middleware ---
 
-func TestRequireAuth_MissingHeader(t *testing.T) {
+func TestRequireAuth_MissingCookie(t *testing.T) {
 	t.Parallel()
 
 	handler := requireAuth(&stubTokenValidator{}, okHandler())
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
-
-	if rec.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", rec.Code)
-	}
-}
-
-func TestRequireAuth_WrongScheme(t *testing.T) {
-	t.Parallel()
-
-	handler := requireAuth(&stubTokenValidator{}, okHandler())
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("Authorization", "Basic dXNlcjpwYXNz")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", rec.Code)
@@ -53,7 +39,7 @@ func TestRequireAuth_InvalidToken(t *testing.T) {
 	validator := &stubTokenValidator{err: auth.ErrInvalidToken}
 	handler := requireAuth(validator, okHandler())
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("Authorization", "Bearer unknown-token")
+	req.AddCookie(&http.Cookie{Name: accessCookieName, Value: "unknown-token"})
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -68,7 +54,7 @@ func TestRequireAuth_ExpiredSession(t *testing.T) {
 	validator := &stubTokenValidator{err: auth.ErrInvalidToken}
 	handler := requireAuth(validator, okHandler())
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("Authorization", "Bearer tok")
+	req.AddCookie(&http.Cookie{Name: accessCookieName, Value: "expired-tok"})
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -90,7 +76,7 @@ func TestRequireAuth_ValidToken_AttachesAccountIDToContext(t *testing.T) {
 
 	handler := requireAuth(validator, next)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("Authorization", "Bearer valid-tok")
+	req.AddCookie(&http.Cookie{Name: accessCookieName, Value: "valid-tok"})
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -250,7 +236,7 @@ func TestOAuthCallbackHandler_GoogleErrorParam(t *testing.T) {
 	cfg := minimalOAuthConfig()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/auth/google/callback?error=access_denied", nil)
-	oauthCallbackHandler(rec, req, cfg, "secret", testFrontendURL, nil)
+	oauthCallbackHandler(rec, req, cfg, "secret", testFrontendURL, nil, authCookieConfig{})
 
 	if rec.Code != http.StatusFound {
 		t.Fatalf("expected 302, got %d", rec.Code)
@@ -270,7 +256,7 @@ func TestOAuthCallbackHandler_MissingStateCookie(t *testing.T) {
 	cfg := minimalOAuthConfig()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/auth/google/callback?state=some-state&code=code", nil)
-	oauthCallbackHandler(rec, req, cfg, "secret", testFrontendURL, nil)
+	oauthCallbackHandler(rec, req, cfg, "secret", testFrontendURL, nil, authCookieConfig{})
 
 	if rec.Code != http.StatusFound {
 		t.Fatalf("expected 302, got %d", rec.Code)
@@ -292,7 +278,7 @@ func TestOAuthCallbackHandler_StateMismatch(t *testing.T) {
 		Name:  oauthStateCookieName,
 		Value: signState("different-state", "secret"),
 	})
-	oauthCallbackHandler(rec, req, cfg, "secret", testFrontendURL, nil)
+	oauthCallbackHandler(rec, req, cfg, "secret", testFrontendURL, nil, authCookieConfig{})
 
 	if rec.Code != http.StatusFound {
 		t.Fatalf("expected 302, got %d", rec.Code)
@@ -355,20 +341,29 @@ func TestTestLoginHandlerReturnsSessionWhenEnabled(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
 
-	var resp authSessionResponse
+	var resp accountIDResponse
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
 
-	if resp.AccessToken == "" {
-		t.Fatal("expected non-empty access token")
-	}
-	if resp.RefreshToken == "" {
-		t.Fatal("expected non-empty refresh token")
-	}
-
 	if resp.AccountID == "" {
 		t.Fatal("expected non-empty account_id")
+	}
+
+	var accessCookie, refreshCookie *http.Cookie
+	for _, c := range rec.Result().Cookies() {
+		switch c.Name {
+		case accessCookieName:
+			accessCookie = c
+		case refreshCookieName:
+			refreshCookie = c
+		}
+	}
+	if accessCookie == nil || accessCookie.Value == "" {
+		t.Fatal("expected keklik_access cookie to be set")
+	}
+	if refreshCookie == nil || refreshCookie.Value == "" {
+		t.Fatal("expected keklik_refresh cookie to be set")
 	}
 
 	if len(accounts.saved) != 1 {

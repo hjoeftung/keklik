@@ -250,7 +250,7 @@ func postJSON(t *testing.T, server *http.Server, path string, body any) *httptes
 
 	req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(b))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+testSessionToken)
+	req.AddCookie(&http.Cookie{Name: accessCookieName, Value: testSessionToken})
 	rec := httptest.NewRecorder()
 	server.Handler.ServeHTTP(rec, req)
 	return rec
@@ -288,7 +288,7 @@ func TestCreateFamilyRejects400OnMalformedJSON(t *testing.T) {
 	server := newTestServer(&stubFamilyRepository{}, &stubFamilyMemberRepository{})
 	req := httptest.NewRequest(http.MethodPost, "/families", bytes.NewBufferString("{bad json"))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+testSessionToken)
+	req.AddCookie(&http.Cookie{Name: accessCookieName, Value: testSessionToken})
 	rec := httptest.NewRecorder()
 	server.Handler.ServeHTTP(rec, req)
 
@@ -304,7 +304,7 @@ func TestCreateFamilyRejects401WhenUnauthenticated(t *testing.T) {
 	b, _ := json.Marshal(validCreateFamilyBody())
 	req := httptest.NewRequest(http.MethodPost, "/families", bytes.NewReader(b))
 	req.Header.Set("Content-Type", "application/json")
-	// No Authorization header.
+	// No auth cookie.
 	rec := httptest.NewRecorder()
 	server.Handler.ServeHTTP(rec, req)
 
@@ -320,7 +320,7 @@ func TestCreateFamilyRejects401WithWrongToken(t *testing.T) {
 	b, _ := json.Marshal(validCreateFamilyBody())
 	req := httptest.NewRequest(http.MethodPost, "/families", bytes.NewReader(b))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer wrong-token")
+	req.AddCookie(&http.Cookie{Name: accessCookieName, Value: "wrong-token"})
 	rec := httptest.NewRecorder()
 	server.Handler.ServeHTTP(rec, req)
 
