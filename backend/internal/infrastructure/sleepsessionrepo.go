@@ -59,9 +59,9 @@ func (r *PostgresSleepSessionRepository) insert(ctx context.Context, s sleep.Sle
 		if pqErr, ok := err.(*pq.Error); ok {
 			switch pqErr.Code {
 			case pgUniqueViolation:
-				return apperror.New(apperror.CodeActiveSleepExists, sleep.ErrActiveSleepSessionExists.Error())
+				return apperror.Wrap(apperror.CodeActiveSleepExists, sleep.ErrActiveSleepSessionExists.Error(), sleep.ErrActiveSleepSessionExists)
 			case pgExclusionViolation:
-				return apperror.New(apperror.CodeConflict, sleep.ErrSleepSessionOverlap.Error())
+				return apperror.Wrap(apperror.CodeConflict, sleep.ErrSleepSessionOverlap.Error(), sleep.ErrSleepSessionOverlap)
 			}
 		}
 		return fmt.Errorf("insert sleep session: %w", err)
@@ -93,7 +93,7 @@ func (r *PostgresSleepSessionRepository) update(ctx context.Context, s sleep.Sle
 	)
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == pgExclusionViolation {
-			return apperror.New(apperror.CodeConflict, sleep.ErrSleepSessionOverlap.Error())
+			return apperror.Wrap(apperror.CodeConflict, sleep.ErrSleepSessionOverlap.Error(), sleep.ErrSleepSessionOverlap)
 		}
 		return fmt.Errorf("update sleep session: %w", err)
 	}
@@ -103,7 +103,7 @@ func (r *PostgresSleepSessionRepository) update(ctx context.Context, s sleep.Sle
 		return fmt.Errorf("update sleep session rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
-		return apperror.New(apperror.CodeConflict, sleep.ErrSleepSessionConflict.Error())
+		return apperror.Wrap(apperror.CodeConflict, sleep.ErrSleepSessionConflict.Error(), sleep.ErrSleepSessionConflict)
 	}
 	return nil
 }
@@ -195,6 +195,28 @@ func (r *PostgresSleepSessionRepository) DeleteByID(ctx context.Context, id slee
 	return nil
 }
 
+// DeleteByIDAndVersion hard-deletes a sleep session only if the version still matches.
+func (r *PostgresSleepSessionRepository) DeleteByIDAndVersion(ctx context.Context, id sleep.SleepSessionID, version int) error {
+	result, err := querierFromContext(ctx, r.db).ExecContext(ctx, `
+		DELETE FROM sleep_sessions WHERE id = $1 AND version = $2`,
+		string(id),
+		version,
+	)
+	if err != nil {
+		return fmt.Errorf("delete sleep session by version: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("delete sleep session by version rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return apperror.Wrap(apperror.CodeConflict, sleep.ErrSleepSessionConflict.Error(), sleep.ErrSleepSessionConflict)
+	}
+
+	return nil
+}
+
 // FindMostRecentByBabyID returns the most recently started sleep session for a
 // baby, regardless of whether it is active or completed.
 // Returns apperror with CodeNotFound when no sessions exist.
@@ -274,6 +296,33 @@ func (r *PostgresSleepSessionRepository) HasOverlappingByBabyID(ctx context.Cont
 		return false, fmt.Errorf("check overlapping sleep sessions: %w", err)
 	}
 	return count > 0, nil
+}
+
+// FindOverlappingByBabyID returns the first session that intersects
+// [startedAt, stoppedAt), optionally excluding a known session ID.
+func (r *PostgresSleepSessionRepository) FindOverlappingByBabyID(ctx context.Context, babyID sleep.BabyID, startedAt time.Time, stoppedAt time.Time, excludeID *sleep.SleepSessionID) (sleep.SleepSession, error) {
+	var excludedID *string
+	if excludeID != nil {
+		id := string(*excludeID)
+		excludedID = &id
+	}
+
+	row := querierFromContext(ctx, r.db).QueryRowContext(ctx, `
+		SELECT id, baby_id, created_by_member_id, started_at, stopped_at, version
+		FROM sleep_sessions
+		WHERE baby_id = $1
+		  AND started_at < $3
+		  AND (stopped_at IS NULL OR stopped_at > $2)
+		  AND ($4::uuid IS NULL OR id <> $4::uuid)
+		ORDER BY started_at ASC
+		LIMIT 1`,
+		string(babyID),
+		startedAt.UTC(),
+		stoppedAt.UTC(),
+		excludedID,
+	)
+
+	return scanSleepSession(row)
 }
 
 func scanSleepSession(row *sql.Row) (sleep.SleepSession, error) {

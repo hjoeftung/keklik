@@ -18,6 +18,7 @@ type StartSleepCommand struct {
 type StartSleepResult struct {
 	ID        SleepSessionID
 	StartedAt time.Time
+	Version   int
 }
 
 // StartSleepHandler executes the StartSleep use case.
@@ -51,5 +52,5 @@ func (h *StartSleepHandler) Handle(ctx context.Context, cmd StartSleepCommand) (
 		return StartSleepResult{}, err
 	}
 
-	return StartSleepResult{ID: id, StartedAt: startedAt}, nil
+	return StartSleepResult{ID: id, StartedAt: startedAt, Version: 1}, nil
 }

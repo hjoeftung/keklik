@@ -35,6 +35,7 @@ type sleepSessionResponse struct {
 	StoppedAt       *string  `json:"stopped_at,omitempty"`
 	Classification  string   `json:"classification,omitempty"`
 	DurationSeconds *float64 `json:"duration_seconds,omitempty"`
+	Version         int      `json:"version"`
 }
 
 func toSleepSessionResponse(s sleep.SleepSession, classification sleep.SleepClassification) sleepSessionResponse {
@@ -43,6 +44,7 @@ func toSleepSessionResponse(s sleep.SleepSession, classification sleep.SleepClas
 		BabyID:         string(s.BabyID()),
 		StartedAt:      s.StartedAt().UTC().Format(time.RFC3339),
 		Classification: string(classification),
+		Version:        s.Version(),
 	}
 	if t, ok := s.StoppedAt(); ok {
 		ts := t.UTC().Format(time.RFC3339)
@@ -184,6 +186,7 @@ type startSleepRequest struct {
 type startSleepResponse struct {
 	ID        string    `json:"id"`
 	StartedAt time.Time `json:"started_at"`
+	Version   int       `json:"version"`
 }
 
 // startSleepHandler starts a new sleep session for the caller's baby.
@@ -227,6 +230,7 @@ func startSleepHandler(w http.ResponseWriter, r *http.Request, h *sleep.StartSle
 	_ = json.NewEncoder(w).Encode(startSleepResponse{
 		ID:        string(result.ID),
 		StartedAt: result.StartedAt,
+		Version:   result.Version,
 	})
 }
 
@@ -255,11 +259,17 @@ type stopSleepResponse struct {
 	ID        string    `json:"id"`
 	StartedAt time.Time `json:"started_at"`
 	StoppedAt time.Time `json:"stopped_at"`
+	Version   int       `json:"version"`
 }
 
 type editSleepSessionRequest struct {
 	StartedAt *time.Time `json:"started_at"`
 	StoppedAt *time.Time `json:"stopped_at"`
+	Version   *int       `json:"version"`
+}
+
+type deleteSleepSessionRequest struct {
+	Version *int `json:"version"`
 }
 
 // stopSleepHandler stops the active sleep session for the caller's baby.
@@ -302,6 +312,7 @@ func stopSleepHandler(w http.ResponseWriter, r *http.Request, h *sleep.StopSleep
 		ID:        string(result.ID),
 		StartedAt: result.StartedAt,
 		StoppedAt: result.StoppedAt,
+		Version:   result.Version,
 	})
 }
 
@@ -348,12 +359,13 @@ func editSleepSessionHandler(w http.ResponseWriter, r *http.Request, h *sleep.Ed
 	}
 
 	session, err := h.Handle(r.Context(), sleep.EditSleepSessionCommand{
-		SessionID: sleep.SleepSessionID(r.PathValue("id")),
-		StartedAt: req.StartedAt,
-		StoppedAt: req.StoppedAt,
+		SessionID:       sleep.SleepSessionID(r.PathValue("id")),
+		StartedAt:       req.StartedAt,
+		StoppedAt:       req.StoppedAt,
+		ExpectedVersion: req.Version,
 	})
 	if err != nil {
-		writeError(w, r, mapEditSleepSessionError(err))
+		writeSleepSessionError(w, r, err, mapEditSleepSessionError(err))
 		return
 	}
 
@@ -380,10 +392,17 @@ func deleteSleepSessionHandler(w http.ResponseWriter, r *http.Request, h *sleep.
 		return
 	}
 
+	var req deleteSleepSessionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, r, apperror.New(apperror.CodeInvalidArgument, "invalid request body"))
+		return
+	}
+
 	if err := h.Handle(r.Context(), sleep.DeleteSleepSessionCommand{
-		SessionID: sleep.SleepSessionID(r.PathValue("id")),
+		SessionID:       sleep.SleepSessionID(r.PathValue("id")),
+		ExpectedVersion: req.Version,
 	}); err != nil {
-		writeError(w, r, mapDeleteSleepSessionError(err))
+		writeSleepSessionError(w, r, err, mapDeleteSleepSessionError(err))
 		return
 	}
 
@@ -393,11 +412,15 @@ func deleteSleepSessionHandler(w http.ResponseWriter, r *http.Request, h *sleep.
 func mapEditSleepSessionError(err error) apperror.AppError {
 	switch {
 	case errors.Is(err, sleep.ErrMissingSleepSessionEdit),
+		errors.Is(err, sleep.ErrMissingSleepSessionVersion),
 		errors.Is(err, sleep.ErrZeroSleepSessionStart),
 		errors.Is(err, sleep.ErrInvalidSleepSessionStop):
 		return apperror.New(apperror.CodeInvalidArgument, err.Error())
 	case errors.Is(err, sleep.ErrActiveSleepSessionExists):
 		return apperror.New(apperror.CodeActiveSleepExists, err.Error())
+	case errors.Is(err, sleep.ErrSleepSessionConflict),
+		errors.Is(err, sleep.ErrSleepSessionOverlap):
+		return apperror.New(apperror.CodeConflict, err.Error())
 	default:
 		var appErr apperror.AppError
 		if errors.As(err, &appErr) {
@@ -408,11 +431,42 @@ func mapEditSleepSessionError(err error) apperror.AppError {
 }
 
 func mapDeleteSleepSessionError(err error) apperror.AppError {
+	if errors.Is(err, sleep.ErrMissingSleepSessionVersion) {
+		return apperror.New(apperror.CodeInvalidArgument, err.Error())
+	}
+	if errors.Is(err, sleep.ErrSleepSessionConflict) {
+		return apperror.New(apperror.CodeConflict, err.Error())
+	}
 	var appErr apperror.AppError
 	if errors.As(err, &appErr) {
 		return appErr
 	}
 	return apperror.Wrap(apperror.CodeInternalError, "unexpected error", err)
+}
+
+type sleepSessionConflictResponse struct {
+	Type               string                `json:"type"`
+	CurrentSession     *sleepSessionResponse `json:"current_session,omitempty"`
+	ConflictingSession *sleepSessionResponse `json:"conflicting_session,omitempty"`
+}
+
+func writeSleepSessionError(w http.ResponseWriter, r *http.Request, err error, appErr apperror.AppError) {
+	var conflictErr sleep.SleepSessionConflictError
+	if !errors.As(err, &conflictErr) {
+		writeError(w, r, appErr)
+		return
+	}
+
+	conflict := sleepSessionConflictResponse{Type: string(conflictErr.Type)}
+	if conflictErr.CurrentSession != nil {
+		current := toSleepSessionResponse(*conflictErr.CurrentSession, sleep.SleepClassificationUnknown)
+		conflict.CurrentSession = &current
+	}
+	if conflictErr.ConflictingSession != nil {
+		conflicting := toSleepSessionResponse(*conflictErr.ConflictingSession, sleep.SleepClassificationUnknown)
+		conflict.ConflictingSession = &conflicting
+	}
+	writeErrorResponse(w, r, appErr, conflict)
 }
 
 type logPastSleepRequest struct {
@@ -424,6 +478,7 @@ type logPastSleepResponse struct {
 	ID        string    `json:"id"`
 	StartedAt time.Time `json:"started_at"`
 	StoppedAt time.Time `json:"stopped_at"`
+	Version   int       `json:"version"`
 }
 
 // logPastSleepHandler creates a completed sleep session from explicit start and end times.
@@ -476,6 +531,7 @@ func logPastSleepHandler(w http.ResponseWriter, r *http.Request, h *sleep.LogPas
 		ID:        string(result.ID),
 		StartedAt: result.StartedAt,
 		StoppedAt: result.StoppedAt,
+		Version:   result.Version,
 	})
 }
 
@@ -515,8 +571,8 @@ type periodAvgResponse struct {
 }
 
 type sleepStatsResponse struct {
-	DiaryWindow diaryWindowResponse       `json:"diary_window"`
-	Today       todayStatsResponse        `json:"today"`
+	DiaryWindow diaryWindowResponse          `json:"diary_window"`
+	Today       todayStatsResponse           `json:"today"`
 	Summary     map[string]periodAvgResponse `json:"summary"`
 }
 

@@ -20,6 +20,8 @@ type Transactor interface {
 type EditableSleepSessionRepository interface {
 	SleepSessionRepository
 	DeleteByID(ctx context.Context, id SleepSessionID) error
+	DeleteByIDAndVersion(ctx context.Context, id SleepSessionID, version int) error
+	FindOverlappingByBabyID(ctx context.Context, babyID BabyID, startedAt time.Time, stoppedAt time.Time, excludeID *SleepSessionID) (SleepSession, error)
 }
 
 type ActiveSleepSessionRepository interface {

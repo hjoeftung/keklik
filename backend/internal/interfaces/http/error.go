@@ -9,11 +9,16 @@ import (
 )
 
 type errorResponse struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Code     string `json:"code"`
+	Message  string `json:"message"`
+	Conflict any    `json:"conflict,omitempty"`
 }
 
 func writeError(w http.ResponseWriter, r *http.Request, err apperror.AppError) {
+	writeErrorResponse(w, r, err, nil)
+}
+
+func writeErrorResponse(w http.ResponseWriter, r *http.Request, err apperror.AppError, conflict any) {
 	status := apperror.HTTPStatus(err.Code)
 	attrs := []any{
 		"method", r.Method,
@@ -33,7 +38,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err apperror.AppError) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(errorResponse{
-		Code:    string(err.Code),
-		Message: err.Message,
+		Code:     string(err.Code),
+		Message:  err.Message,
+		Conflict: conflict,
 	})
 }

@@ -27,12 +27,18 @@ export function clearSession(): void {
 export class ApiError extends Error {
   readonly code: string
   readonly status: number
+  readonly payload?: unknown
+  readonly conflict?: unknown
 
-  constructor(message: string, code: string, status: number) {
+  constructor(message: string, code: string, status: number, payload?: unknown) {
     super(message)
     this.name = 'ApiError'
     this.code = code
     this.status = status
+    this.payload = payload
+    if (payload && typeof payload === 'object' && 'conflict' in payload) {
+      this.conflict = (payload as { conflict?: unknown }).conflict
+    }
   }
 }
 
@@ -108,14 +114,16 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (!response.ok) {
     let code = 'unknown'
     let message = `Request failed with status ${response.status}`
+    let payload: unknown
     try {
       const err = (await response.json()) as { code?: string; message?: string }
+      payload = err
       if (err.code) code = err.code
       if (err.message) message = err.message
     } catch {
       // non-JSON error body
     }
-    throw new ApiError(message, code, response.status)
+    throw new ApiError(message, code, response.status, payload)
   }
 
   if (response.status === 204) {

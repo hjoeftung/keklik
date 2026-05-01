@@ -14,6 +14,7 @@ var (
 	ErrActiveSleepSessionExists     = errors.New("active sleep session already exists for this baby")
 	ErrSleepSessionOverlap          = errors.New("sleep session overlaps an existing session")
 	ErrSleepSessionConflict         = errors.New("sleep session was modified concurrently")
+	ErrMissingSleepSessionVersion   = errors.New("sleep session version is required")
 	ErrInvalidSleepHistoryPeriod    = errors.New("period must be one of: today, 7d, 14d")
 	ErrEffectiveFromTooOld          = errors.New("effective_from must not be earlier than 30 days ago")
 
@@ -22,3 +23,44 @@ var (
 	ErrInvalidNightWindow = errors.New("invalid night window")
 	ErrEmptyNightWindowID = errors.New("night window id must not be empty")
 )
+
+type SleepSessionConflictType string
+
+const (
+	SleepSessionConflictStaleVersion SleepSessionConflictType = "stale_version"
+	SleepSessionConflictOverlap      SleepSessionConflictType = "overlap"
+)
+
+type SleepSessionConflictError struct {
+	Type               SleepSessionConflictType
+	CurrentSession     *SleepSession
+	ConflictingSession *SleepSession
+	cause              error
+}
+
+func NewStaleSleepSessionConflict(current SleepSession) SleepSessionConflictError {
+	return SleepSessionConflictError{
+		Type:           SleepSessionConflictStaleVersion,
+		CurrentSession: &current,
+		cause:          ErrSleepSessionConflict,
+	}
+}
+
+func NewOverlapSleepSessionConflict(conflicting SleepSession) SleepSessionConflictError {
+	return SleepSessionConflictError{
+		Type:               SleepSessionConflictOverlap,
+		ConflictingSession: &conflicting,
+		cause:              ErrSleepSessionOverlap,
+	}
+}
+
+func (e SleepSessionConflictError) Error() string {
+	if e.Type == SleepSessionConflictOverlap {
+		return ErrSleepSessionOverlap.Error()
+	}
+	return ErrSleepSessionConflict.Error()
+}
+
+func (e SleepSessionConflictError) Unwrap() error {
+	return e.cause
+}

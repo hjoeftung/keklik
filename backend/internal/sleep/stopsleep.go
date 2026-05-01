@@ -16,6 +16,7 @@ type StopSleepResult struct {
 	ID        SleepSessionID
 	StartedAt time.Time
 	StoppedAt time.Time
+	Version   int
 }
 
 // stopSleepSessionRepository combines the interfaces required by StopSleepHandler.
@@ -60,5 +61,6 @@ func (h *StopSleepHandler) Handle(ctx context.Context, cmd StopSleepCommand) (St
 		ID:        session.ID(),
 		StartedAt: session.StartedAt(),
 		StoppedAt: stoppedAt,
+		Version:   session.Version() + 1,
 	}, nil
 }

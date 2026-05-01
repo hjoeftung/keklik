@@ -34,6 +34,13 @@ definitions:
       member_id:
         type: string
     type: object
+  httpapi.diaryWindowResponse:
+    properties:
+      end:
+        type: string
+      start:
+        type: string
+    type: object
   httpapi.editSleepSessionRequest:
     properties:
       started_at:
@@ -92,6 +99,31 @@ definitions:
       member_id:
         type: string
     type: object
+  httpapi.logPastSleepRequest:
+    properties:
+      started_at:
+        type: string
+      stopped_at:
+        type: string
+    type: object
+  httpapi.logPastSleepResponse:
+    properties:
+      id:
+        type: string
+      started_at:
+        type: string
+      stopped_at:
+        type: string
+    type: object
+  httpapi.periodAvgResponse:
+    properties:
+      avg_active_seconds:
+        type: number
+      avg_nap_seconds:
+        type: number
+      avg_sleep_seconds:
+        type: number
+    type: object
   httpapi.refreshTokenRequest:
     properties:
       refresh_token:
@@ -125,6 +157,17 @@ definitions:
       stopped_at:
         type: string
     type: object
+  httpapi.sleepStatsResponse:
+    properties:
+      diary_window:
+        $ref: '#/definitions/httpapi.diaryWindowResponse'
+      summary:
+        additionalProperties:
+          $ref: '#/definitions/httpapi.periodAvgResponse'
+        type: object
+      today:
+        $ref: '#/definitions/httpapi.todayStatsResponse'
+    type: object
   httpapi.startSleepRequest:
     properties:
       started_at:
@@ -155,6 +198,15 @@ definitions:
     properties:
       identifier:
         type: string
+    type: object
+  httpapi.todayStatsResponse:
+    properties:
+      total_active_seconds:
+        type: number
+      total_nap_seconds:
+        type: number
+      total_sleep_seconds:
+        type: number
     type: object
   httpapi.tokenRefreshResponse:
     properties:
@@ -315,7 +367,7 @@ paths:
         name: baby_id
         required: true
         type: string
-      - description: 'History window: today, 7d (default), or 14d'
+      - description: 'History window: today, or Nd where 1 ≤ N ≤ 120 (default: 7d)'
         in: query
         name: period
         type: string
@@ -352,6 +404,49 @@ paths:
       security:
       - BearerAuth: []
       summary: Get sleep history
+      tags:
+      - sleep
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Baby ID
+        in: path
+        name: baby_id
+        required: true
+        type: string
+      - description: Start and end times of the completed session
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.logPastSleepRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/httpapi.logPastSleepResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "409":
+          description: Session overlaps an existing session
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Log past sleep session
       tags:
       - sleep
   /babies/{baby_id}/sleep-sessions/{id}:
@@ -522,6 +617,47 @@ paths:
       security:
       - BearerAuth: []
       summary: Start sleep session
+      tags:
+      - sleep
+  /babies/{baby_id}/sleep-stats:
+    get:
+      parameters:
+      - description: Baby ID
+        in: path
+        name: baby_id
+        required: true
+        type: string
+      - description: IANA timezone, e.g. America/New_York
+        in: query
+        name: timezone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.sleepStatsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get sleep stats
       tags:
       - sleep
   /families:

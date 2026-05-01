@@ -91,11 +91,12 @@ export default function SleepScreen() {
           started_at: stopped.started_at,
           stopped_at: stopped.stopped_at,
           classification: stopped.classification,
+          version: stopped.version,
         }
         setSessions(prev => [updated, ...prev.filter(s => s.id !== updated.id)])
       } else {
         const started = await startSleep(babyId)
-        const active: SleepSession = { id: started.id, baby_id: babyId, started_at: started.started_at }
+        const active: SleepSession = { id: started.id, baby_id: babyId, started_at: started.started_at, version: started.version }
         setSessions(prev => [active, ...prev])
       }
     } catch (err) {
@@ -121,6 +122,7 @@ export default function SleepScreen() {
       d.setHours(h, m, 0, 0)
       const updated = await editSleepSession(babyId, session.id, {
         started_at: d.toISOString(),
+        version: session.version,
       })
       setSessions(prev => [updated, ...prev.filter(s => s.id !== updated.id)])
       setShowEditStart(false)

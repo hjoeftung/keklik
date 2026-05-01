@@ -18,6 +18,7 @@ type LogPastSleepResult struct {
 	ID        SleepSessionID
 	StartedAt time.Time
 	StoppedAt time.Time
+	Version   int
 }
 
 // logPastSleepRepository combines the interfaces required by LogPastSleepHandler.
@@ -58,5 +59,5 @@ func (h *LogPastSleepHandler) Handle(ctx context.Context, cmd LogPastSleepComman
 		return LogPastSleepResult{}, err
 	}
 
-	return LogPastSleepResult{ID: id, StartedAt: cmd.StartedAt, StoppedAt: cmd.StoppedAt}, nil
+	return LogPastSleepResult{ID: id, StartedAt: cmd.StartedAt, StoppedAt: cmd.StoppedAt, Version: 1}, nil
 }

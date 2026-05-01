@@ -64,6 +64,12 @@ func (r *stubEditableHTTPSleepSessionRepo) FindByID(_ context.Context, _ sleep.S
 func (r *stubEditableHTTPSleepSessionRepo) DeleteByID(_ context.Context, _ sleep.SleepSessionID) error {
 	return r.deleteErr
 }
+func (r *stubEditableHTTPSleepSessionRepo) DeleteByIDAndVersion(_ context.Context, _ sleep.SleepSessionID, _ int) error {
+	return r.deleteErr
+}
+func (r *stubEditableHTTPSleepSessionRepo) FindOverlappingByBabyID(_ context.Context, _ sleep.BabyID, _, _ time.Time, _ *sleep.SleepSessionID) (sleep.SleepSession, error) {
+	return sleep.SleepSession{}, apperror.New(apperror.CodeNotFound, "sleep session not found")
+}
 
 type stubStartSleepSessionRepo struct {
 	saveErr error
@@ -279,6 +285,7 @@ func TestEditSleepSessionReturns200WithUpdatedSession(t *testing.T) {
 
 	rec := requestJSON(t, server, http.MethodPatch, "/babies/"+testBabyID+"/sleep-sessions/session-1", map[string]any{
 		"started_at": startedAt.Add(-15 * time.Minute),
+		"version":    0,
 	}, true)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -289,7 +296,7 @@ func TestDeleteSleepSessionReturns204(t *testing.T) {
 	t.Parallel()
 
 	server := newEditDeleteSleepTestServer(&stubBabyAccessChecker{memberID: "member-1"}, &stubEditableHTTPSleepSessionRepo{})
-	rec := requestJSON(t, server, http.MethodDelete, "/babies/"+testBabyID+"/sleep-sessions/session-1", map[string]any{}, true)
+	rec := requestJSON(t, server, http.MethodDelete, "/babies/"+testBabyID+"/sleep-sessions/session-1", map[string]any{"version": 0}, true)
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("expected 204, got %d: %s", rec.Code, rec.Body.String())
 	}

@@ -93,6 +93,7 @@ export interface StartSleepRequest {
 export interface StartSleepResponse {
   id: string
   started_at: string
+  version: number
 }
 
 export function startSleep(babyId: string, req?: StartSleepRequest): Promise<StartSleepResponse> {
@@ -108,6 +109,7 @@ export interface StopSleepResponse {
   started_at: string
   stopped_at: string
   classification: string
+  version: number
 }
 
 export function stopSleep(babyId: string, req?: StopSleepRequest): Promise<StopSleepResponse> {
@@ -121,11 +123,13 @@ export interface SleepSession {
   stopped_at?: string
   classification?: string
   duration_seconds?: number
+  version: number
 }
 
 export interface EditSleepSessionRequest {
   started_at?: string
   stopped_at?: string
+  version: number
 }
 
 export function editSleepSession(
@@ -136,8 +140,16 @@ export function editSleepSession(
   return api.patch(`/babies/${babyId}/sleep-sessions/${sessionId}`, req)
 }
 
-export function deleteSleepSession(babyId: string, sessionId: string): Promise<void> {
-  return api.delete(`/babies/${babyId}/sleep-sessions/${sessionId}`)
+export interface DeleteSleepSessionRequest {
+  version: number
+}
+
+export function deleteSleepSession(
+  babyId: string,
+  sessionId: string,
+  req: DeleteSleepSessionRequest,
+): Promise<void> {
+  return api.delete(`/babies/${babyId}/sleep-sessions/${sessionId}`, req)
 }
 
 export interface LogPastSleepRequest {
@@ -162,6 +174,29 @@ export function getSleepHistory(
   return api.get(`/babies/${babyId}/sleep-sessions?period=${period}&timezone=${encodeURIComponent(tz)}`)
 }
 
+// --- Sleep stats ---
+
+export interface DiaryWindow {
+  start: string
+  end: string
+}
+
+export interface TodayStats {
+  total_sleep_seconds: number
+  total_nap_seconds: number
+  total_active_seconds: number
+}
+
+export interface SleepStatsResponse {
+  diary_window: DiaryWindow
+  today: TodayStats
+}
+
+export function getSleepStats(babyId: string): Promise<SleepStatsResponse> {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+  return api.get(`/babies/${babyId}/sleep-stats?timezone=${encodeURIComponent(tz)}`)
+}
+
 // --- Sleep profiles ---
 
 export interface NightWindowRequest {
@@ -182,4 +217,3 @@ export function createSleepProfile(
 ): Promise<void> {
   return api.post(`/babies/${babyId}/sleep-profiles`, req)
 }
-
