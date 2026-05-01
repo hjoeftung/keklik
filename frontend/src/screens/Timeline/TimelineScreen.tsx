@@ -9,6 +9,7 @@ import {
 import { ApiError } from '@/api/client'
 import TodayTab from './TodayTab'
 import WeekTab from './WeekTab'
+import SummaryTab from './SummaryTab'
 import styles from './TimelineScreen.module.css'
 
 type Tab = 'today' | 'week' | 'summary'
@@ -105,8 +106,8 @@ export default function TimelineScreen() {
       {!isLoading && !error && activeTab === 'week' && (
         <WeekTab sessions={weekSessions} isLoading={isLoadingWeek} />
       )}
-      {!isLoading && !error && activeTab === 'summary' && (
-        <div className={styles.comingSoon}>Coming soon</div>
+      {!isLoading && !error && activeTab === 'summary' && stats && (
+        <SummaryTab summary={stats.summary ?? {}} />
       )}
     </div>
   )

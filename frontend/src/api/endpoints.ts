@@ -171,8 +171,15 @@ export interface TodayStats {
   total_active_seconds: number
 }
 
+export interface PeriodAverage {
+  avg_sleep_seconds: number
+  avg_nap_seconds: number
+  avg_active_seconds: number
+}
+
 export interface SleepStatsResponse {
   today: TodayStats
+  summary: Record<string, PeriodAverage>
 }
 
 export function getSleepStats(babyId: string): Promise<SleepStatsResponse> {

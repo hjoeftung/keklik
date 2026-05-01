@@ -1,0 +1,112 @@
+/* ── Tab shell ────────────────────────────────────────────── */
+.tab {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 18px 24px 32px;
+}
+.tab::-webkit-scrollbar { display: none; }
+
+/* ── Period segmented control ─────────────────────────────── */
+.periodControl {
+  display: flex;
+  gap: 6px;
+  background: var(--kk-surface-soft);
+  padding: 4px;
+  border-radius: 999px;
+}
+
+.periodBtn {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--kk-ink-soft);
+  font-family: var(--kk-sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.periodBtnActive {
+  background: var(--kk-surface);
+  color: var(--kk-ink);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  cursor: default;
+}
+
+/* ── Date range label ─────────────────────────────────────── */
+.dateRange {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--kk-ink-soft);
+  text-align: center;
+}
+
+/* ── Stat cards ───────────────────────────────────────────── */
+.cards {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card {
+  border-radius: 24px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cardNight  { background: var(--kk-night-soft); }
+.cardNap    { background: var(--kk-nap-soft); }
+.cardActive { background: var(--kk-primary-soft); }
+
+/* ── Icon circle ──────────────────────────────────────────── */
+.iconCircle {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconCircleNight  { background: var(--kk-night); }
+.iconCircleNap    { background: var(--kk-nap); }
+.iconCircleActive { background: var(--kk-primary); }
+
+/* ── Card body ────────────────────────────────────────────── */
+.cardBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--kk-ink-soft);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.cardValue {
+  font-family: var(--kk-serif);
+  font-size: 32px;
+  font-weight: 500;
+  color: var(--kk-ink);
+  line-height: 1.05;
+  margin-top: 4px;
+  letter-spacing: -0.6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardSub {
+  font-size: 12px;
+  color: var(--kk-ink-soft);
+  margin-top: 2px;
+}
