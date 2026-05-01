@@ -24,8 +24,6 @@
   align-items: center;
   gap: 4px;
   padding: 12px 6px;
-  background: var(--kk-surface);
-  border: 1px solid var(--kk-border);
   border-radius: 16px;
 }
 
@@ -51,11 +49,23 @@
 }
 
 .statNap {
-  color: var(--kk-nap);
+  color: #C07B10;
 }
 
 .statActive {
-  color: var(--kk-primary);
+  color: var(--kk-primary-deep);
+}
+
+.statPillNight {
+  background: var(--kk-night-soft);
+}
+
+.statPillNap {
+  background: var(--kk-nap-soft);
+}
+
+.statPillActive {
+  background: var(--kk-primary-soft);
 }
 
 /* ── Diary scroll area ──────────────────────────────────────── */
@@ -143,10 +153,8 @@
   left: 6px;
   right: 6px;
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
   align-items: center;
-  padding: 5px 8px;
+  padding: 0 12px;
   overflow: hidden;
   cursor: pointer;
   border: none;
@@ -164,20 +172,28 @@
   transform: scale(0.995);
 }
 
-.barTime {
-  font-size: 11px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  opacity: 0.85;
-  align-self: flex-start;
-  line-height: 1.2;
+.barContent {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.barLabel {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .barDuration {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: -0.2px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* ── Awake gap pills ────────────────────────────────────────── */
@@ -186,16 +202,17 @@
   position: absolute;
   left: 50%;
   transform: translate(-50%, -50%);
-  padding: 5px 12px;
+  padding: 5px 14px;
   border-radius: 999px;
-  border: 1.5px dashed var(--kk-border);
+  border: 1px solid var(--kk-border);
   background: var(--kk-bg);
   font-size: 12px;
   font-weight: 500;
-  color: var(--kk-ink-muted);
+  color: var(--kk-ink-soft);
   white-space: nowrap;
   pointer-events: none;
   z-index: 3;
+  box-shadow: var(--kk-shadow-sm);
 }
 
 /* ── Empty state ────────────────────────────────────────────── */

@@ -8,6 +8,67 @@
   overflow: hidden;
 }
 
+/* ── Header ────────────────────────────────────────────────── */
+.header {
+  flex-shrink: 0;
+  padding: 20px 20px 0;
+}
+
+.babyName {
+  font-family: var(--kk-serif);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--kk-ink);
+  margin: 0 0 2px;
+}
+
+.headerDate {
+  font-size: 13px;
+  color: var(--kk-ink-muted);
+  margin: 0 0 14px;
+}
+
+/* ── Tabs ──────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tabBtn {
+  padding: 7px 18px;
+  border: 1.5px solid var(--kk-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--kk-ink-soft);
+  font-family: var(--kk-sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.tabBtn:hover:not(.tabBtnActive) {
+  border-color: var(--kk-ink-muted);
+  color: var(--kk-ink);
+}
+
+.tabBtnActive {
+  background: var(--kk-ink);
+  border-color: var(--kk-ink);
+  color: #fff;
+  cursor: default;
+}
+
+.comingSoon {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--kk-ink-muted);
+}
+
 /* ── Period toggle ─────────────────────────────────────────── */
 .periodToggle {
   display: flex;

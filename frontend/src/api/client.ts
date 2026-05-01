@@ -7,7 +7,7 @@ export interface Session {
 }
 
 export function getSession(): Session | null {
-  const raw = sessionStorage.getItem(SESSION_KEY)
+  const raw = localStorage.getItem(SESSION_KEY)
   if (!raw) return null
   try {
     return JSON.parse(raw) as Session
@@ -16,12 +16,41 @@ export function getSession(): Session | null {
   }
 }
 
+let refreshTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleProactiveRefresh(accessToken: string): void {
+  if (refreshTimer !== null) {
+    clearTimeout(refreshTimer)
+    refreshTimer = null
+  }
+  try {
+    const payload = JSON.parse(atob(accessToken.split('.')[1])) as { exp?: number }
+    if (!payload.exp) return
+    const delay = payload.exp * 1000 - Date.now() - 60_000
+    if (delay <= 0) return
+    refreshTimer = setTimeout(async () => {
+      const newSession = await tryRefreshSession()
+      if (!newSession) {
+        clearSession()
+        window.location.replace('/')
+      }
+    }, delay)
+  } catch {
+    // malformed token — fall back to reactive 401 refresh
+  }
+}
+
 export function saveSession(session: Session): void {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+  scheduleProactiveRefresh(session.accessToken)
 }
 
 export function clearSession(): void {
-  sessionStorage.removeItem(SESSION_KEY)
+  if (refreshTimer !== null) {
+    clearTimeout(refreshTimer)
+    refreshTimer = null
+  }
+  localStorage.removeItem(SESSION_KEY)
 }
 
 export class ApiError extends Error {
@@ -138,4 +167,10 @@ export const api = {
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   delete: <T>(path: string, body?: unknown) => request<T>('DELETE', path, body),
+}
+
+// Schedule proactive refresh for any session already in storage on page load
+const _existingSession = getSession()
+if (_existingSession) {
+  scheduleProactiveRefresh(_existingSession.accessToken)
 }

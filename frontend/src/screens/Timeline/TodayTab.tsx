@@ -10,7 +10,7 @@ interface Props {
   onRefresh: () => void
 }
 
-const PX_PER_MIN = 1.2
+const PX_PER_MIN = 0.9
 
 function formatDur(seconds: number): string {
   if (seconds <= 0) return '0h'
@@ -19,10 +19,6 @@ function formatDur(seconds: number): string {
   if (h > 0 && m > 0) return `${h}h ${m}m`
   if (h > 0) return `${h}h`
   return `${m}m`
-}
-
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
 interface HourTick {
@@ -41,7 +37,7 @@ interface SessionBar {
   height: number
   color: string
   borderRadius: number
-  showTimes: boolean
+  showLabel: boolean
   showDuration: boolean
 }
 
@@ -120,11 +116,11 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh }: Props) 
     const gapStartMs = new Date(curr.stopped_at).getTime()
     const gapEndMs = new Date(next.started_at).getTime()
     const gapSec = (gapEndMs - gapStartMs) / 1000
-    if (gapSec < 60) continue
+    if (gapSec < 3600) continue
     const gapStartOffsetMin = (gapStartMs - windowStart.getTime()) / 60000
     const gapEndOffsetMin = (gapEndMs - windowStart.getTime()) / 60000
     gapPills.push({
-      label: `awake · ${formatDur(gapSec)}`,
+      label: `✦ awake · ${formatDur(gapSec)}`,
       midOffsetMin: (gapStartOffsetMin + gapEndOffsetMin) / 2,
     })
   }
@@ -158,8 +154,8 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh }: Props) 
       height,
       color,
       borderRadius,
-      showTimes: height >= 60,
-      showDuration: height >= 30,
+      showLabel: height >= 22,
+      showDuration: height >= 22,
     }]
   })
 
@@ -181,19 +177,19 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh }: Props) 
     <div className={styles.tab}>
       {/* Summary pills */}
       <div className={styles.summaryRow}>
-        <div className={styles.statPill}>
-          <span className={styles.statLabel}>Total Sleep</span>
+        <div className={`${styles.statPill} ${styles.statPillNight}`}>
+          <span className={styles.statLabel}>Sleep</span>
           <span className={`${styles.statValue} ${styles.statNight}`}>
             {formatDur(stats.today.total_sleep_seconds)}
           </span>
         </div>
-        <div className={styles.statPill}>
-          <span className={styles.statLabel}>Total Nap</span>
+        <div className={`${styles.statPill} ${styles.statPillNap}`}>
+          <span className={styles.statLabel}>Naps</span>
           <span className={`${styles.statValue} ${styles.statNap}`}>
             {formatDur(stats.today.total_nap_seconds)}
           </span>
         </div>
-        <div className={styles.statPill}>
+        <div className={`${styles.statPill} ${styles.statPillActive}`}>
           <span className={styles.statLabel}>Active</span>
           <span className={`${styles.statValue} ${styles.statActive}`}>
             {formatDur(stats.today.total_active_seconds)}
@@ -246,22 +242,25 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh }: Props) 
             )}
 
             {/* Session bars */}
-            {sessionBars.map(({ session, top, height, color, borderRadius, showTimes, showDuration }) => (
+            {sessionBars.map(({ session, top, height, color, borderRadius, showLabel, showDuration }) => (
               <button
                 key={session.id}
                 className={styles.sessionBar}
                 style={{ top, height, background: color, borderRadius }}
                 onClick={() => setSelectedSession(session)}
-                aria-label={`${session.classification ?? 'Sleep'} session, ${formatDur(session.duration_seconds ?? 0)}`}
+                aria-label={`${session.classification === 'night' ? 'Night sleep' : 'Nap'}, ${formatDur(session.duration_seconds ?? 0)}`}
               >
-                {showTimes && (
-                  <span className={styles.barTime}>{formatTime(session.started_at)}</span>
-                )}
-                {showDuration && (
-                  <span className={styles.barDuration}>{formatDur(session.duration_seconds ?? 0)}</span>
-                )}
-                {showTimes && session.stopped_at && (
-                  <span className={styles.barTime}>{formatTime(session.stopped_at)}</span>
+                {(showLabel || showDuration) && (
+                  <div className={styles.barContent}>
+                    {showLabel && (
+                      <span className={styles.barLabel}>
+                        {session.classification === 'night' ? 'Night sleep' : 'Nap'}
+                      </span>
+                    )}
+                    {showDuration && (
+                      <span className={styles.barDuration}>{formatDur(session.duration_seconds ?? 0)}</span>
+                    )}
+                  </div>
                 )}
               </button>
             ))}
