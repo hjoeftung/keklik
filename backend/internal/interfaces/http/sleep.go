@@ -540,7 +540,8 @@ func mapLogPastSleepError(err error) apperror.AppError {
 	case errors.Is(err, sleep.ErrZeroSleepSessionStart),
 		errors.Is(err, sleep.ErrInvalidSleepSessionStop),
 		errors.Is(err, sleep.ErrEmptyBabyID),
-		errors.Is(err, sleep.ErrEmptyFamilyMemberID):
+		errors.Is(err, sleep.ErrEmptyFamilyMemberID),
+		errors.Is(err, sleep.ErrSleepSessionInFuture):
 		return apperror.New(apperror.CodeInvalidArgument, err.Error())
 	case errors.Is(err, sleep.ErrSleepSessionOverlap):
 		return apperror.New(apperror.CodeConflict, err.Error())

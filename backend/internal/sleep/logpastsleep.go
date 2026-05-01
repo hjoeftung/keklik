@@ -40,6 +40,11 @@ func NewLogPastSleepHandler(sessions logPastSleepRepository) *LogPastSleepHandle
 // Handle creates and persists a completed sleep session from past times.
 // It rejects the session if it overlaps any existing session for the same baby.
 func (h *LogPastSleepHandler) Handle(ctx context.Context, cmd LogPastSleepCommand) (LogPastSleepResult, error) {
+	now := time.Now()
+	if cmd.StartedAt.After(now) || cmd.StoppedAt.After(now) {
+		return LogPastSleepResult{}, ErrSleepSessionInFuture
+	}
+
 	id := SleepSessionID(uuid.New().String())
 
 	session, err := NewCompletedSleepSession(id, cmd.BabyID, cmd.CreatedByMemberID, cmd.StartedAt, cmd.StoppedAt)

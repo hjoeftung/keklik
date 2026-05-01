@@ -2,6 +2,7 @@ package sleep_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -98,5 +99,41 @@ func TestLogPastSleepRejectsStopBeforeStart(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error for stop before start, got nil")
+	}
+}
+
+func TestLogPastSleepRejectsFutureStart(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now()
+	repo := &stubLogPastSleepRepo{}
+	h := sleep.NewLogPastSleepHandler(repo)
+
+	_, err := h.Handle(context.Background(), sleep.LogPastSleepCommand{
+		BabyID:            "baby-1",
+		CreatedByMemberID: "member-1",
+		StartedAt:         now.Add(1 * time.Hour),
+		StoppedAt:         now.Add(2 * time.Hour),
+	})
+	if !errors.Is(err, sleep.ErrSleepSessionInFuture) {
+		t.Fatalf("expected ErrSleepSessionInFuture, got %v", err)
+	}
+}
+
+func TestLogPastSleepRejectsFutureStop(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now()
+	repo := &stubLogPastSleepRepo{}
+	h := sleep.NewLogPastSleepHandler(repo)
+
+	_, err := h.Handle(context.Background(), sleep.LogPastSleepCommand{
+		BabyID:            "baby-1",
+		CreatedByMemberID: "member-1",
+		StartedAt:         now.Add(-1 * time.Hour),
+		StoppedAt:         now.Add(1 * time.Hour),
+	})
+	if !errors.Is(err, sleep.ErrSleepSessionInFuture) {
+		t.Fatalf("expected ErrSleepSessionInFuture, got %v", err)
 	}
 }

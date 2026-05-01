@@ -17,6 +17,7 @@ var (
 	ErrMissingSleepSessionVersion   = errors.New("sleep session version is required")
 	ErrInvalidSleepHistoryPeriod    = errors.New("period must be one of: today, 7d, 14d")
 	ErrEffectiveFromTooOld          = errors.New("effective_from must not be earlier than 30 days ago")
+	ErrSleepSessionInFuture         = errors.New("sleep session must not start or end in the future")
 
 	ErrInvalidTimezone    = errors.New("invalid timezone")
 	ErrInvalidLocalTime   = errors.New("invalid local time")
