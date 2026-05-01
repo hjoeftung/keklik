@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Keklik · Warm & Cozy Redesign</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #f0eee9; }
+  body { font-family: "Quicksand", system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tokens.jsx"></script>
+<script type="text/babel" src="illustrations.jsx"></script>
+<script type="text/babel" src="shell.jsx"></script>
+<script type="text/babel" src="screens-sleep.jsx"></script>
+<script type="text/babel" src="screens-stats.jsx"></script>
+<script type="text/babel" src="screens-other.jsx"></script>
+
+<script type="text/babel">
+  function App() {
+    const pastel = window.PALETTES.pastel;
+    const W = 390, H = 780;
+
+    return (
+      <DesignCanvas>
+        <DCSection id="overview" title="Keklik · Warm redesign" subtitle="A cozy take on a baby sleep tracker. Mobile-first, opinionated, sweet but quiet. Focus any artboard.">
+          <DCArtboard id="hero-pastel" label="Sleep · awake" width={W} height={H}>
+            <SleepA_Awake palette={pastel} />
+          </DCArtboard>
+          <DCArtboard id="hero-night" label="Sleep · asleep (night sky)" width={W} height={H}>
+            <SleepC_Asleep_Night palette={pastel} />
+          </DCArtboard>
+          <DCArtboard id="hero-today" label="Stats · Today" width={W} height={H}>
+            <StatsToday palette={pastel} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="palette" title="Palette" subtitle="Pastel — soft warm dawn-light. Cartoon notes feel like watercolor, never crayon.">
+          <DCArtboard id="pal-pastel" label="Pastel swatches" width={W} height={420}>
+            <PaletteCard palette={pastel} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="pillows" title="Pillow button takes" subtitle="The signature element. Each is the awake state — tap to start sleep.">
+          <DCArtboard id="p-soft-pastel" label="Soft pillow" width={W} height={H}>
+            <SleepA_Awake palette={pastel} />
+          </DCArtboard>
+          <DCArtboard id="p-stylized-pastel" label="Stylized squircle" width={W} height={H}>
+            <SleepD_Stylized palette={pastel} />
+          </DCArtboard>
+          <DCArtboard id="p-minimal" label="Minimal" width={W} height={H}>
+            <SleepE_Minimal palette={pastel} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="active" title="Active sleep states" subtitle="What happens when a session is running. Pick the level of takeover.">
+          <DCArtboard id="act-soft-pastel" label="Soft · pillow w/ sleep mask" width={W} height={H}>
+            <SleepB_Asleep_Soft palette={pastel} />
+          </DCArtboard>
+          <DCArtboard id="act-night-pastel" label="Full takeover · night sky" width={W} height={H}>
+            <SleepC_Asleep_Night palette={pastel} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="empty" title="First-ever session (empty state)">
+          <DCArtboard id="emp-pastel" label="Empty · welcome" width={W} height={H}>
+            <SleepF_Empty palette={pastel} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="stats" title="Statistics — Today / Week / Summary" subtitle="Plain rounded bars. Awake gaps shown as soft 'awake · 2h 17m' pills between sleeps.">
+          <DCArtboard id="st-today" label="Today" width={W} height={H}>
+            <StatsToday palette={pastel} />
+          </DCArtboard>
+          <DCArtboard id="st-week" label="Week" width={W} height={H}>
+            <StatsWeek palette={pastel} />
+          </DCArtboard>
+          <DCArtboard id="st-summary" label="Summary" width={W} height={H}>
+            <StatsSummary palette={pastel} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="forms" title="Forms — log past + edit session">
+          <DCArtboard id="f-log-default" label="Log past · default (just opened)" width={W} height={H}>
+            <LogPastDefault palette={pastel} />
+          </DCArtboard>
+          <DCArtboard id="f-log-empty" label="Log past · empty / first time" width={W} height={H}>
+            <LogPastEmpty palette={pastel} />
+          </DCArtboard>
+          <DCArtboard id="f-log" label="Log past · filled" width={W} height={H}>
+            <LogPast palette={pastel} />
+          </DCArtboard>
+          <DCArtboard id="f-edit" label="Edit session" width={W} height={H}>
+            <EditSession palette={pastel} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="onboarding" title="Onboarding · 2 screens">
+          <DCArtboard id="ob1-pastel" label="1. Welcome" width={W} height={H}>
+            <Onboard1 palette={pastel} />
+          </DCArtboard>
+          <DCArtboard id="ob2-pastel" label="2. Set up baby" width={W} height={H}>
+            <Onboard2 palette={pastel} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="settings" title="Settings">
+          <DCArtboard id="set-pastel" label="Settings" width={W} height={H}>
+            <Settings palette={pastel} />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  function PaletteCard({ palette }) {
+    const p = palette;
+    const swatches = [
+      { name: 'Background', val: p.bg },
+      { name: 'Primary', val: p.primary },
+      { name: 'Primary deep', val: p.primaryDeep },
+      { name: 'Night', val: p.night },
+      { name: 'Nap', val: p.nap },
+      { name: 'Accent', val: p.accent },
+      { name: 'Surface soft', val: p.surfaceSoft },
+      { name: 'Ink', val: p.ink },
+    ];
+    return (
+      <div className="kk" style={{ background: p.bg, height: '100%', padding: 28, fontFamily: '"Quicksand", system-ui' }}>
+        <div className="kk-display" style={{ fontSize: 26, fontWeight: 500, color: p.ink, letterSpacing: -0.4 }}>{p.name}</div>
+        <div style={{ fontSize: 13, color: p.inkSoft, marginTop: 4 }}>Soft, calm, dawn-light. Cartoon notes feel like watercolor.</div>
+        <div style={{ marginTop: 22, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+          {swatches.map(s => (
+            <div key={s.name}>
+              <div style={{ width: '100%', aspectRatio: '1', borderRadius: 14, background: s.val, border: `1px solid ${p.border}` }}/>
+              <div style={{ fontSize: 11, fontWeight: 600, color: p.ink, marginTop: 6 }}>{s.name}</div>
+              <div style={{ fontSize: 10, color: p.inkMuted, fontFamily: 'monospace' }}>{s.val}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 22, display: 'flex', gap: 14, alignItems: 'center', padding: '14px 16px', background: p.surface, borderRadius: 18, border: `1px solid ${p.border}` }}>
+          <PillowFlat palette={p} size={64} />
+          <div>
+            <div className="kk-display" style={{ fontSize: 18, fontWeight: 500, color: p.ink, letterSpacing: -0.3 }}>The pillow</div>
+            <div style={{ fontSize: 12, color: p.inkSoft }}>Squircle silhouette · soft fabric highlight · 4 tiny dimples</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  window.App = App;
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

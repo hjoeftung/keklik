@@ -554,11 +554,6 @@ func mapLogPastSleepError(err error) apperror.AppError {
 	}
 }
 
-type diaryWindowResponse struct {
-	Start string `json:"start"`
-	End   string `json:"end"`
-}
-
 type todayStatsResponse struct {
 	TotalSleepSeconds  float64 `json:"total_sleep_seconds"`
 	TotalNapSeconds    float64 `json:"total_nap_seconds"`
@@ -572,9 +567,8 @@ type periodAvgResponse struct {
 }
 
 type sleepStatsResponse struct {
-	DiaryWindow diaryWindowResponse          `json:"diary_window"`
-	Today       todayStatsResponse           `json:"today"`
-	Summary     map[string]periodAvgResponse `json:"summary"`
+	Today   todayStatsResponse           `json:"today"`
+	Summary map[string]periodAvgResponse `json:"summary"`
 }
 
 // getSleepStatsHandler returns diary-window totals and rolling period averages.
@@ -623,10 +617,6 @@ func getSleepStatsHandler(w http.ResponseWriter, r *http.Request, h *sleep.GetSl
 	}
 
 	resp := sleepStatsResponse{
-		DiaryWindow: diaryWindowResponse{
-			Start: stats.DiaryWindow.Start.UTC().Format(time.RFC3339),
-			End:   stats.DiaryWindow.End.UTC().Format(time.RFC3339),
-		},
 		Today: todayStatsResponse{
 			TotalSleepSeconds:  stats.Today.TotalSleepSeconds,
 			TotalNapSeconds:    stats.Today.TotalNapSeconds,

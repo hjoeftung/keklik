@@ -12,11 +12,6 @@ type GetSleepStatsQuery struct {
 	Timezone string
 }
 
-type DiaryWindow struct {
-	Start time.Time
-	End   time.Time
-}
-
 type TodayStats struct {
 	TotalSleepSeconds  float64
 	TotalNapSeconds    float64
@@ -30,9 +25,8 @@ type PeriodAverage struct {
 }
 
 type SleepStats struct {
-	DiaryWindow DiaryWindow
-	Today       TodayStats
-	Summary     map[string]PeriodAverage
+	Today   TodayStats
+	Summary map[string]PeriodAverage
 }
 
 type GetSleepStatsHandler struct {
@@ -61,20 +55,15 @@ func (h *GetSleepStatsHandler) Handle(ctx context.Context, q GetSleepStatsQuery)
 		return SleepStats{}, fmt.Errorf("load night windows: %w", err)
 	}
 
-	currentWindow, ok := findWindowAt(windows, now)
+	_, ok := findWindowAt(windows, now)
 	if !ok {
 		return SleepStats{}, nil
 	}
-
-	dw := computeDiaryWindow(currentWindow, loc, now)
 
 	// Fetch sessions covering 90d plus a 24h buffer for cross-midnight naps.
 	ninetyDaysAgoLocal := now.In(loc).AddDate(0, 0, -90)
 	periodStart := time.Date(ninetyDaysAgoLocal.Year(), ninetyDaysAgoLocal.Month(), ninetyDaysAgoLocal.Day(), 0, 0, 0, 0, loc).UTC()
 	fetchStart := periodStart.Add(-24 * time.Hour)
-	if dw.Start.Before(fetchStart) {
-		fetchStart = dw.Start
-	}
 
 	dr, err := NewDateRange(fetchStart, now)
 	if err != nil {
@@ -102,13 +91,12 @@ func (h *GetSleepStatsHandler) Handle(ctx context.Context, q GetSleepStatsQuery)
 		classified = append(classified, statsCS{s: s, cls: cls})
 	}
 
-	today := statsTodayTotals(classified, dw, now)
+	today := statsTodayTotals(classified, loc, now)
 	summary := statsSummaryAverages(classified, loc, now)
 
 	return SleepStats{
-		DiaryWindow: dw,
-		Today:       today,
-		Summary:     summary,
+		Today:   today,
+		Summary: summary,
 	}, nil
 }
 
@@ -126,35 +114,24 @@ func findWindowAt(windows []NightWindow, t time.Time) (NightWindow, bool) {
 	return best, found
 }
 
-// computeDiaryWindow returns a 24h window ending 2h before today's night-window
-// end time in the given timezone.
-func computeDiaryWindow(nw NightWindow, loc *time.Location, now time.Time) DiaryWindow {
-	localNow := now.In(loc)
-	nwEndToday := time.Date(
-		localNow.Year(), localNow.Month(), localNow.Day(),
-		nw.End().Hour(), nw.End().Minute(), 0, 0, loc,
-	)
-	end := nwEndToday.Add(-2 * time.Hour).UTC()
-	return DiaryWindow{
-		Start: end.Add(-24 * time.Hour),
-		End:   end,
-	}
-}
-
 type statsCS struct {
 	s   SleepSession
 	cls SleepClassification
 }
 
 // statsTodayTotals sums sleep, nap, and active seconds for completed sessions
-// that overlap the diary window.
-func statsTodayTotals(classified []statsCS, dw DiaryWindow, now time.Time) TodayStats {
+// that overlap the local calendar day.
+func statsTodayTotals(classified []statsCS, loc *time.Location, now time.Time) TodayStats {
+	localNow := now.In(loc)
+	dayStart := time.Date(localNow.Year(), localNow.Month(), localNow.Day(), 0, 0, 0, 0, loc).UTC()
+	dayEnd := dayStart.Add(24 * time.Hour)
+
 	var included []SleepSession
 	var totalSleep, totalNap time.Duration
 
 	for _, cs := range classified {
 		stoppedAt, _ := cs.s.StoppedAt()
-		if !cs.s.StartedAt().Before(dw.End) || !stoppedAt.After(dw.Start) {
+		if !cs.s.StartedAt().Before(dayEnd) || !stoppedAt.After(dayStart) {
 			continue
 		}
 		included = append(included, cs.s)
@@ -169,14 +146,14 @@ func statsTodayTotals(classified []statsCS, dw DiaryWindow, now time.Time) Today
 		return included[i].StartedAt().Before(included[j].StartedAt())
 	})
 
-	effectiveEnd := dw.End
-	if now.Before(dw.End) {
+	effectiveEnd := dayEnd
+	if now.Before(dayEnd) {
 		effectiveEnd = now
 	}
 
 	var active time.Duration
-	if now.After(dw.Start) {
-		active = activeTimeInWindow(included, dw.Start, effectiveEnd, now)
+	if now.After(dayStart) {
+		active = activeTimeInWindow(included, dayStart, effectiveEnd, now)
 	}
 
 	return TodayStats{

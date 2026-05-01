@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(cp \"/home/hjoeftung/.claude/projects/-home-hjoeftung-code-projects-keklik/da68d9eb-36ad-4c3c-9d37-4228aaf8e50e/tool-results/webfetch-1777410902405-5js3ov.bin\" /tmp/design.html.gz)",
+      "Bash(gunzip -f /tmp/design.html.gz)",
+      "Read(//tmp/**)",
+      "Bash(mkdir -p design_extract)",
+      "Bash(tar -xf design.html -C design_extract)",
+      "Bash(go build *)",
+      "Bash(go test *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(xargs cat *)",
+      "Bash(git -C /home/hjoeftung/code/projects/keklik diff backend/internal/infrastructure/db.go backend/internal/infrastructure/sleepsessionrepo.go backend/internal/sleep/sleep.go)",
+      "Bash(git -C /home/hjoeftung/code/projects/keklik add backend/internal/infrastructure/db.go backend/internal/infrastructure/sleepsessionrepo.go backend/internal/infrastructure/migrations/000010_occ_sleep_sessions.up.sql backend/internal/infrastructure/migrations/000010_occ_sleep_sessions.down.sql backend/internal/sleep/sleep.go)",
+      "Bash(git -C /home/hjoeftung/code/projects/keklik commit -m ' *)",
+      "Bash(npm run *)",
+      "Bash(git stash *)",
+      "Bash(git -C /home/hjoeftung/code/projects/keklik diff --stat HEAD)",
+      "Bash(git -C /home/hjoeftung/code/projects/keklik log --oneline -5)",
+      "Bash(git -C /home/hjoeftung/code/projects/keklik add frontend/index.html frontend/src/index.css)",
+      "Bash(npx tsc *)",
+      "Bash(npx vite *)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx\\)$\")",
+      "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx|json\\)$\")",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(go vet *)"
+    ],
+    "additionalDirectories": [
+      "/tmp",
+      "/home/hjoeftung/.claude/projects/-home-hjoeftung-code-projects-keklik/cfc4282d-0100-4084-9d14-cce52e834240/tool-results"
+    ]
+  }
+}

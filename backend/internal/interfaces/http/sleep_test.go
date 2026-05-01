@@ -435,19 +435,12 @@ func TestGetSleepStatsReturns200(t *testing.T) {
 	}
 
 	var resp struct {
-		DiaryWindow struct {
-			Start string `json:"start"`
-			End   string `json:"end"`
-		} `json:"diary_window"`
 		Summary map[string]struct {
 			AvgSleepSeconds float64 `json:"avg_sleep_seconds"`
 		} `json:"summary"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode response: %v", err)
-	}
-	if resp.DiaryWindow.Start == "" || resp.DiaryWindow.End == "" {
-		t.Fatalf("expected non-empty diary_window, got %+v", resp.DiaryWindow)
 	}
 	for _, key := range []string{"7d", "14d", "30d", "90d"} {
 		if _, ok := resp.Summary[key]; !ok {

@@ -25,53 +25,29 @@ func TestGetSleepStatsHandlerReturnsZeroStatsWhenNoNightWindow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if stats.DiaryWindow.Start != (time.Time{}) || stats.DiaryWindow.End != (time.Time{}) {
-		t.Fatalf("expected zero diary window, got %+v", stats.DiaryWindow)
-	}
-}
-
-func TestComputeDiaryWindow(t *testing.T) {
-	t.Parallel()
-
-	nw := mustNightWindow(t, 21, 0, 7, 0) // 21:00–07:00
-	loc := time.UTC
-	// now = April 29 2026 at 12:00 UTC
-	now := time.Date(2026, time.April, 29, 12, 0, 0, 0, time.UTC)
-
-	dw := computeDiaryWindow(nw, loc, now)
-
-	// night window end today = April 29 07:00 UTC
-	// diary_window.end = 07:00 - 2h = 05:00 UTC
-	// diary_window.start = 05:00 - 24h = April 28 05:00 UTC
-	wantEnd := time.Date(2026, time.April, 29, 5, 0, 0, 0, time.UTC)
-	wantStart := time.Date(2026, time.April, 28, 5, 0, 0, 0, time.UTC)
-
-	if !dw.End.Equal(wantEnd) {
-		t.Fatalf("diary window end: want %v, got %v", wantEnd, dw.End)
-	}
-	if !dw.Start.Equal(wantStart) {
-		t.Fatalf("diary window start: want %v, got %v", wantStart, dw.Start)
+	if stats.Today.TotalSleepSeconds != 0 || stats.Today.TotalNapSeconds != 0 {
+		t.Fatalf("expected zero today stats, got %+v", stats.Today)
 	}
 }
 
 func TestGetSleepStatsHandlerTodayTotals(t *testing.T) {
 	t.Parallel()
 
-	// Night window 21:00–07:00 UTC, diary window April 28 05:00 – April 29 05:00 UTC.
 	nw := mustNightWindow(t, 21, 0, 7, 0)
+	// now = April 29 2026 at 12:00 UTC; calendar day = April 29 00:00–24:00 UTC
 	now := time.Date(2026, time.April, 29, 12, 0, 0, 0, time.UTC)
 
-	// Nap: April 28 10:00–11:00 (1h, within diary window)
+	// Nap: April 29 09:00–10:00 (1h, within today's calendar day)
 	nap, _ := NewCompletedSleepSession("nap-1", "baby-1", "m-1",
-		time.Date(2026, time.April, 28, 10, 0, 0, 0, time.UTC),
-		time.Date(2026, time.April, 28, 11, 0, 0, 0, time.UTC),
+		time.Date(2026, time.April, 29, 9, 0, 0, 0, time.UTC),
+		time.Date(2026, time.April, 29, 10, 0, 0, 0, time.UTC),
 	)
-	// Night sleep: April 28 21:00 – April 29 07:00 (10h), overlaps diary window end
+	// Night sleep: April 28 21:00 – April 29 07:00 (10h), overlaps today
 	night, _ := NewCompletedSleepSession("night-1", "baby-1", "m-1",
 		time.Date(2026, time.April, 28, 21, 0, 0, 0, time.UTC),
 		time.Date(2026, time.April, 29, 7, 0, 0, 0, time.UTC),
 	)
-	// Session outside diary window (April 27 10:00–11:00): should be excluded
+	// Session from two days ago: should be excluded
 	outside, _ := NewCompletedSleepSession("old-1", "baby-1", "m-1",
 		time.Date(2026, time.April, 27, 10, 0, 0, 0, time.UTC),
 		time.Date(2026, time.April, 27, 11, 0, 0, 0, time.UTC),

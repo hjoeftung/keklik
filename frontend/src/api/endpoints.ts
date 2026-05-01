@@ -176,11 +176,6 @@ export function getSleepHistory(
 
 // --- Sleep stats ---
 
-export interface DiaryWindow {
-  start: string
-  end: string
-}
-
 export interface TodayStats {
   total_sleep_seconds: number
   total_nap_seconds: number
@@ -188,7 +183,6 @@ export interface TodayStats {
 }
 
 export interface SleepStatsResponse {
-  diary_window: DiaryWindow
   today: TodayStats
 }
 
