@@ -1,106 +1,643 @@
+/* ── Loading ──────────────────────────────────────────────────── */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--kk-ink-muted);
+  font-size: 15px;
+}
+
+/* ── Shared header ────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 52px 24px 0;
+  width: 100%;
+  max-width: 480px;
+}
+
+.greeting {
+  font-family: var(--kk-serif);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--kk-ink);
+  letter-spacing: -0.3px;
+}
+
+.dateStr {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--kk-ink-soft);
+  margin-top: 2px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--kk-surface);
+  border: 1px solid var(--kk-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--kk-primary);
+  flex-shrink: 0;
+}
+
+/* ── Awake screen ─────────────────────────────────────────────── */
 .screen {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
-  padding: 48px 24px;
+  flex: 1;
+  min-height: 0;
+  background: var(--kk-bg, #FBF6EE);
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
 }
 
-.button {
-  display: inline-flex;
+.durationBlock {
+  text-align: center;
+  padding: 0 24px;
+}
+
+.durationLabel {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--kk-ink-muted);
+}
+
+.durationValue {
+  font-family: var(--kk-serif);
+  font-variant-numeric: tabular-nums;
+  font-size: 52px;
+  font-weight: 500;
+  color: var(--kk-ink);
+  line-height: 1;
+  margin-top: 6px;
+  letter-spacing: -1px;
+}
+
+.durationUnit {
+  font-size: 28px;
+  color: var(--kk-ink-soft);
+  font-weight: 500;
+}
+
+.lastSleepHint {
+  font-size: 13px;
+  color: var(--kk-ink-soft);
+  margin-top: 6px;
+}
+
+.startedAtSoft {
+  font-size: 13px;
+  color: var(--kk-ink-soft);
+  margin-top: 6px;
+}
+
+.centerContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding-top: 24px;
+}
+
+.pillowWrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 14px;
   width: 100%;
-  max-width: 320px;
-  padding: 18px 24px;
-  border: none;
-  border-radius: 12px;
-  font-family: var(--sans);
-  font-size: 18px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: opacity 0.15s ease;
-  box-shadow: var(--shadow);
 }
 
-.button:hover:not(:disabled) {
+/* Z's floating near the pillow */
+.pillowZeeContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.zee {
+  position: absolute;
+  font-family: var(--kk-serif);
+  font-weight: 700;
+  color: var(--kk-night);
+  animation: floatZee 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.z1 {
+  font-size: 20px;
+  top: -8px;
+  right: 24px;
+  opacity: 0.65;
+  animation-delay: 0s;
+}
+
+.z2 {
+  font-size: 26px;
+  top: -28px;
+  right: 44px;
+  opacity: 0.45;
+  animation-delay: 0.9s;
+}
+
+.z3 {
+  font-size: 34px;
+  top: -52px;
+  right: 62px;
+  opacity: 0.28;
+  animation-delay: 1.8s;
+}
+
+@keyframes floatZee {
+  0%   { transform: translate(0, 0) scale(0.9);  opacity: inherit; }
+  40%  { opacity: 1; }
+  100% { transform: translate(12px, -32px) scale(1.15); opacity: 0; }
+}
+
+.wakeHint {
+  margin-top: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kk-night);
+}
+
+.lastSleepEnd {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--kk-ink-soft);
+}
+
+/* ── Quick-action cards ───────────────────────────────────────── */
+.quickActions {
+  display: flex;
+  gap: 12px;
+  padding: 0 24px 20px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.quickCard {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  background: var(--kk-surface-soft);
+  border: 1px solid var(--kk-border);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-family: var(--kk-sans);
+  text-align: left;
+}
+
+.quickCard:hover {
+  background: var(--kk-primary-soft);
+}
+
+.quickCardLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--kk-ink-muted);
+}
+
+.quickCardValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kk-ink);
+  margin-top: 1px;
+}
+
+/* ── Soft asleep edit-start pill ─────────────────────────────── */
+.editStartPillSoft {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 11px 20px;
+  border-radius: 999px;
+  border: 1.5px solid var(--kk-border);
+  background: var(--kk-surface);
+  box-shadow: 0 2px 8px rgba(46, 42, 51, 0.08);
+  color: var(--kk-ink);
+  font-family: var(--kk-sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.editStartPillSoft:hover {
+  background: var(--kk-surface-soft);
+  box-shadow: 0 4px 12px rgba(46, 42, 51, 0.12);
+}
+
+/* ── Edit start time sheet ────────────────────────────────────── */
+
+.editSheetOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(46, 42, 51, 0.3);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  animation: fadeInOverlay 0.2s ease;
+}
+
+.editSheet {
+  width: 100%;
+  background: var(--kk-bg);
+  border-radius: 28px 28px 0 0;
+  padding: 12px 24px calc(32px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -10px 30px rgba(46, 42, 51, 0.18);
+  animation: slideUpSheet 0.28s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+@media (min-width: 768px) {
+  .editSheetOverlay {
+    justify-content: center;
+  }
+
+  .editSheet {
+    max-width: 480px;
+    border-radius: 28px;
+    margin-bottom: 32px;
+    padding: 12px 24px 32px;
+  }
+}
+
+.editSheetHandle {
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--kk-border);
+  margin: 0 auto 20px;
+}
+
+.editSheetHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.editSheetIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--kk-night);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.editSheetTitle {
+  font-family: var(--kk-serif);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--kk-ink);
+  letter-spacing: -0.3px;
+}
+
+.editSheetSubtitle {
+  font-size: 13px;
+  color: var(--kk-ink-soft);
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
+}
+
+.editSheetTimeCard {
+  display: block;
+  position: relative;
+  background: var(--kk-surface);
+  border: 1px solid var(--kk-border);
+  border-radius: 18px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.editSheetTimeCard:active {
+  opacity: 0.85;
+}
+
+.editSheetTimeLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--kk-ink-soft);
+}
+
+.editSheetTimeInput {
+  font-family: var(--kk-sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--kk-ink);
+  background: var(--kk-bg);
+  border: 1.5px solid var(--kk-primary);
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-top: 6px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.editSheetTimeInput:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(229, 155, 106, 0.2);
+}
+
+.editSheetActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.editSheetCancelBtn {
+  flex: 1;
+  padding: 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--kk-border);
+  background: none;
+  font-family: var(--kk-sans);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--kk-ink-soft);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.editSheetCancelBtn:hover:not(:disabled) {
+  background: var(--kk-surface-soft);
+}
+
+.editSheetSaveBtn {
+  flex: 1.4;
+  padding: 14px;
+  border-radius: 999px;
+  border: none;
+  background: var(--kk-primary);
+  font-family: var(--kk-sans);
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease;
+}
+
+.editSheetSaveBtn:hover:not(:disabled) {
   opacity: 0.88;
 }
 
-.button:active:not(:disabled) {
-  opacity: 0.78;
-}
-
-.button:disabled {
+.editSheetSaveBtn:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
-  opacity: 0.65;
 }
 
-.start {
-  background: var(--accent);
-  color: #fff;
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-.stop {
-  background: #dc2626;
-  color: #fff;
+@keyframes slideUpSheet {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }
 
-.elapsed {
-  font-size: 28px;
+.editCancelBtnSoft {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--kk-border);
+  background: transparent;
+  font-family: var(--kk-sans);
+  font-size: 15px;
   font-weight: 500;
-  color: var(--text-h);
-  letter-spacing: -0.5px;
-}
-
-.fields {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
-  max-width: 320px;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.fieldName {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-s);
-}
-
-.fieldInput {
-  font-family: var(--sans);
-  font-size: 16px;
-  color: var(--text-h);
-  background: none;
-  border: none;
-  border-bottom: 1.5px solid var(--border);
-  padding: 6px 0;
-  width: 100%;
+  color: var(--kk-ink-soft);
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-.fieldInput:focus {
-  outline: none;
-  border-bottom-color: var(--accent);
+.editCancelBtnSoft:hover {
+  background: var(--kk-surface-soft);
 }
 
-.error {
-  color: #dc2626;
+/* ── Night / Asleep screen ────────────────────────────────────── */
+.nightScreen {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.nightContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.nightName {
+  font-family: var(--kk-serif);
+  font-size: 22px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.nightDate {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
+}
+
+.avatarDark {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
   font-size: 14px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.durationLabelDark {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.durationValueDark {
+  font-family: var(--kk-sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 60px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1;
+  margin-top: 4px;
+  letter-spacing: -1.5px;
+}
+
+.durationUnitDark {
+  font-size: 30px;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 500;
+}
+
+.startedAt {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 6px;
+}
+
+/* ── Edit start time pill ─────────────────────────────────────── */
+.editStartPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 11px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.13);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-family: var(--kk-sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.editStartPill:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Edit start time inline form ─────────────────────────────── */
+.editStartModal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 20px 24px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  width: min(320px, calc(100% - 48px));
+}
+
+.timeInput {
+  font-family: var(--kk-sans);
+  font-size: 32px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 12px;
+  padding: 10px 20px;
+  text-align: center;
+  width: 100%;
+}
+
+.timeInput:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.editStartActions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.editCancelBtn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  font-family: var(--kk-sans);
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.editCancelBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.editSaveBtn {
+  flex: 2;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: var(--kk-primary);
+  font-family: var(--kk-sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease;
+}
+
+.editSaveBtn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.editSaveBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Shared ───────────────────────────────────────────────────── */
+.error {
+  font-size: 13px;
+  color: var(--kk-danger, #D4806E);
+  text-align: center;
+  margin-top: 12px;
+  padding: 0 24px;
 }
 
 .spinner {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.4);
   border-top-color: #fff;
   border-radius: 50%;
@@ -109,7 +646,5 @@
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }

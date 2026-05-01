@@ -140,13 +140,26 @@ export function deleteSleepSession(babyId: string, sessionId: string): Promise<v
   return api.delete(`/babies/${babyId}/sleep-sessions/${sessionId}`)
 }
 
+export interface LogPastSleepRequest {
+  started_at: string
+  stopped_at: string
+}
+
+export function logPastSleep(
+  babyId: string,
+  req: LogPastSleepRequest,
+): Promise<SleepSession> {
+  return api.post(`/babies/${babyId}/sleep-sessions`, req)
+}
+
 export type SleepHistoryPeriod = 'today' | '7d' | '14d'
 
 export function getSleepHistory(
   babyId: string,
   period: SleepHistoryPeriod = '7d',
 ): Promise<SleepSession[]> {
-  return api.get(`/babies/${babyId}/sleep-sessions?period=${period}`)
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+  return api.get(`/babies/${babyId}/sleep-sessions?period=${period}&timezone=${encodeURIComponent(tz)}`)
 }
 
 // --- Sleep profiles ---

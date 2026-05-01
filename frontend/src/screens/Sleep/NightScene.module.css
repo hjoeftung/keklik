@@ -1,0 +1,76 @@
+.scene {
+  position: absolute;
+  inset: 0;
+  background: var(--kk-night-sky);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* ── Star field ── */
+.starfield {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.star {
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+/* ── Moon ── */
+.moonWrap {
+  position: absolute;
+  top: 36px;
+  right: 28px;
+  width: 72px;
+  animation: float 7s ease-in-out infinite;
+}
+
+.moonSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 0 12px rgba(245, 230, 184, 0.5));
+}
+
+/* ── Floating Z's ── */
+.zees {
+  position: absolute;
+  bottom: 38%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.zee {
+  font-family: var(--kk-serif);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.55);
+  animation: floatZ 3s ease-in-out infinite;
+  line-height: 1;
+}
+
+.z1 {
+  font-size: 18px;
+  animation-delay: 0s;
+}
+
+.z2 {
+  font-size: 24px;
+  animation-delay: 0.8s;
+}
+
+.z3 {
+  font-size: 32px;
+  animation-delay: 1.6s;
+}
+
+@keyframes floatZ {
+  0%   { transform: translateY(0)   scale(1);    opacity: 0.55; }
+  40%  { transform: translateY(-20px) scale(1.05); opacity: 0.8;  }
+  80%  { transform: translateY(-38px) scale(0.95); opacity: 0.2;  }
+  100% { transform: translateY(-50px) scale(0.9);  opacity: 0;    }
+}

@@ -2,67 +2,63 @@ import { NavLink } from 'react-router-dom'
 import { useAuthContext } from '@/context/AuthContext'
 import './NavBar.css'
 
-function IconHome() {
+function IconSleep({ active }: { active: boolean }) {
   return (
     <svg
       className="navbar__icon"
-      width="20"
-      height="20"
-      viewBox="0 0 20 20"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
       fill="none"
       aria-hidden="true"
     >
       <path
-        d="M3 9.5L10 3l7 6.5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z"
+        d="M5 9 Q5 5.5, 8 6 Q12 4.5, 16 6 Q19 5.5, 19 9 Q21 12, 19 15 Q19 17, 16 16.5 Q12 18, 8 16.5 Q5 17, 5 15 Q3 12, 5 9 Z"
         stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M7.5 18v-5h5v5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
+        strokeWidth="1.8"
+        fill={active ? 'currentColor' : 'none'}
+        fillOpacity={active ? 0.18 : 0}
         strokeLinejoin="round"
       />
     </svg>
   )
 }
 
-function IconTimeline() {
+function IconStats({ active }: { active: boolean }) {
   return (
     <svg
       className="navbar__icon"
-      width="20"
-      height="20"
-      viewBox="0 0 20 20"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
       fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
       aria-hidden="true"
     >
-      <rect x="3" y="13" width="3" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.5" />
-      <rect x="8.5" y="9" width="3" height="8" rx="0.5" stroke="currentColor" strokeWidth="1.5" />
-      <rect x="14" y="5" width="3" height="12" rx="0.5" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="4" y="13" width="4" height="7" rx="1.2" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.18 : 0} />
+      <rect x="10" y="9" width="4" height="11" rx="1.2" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.18 : 0} />
+      <rect x="16" y="5" width="4" height="15" rx="1.2" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.18 : 0} />
     </svg>
   )
 }
 
-function IconSettings() {
+function IconSettings({ active }: { active: boolean }) {
   return (
     <svg
       className="navbar__icon"
-      width="20"
-      height="20"
-      viewBox="0 0 20 20"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
       fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
       aria-hidden="true"
     >
-      <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M10 2v1.5M10 16.5V18M2 10h1.5M16.5 10H18M4.1 4.1l1.06 1.06M14.84 14.84l1.06 1.06M15.9 4.1l-1.06 1.06M5.16 14.84l-1.06 1.06"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
+      <circle cx="12" cy="12" r="3" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.18 : 0} />
+      <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4" />
     </svg>
   )
 }
@@ -107,18 +103,30 @@ export function NavBar() {
 
       <div className="navbar__links">
         <NavLink to="/sleep" className={getLinkClass} end>
-          <IconHome />
-          <span className="navbar__label">Sleep</span>
+          {({ isActive }) => (
+            <>
+              <IconSleep active={isActive} />
+              <span className="navbar__label">Sleep</span>
+            </>
+          )}
         </NavLink>
 
         <NavLink to="/timeline" className={getLinkClass}>
-          <IconTimeline />
-          <span className="navbar__label">Timeline</span>
+          {({ isActive }) => (
+            <>
+              <IconStats active={isActive} />
+              <span className="navbar__label">Stats</span>
+            </>
+          )}
         </NavLink>
 
         <NavLink to="/settings" className={getLinkClass}>
-          <IconSettings />
-          <span className="navbar__label">Settings</span>
+          {({ isActive }) => (
+            <>
+              <IconSettings active={isActive} />
+              <span className="navbar__label">Settings</span>
+            </>
+          )}
         </NavLink>
       </div>
 

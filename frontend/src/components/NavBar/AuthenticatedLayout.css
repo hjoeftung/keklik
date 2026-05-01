@@ -15,7 +15,7 @@
 /* Mobile: add bottom padding so content doesn't hide behind the fixed bottom bar */
 @media (max-width: 767px) {
   .auth-layout__content {
-    /* bottom nav bar is roughly 60px tall */
-    padding-bottom: 64px;
+    /* bottom nav bar: 10px top + ~40px content + 22px bottom ≈ 72px */
+    padding-bottom: 76px;
   }
 }

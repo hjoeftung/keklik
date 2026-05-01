@@ -1,0 +1,33 @@
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.035); }
+}
+
+.wrapper {
+  display: inline-block;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  filter: drop-shadow(0 16px 32px rgba(229, 155, 106, 0.4));
+  animation: breathe 4s ease-in-out infinite;
+  transition: filter 0.15s ease;
+}
+
+.wrapper:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.wrapper:active:not(:disabled) {
+  filter: drop-shadow(0 6px 12px rgba(229, 155, 106, 0.3));
+}
+
+.pillow {
+  display: block;
+}
+
+.svg {
+  display: block;
+}
