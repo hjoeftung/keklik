@@ -73,7 +73,7 @@ function buildBlocks(
 export default function WeekTab({ sessions, nightWindow, isLoading }: Props) {
   const days = getLast7Days()
 
-  const nightStartHour = nightWindow ? parseInt(nightWindow.start_hhmm.split(':')[0], 10) : 7
+  const nightStartHour = nightWindow ? parseInt(nightWindow.end_hhmm.split(':')[0], 10) : 7
   const winStart = (nightStartHour - 1 + 24) % 24
   const winEnd = winStart + 24
   const hourTicks = [winStart, winStart + 6, winStart + 12, winStart + 18]

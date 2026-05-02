@@ -10,12 +10,17 @@ type Tab = 'today' | 'week' | 'summary'
 
 const PULL_THRESHOLD = 72
 
-function formatHeaderDate(): string {
-  return new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
+function formatSelectedDate(d: Date): string {
+  return d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
 }
 
-function localDateKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+function sessionsForDate(sessions: ReturnType<typeof useAppData>['sessions7d'], date: Date) {
+  const y = date.getFullYear(), m = date.getMonth(), d = date.getDate()
+  return sessions.filter(s => {
+    const start = new Date(s.started_at)
+    return start.getFullYear() === y && start.getMonth() === m && start.getDate() === d
+  })
 }
 
 export default function StatsScreen() {
@@ -27,6 +32,10 @@ export default function StatsScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('today')
   const [pullDisplay, setPullDisplay] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const d = new Date()
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  })
 
   const screenRef = useRef<HTMLDivElement>(null)
   const refreshRef = useRef(refresh)
@@ -34,9 +43,7 @@ export default function StatsScreen() {
 
   useEffect(() => { refreshRef.current = refresh }, [refresh])
 
-  const todaySessions = sessions7d.filter(
-    s => localDateKey(new Date(s.started_at)) === localDateKey(new Date())
-  )
+  const filteredSessions = sessionsForDate(sessions7d, selectedDate)
 
   useEffect(() => {
     const el = screenRef.current
@@ -90,7 +97,7 @@ export default function StatsScreen() {
       )}
       <div className={styles.header}>
         <h1 className={styles.babyName}>{babyName}'s sleep</h1>
-        <p className={styles.headerDate}>{formatHeaderDate()}</p>
+        <p className={styles.headerDate}>{formatSelectedDate(activeTab === 'today' ? selectedDate : new Date())}</p>
         <div className={styles.tabs}>
           {(['today', 'week', 'summary'] as Tab[]).map(tab => (
             <button
@@ -106,11 +113,13 @@ export default function StatsScreen() {
       {!isLoading && error && <div className={styles.error}>{error}</div>}
       {!error && activeTab === 'today' && (
         <TodayTab
-          sessions={todaySessions}
+          sessions={filteredSessions}
           stats={stats}
           babyId={babyId}
           onRefresh={refresh}
           isLoading={isLoading}
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
         />
       )}
       {!error && activeTab === 'week' && (

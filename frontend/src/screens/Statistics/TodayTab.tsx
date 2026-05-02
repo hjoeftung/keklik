@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import type { SleepSession, SleepStatsResponse } from '@/api/endpoints'
 import SessionDetailSheet from './SessionDetailSheet'
+import DatePickerStrip from './DatePickerStrip'
 import styles from './TodayTab.module.css'
 
 interface Props {
@@ -9,6 +10,8 @@ interface Props {
   babyId: string
   onRefresh: () => void
   isLoading: boolean
+  selectedDate: Date
+  onDateChange: (d: Date) => void
 }
 
 const PX_PER_MIN = 0.9
@@ -42,7 +45,14 @@ interface SessionBar {
   showDuration: boolean
 }
 
-export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading }: Props) {
+function isToday(d: Date): boolean {
+  const now = new Date()
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+}
+
+export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading, selectedDate, onDateChange }: Props) {
+  const selectedIsToday = isToday(selectedDate)
+
   const [selectedSession, setSelectedSession] = useState<SleepSession | null>(null)
   const [localSessions, setLocalSessions] = useState(sessions)
   const diaryRef = useRef<HTMLDivElement>(null)
@@ -185,26 +195,38 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
     )
   }
 
+  const totalSleepSec = selectedIsToday
+    ? (stats?.today.total_sleep_seconds ?? 0)
+    : localSessions.filter(s => s.classification === 'night').reduce((a, s) => a + (s.duration_seconds ?? 0), 0)
+  const totalNapSec = selectedIsToday
+    ? (stats?.today.total_nap_seconds ?? 0)
+    : localSessions.filter(s => s.classification === 'nap').reduce((a, s) => a + (s.duration_seconds ?? 0), 0)
+  const totalActiveSec = selectedIsToday
+    ? (stats?.today.total_active_seconds ?? 0)
+    : localSessions.filter(s => s.classification === 'active').reduce((a, s) => a + (s.duration_seconds ?? 0), 0)
+
   return (
     <div className={styles.tab}>
+      <DatePickerStrip selectedDate={selectedDate} onChange={onDateChange} />
+
       {/* Summary pills */}
       <div className={styles.summaryRow}>
         <div className={`${styles.statPill} ${styles.statPillNight}`}>
           <span className={styles.statLabel}>Sleep</span>
           <span className={`${styles.statValue} ${styles.statNight}`}>
-            {formatDur(stats?.today.total_sleep_seconds ?? 0)}
+            {formatDur(totalSleepSec)}
           </span>
         </div>
         <div className={`${styles.statPill} ${styles.statPillNap}`}>
           <span className={styles.statLabel}>Naps</span>
           <span className={`${styles.statValue} ${styles.statNap}`}>
-            {formatDur(stats?.today.total_nap_seconds ?? 0)}
+            {formatDur(totalNapSec)}
           </span>
         </div>
         <div className={`${styles.statPill} ${styles.statPillActive}`}>
           <span className={styles.statLabel}>Active</span>
           <span className={`${styles.statValue} ${styles.statActive}`}>
-            {formatDur(stats?.today.total_active_seconds ?? 0)}
+            {formatDur(totalActiveSec)}
           </span>
         </div>
       </div>
@@ -212,7 +234,7 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
       {/* Empty state */}
       {completedSessions.length === 0 && (
         <div className={styles.emptyState}>
-          No sleep sessions recorded today
+          No sleep sessions recorded
         </div>
       )}
 

@@ -1,0 +1,78 @@
+.strip {
+  display: flex;
+  gap: 6px;
+  padding: 10px 24px 4px;
+  flex-shrink: 0;
+}
+
+.chip {
+  flex: 1;
+  height: 54px;
+  border-radius: 14px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  font-family: var(--kk-sans);
+  transition: opacity 0.12s;
+}
+
+.chip:active {
+  opacity: 0.8;
+}
+
+.chipSelected {
+  background: var(--kk-primary);
+  border: none;
+}
+
+.chipSelected .dayNum,
+.chipSelected .weekday {
+  color: #fff;
+}
+
+.chipTodayUnselected {
+  background: transparent;
+  border: 1.5px solid var(--kk-primary);
+}
+
+.chipTodayUnselected .dayNum,
+.chipTodayUnselected .weekday {
+  color: var(--kk-primary);
+}
+
+.chipDefault {
+  background: transparent;
+  border: 1.5px solid var(--kk-border);
+}
+
+.chipDefault .dayNum,
+.chipDefault .weekday {
+  color: var(--kk-ink-soft);
+}
+
+.dayNum {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.weekday {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  line-height: 1;
+}
+
+.chipSelected .weekday {
+  opacity: 0.75;
+}
+
+.chipTodayUnselected .weekday,
+.chipDefault .weekday {
+  opacity: 0.9;
+}
