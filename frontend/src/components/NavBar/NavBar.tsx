@@ -111,7 +111,7 @@ export function NavBar() {
           )}
         </NavLink>
 
-        <NavLink to="/timeline" className={getLinkClass}>
+        <NavLink to="/statistics" className={getLinkClass}>
           {({ isActive }) => (
             <>
               <IconStats active={isActive} />

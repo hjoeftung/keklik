@@ -262,3 +262,18 @@
   font-weight: 500;
   color: var(--text-h);
 }
+
+/* ── Pull-to-refresh ───────────────────────────────────────── */
+.pullIndicator {
+  flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center;
+  overflow: hidden; transition: height 0.1s ease;
+}
+.pullSpinner {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2.5px solid var(--kk-border); border-top-color: var(--kk-primary);
+  margin-bottom: 8px; opacity: 0.4; transition: opacity 0.15s;
+}
+.pullSpinnerActive {
+  opacity: 1; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

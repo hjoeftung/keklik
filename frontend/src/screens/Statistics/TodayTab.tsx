@@ -5,9 +5,10 @@ import styles from './TodayTab.module.css'
 
 interface Props {
   sessions: SleepSession[]
-  stats: SleepStatsResponse
+  stats: SleepStatsResponse | null
   babyId: string
   onRefresh: () => void
+  isLoading: boolean
 }
 
 const PX_PER_MIN = 0.9
@@ -41,7 +42,7 @@ interface SessionBar {
   showDuration: boolean
 }
 
-export default function TodayTab({ sessions, stats, babyId, onRefresh }: Props) {
+export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading }: Props) {
   const [selectedSession, setSelectedSession] = useState<SleepSession | null>(null)
   const [localSessions, setLocalSessions] = useState(sessions)
   const diaryRef = useRef<HTMLDivElement>(null)
@@ -54,11 +55,15 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh }: Props) 
     .filter(s => s.stopped_at != null)
     .sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime())
 
-  // Derive window from sessions, padding 1h each side rounded to the hour.
-  // Fall back to ±8h / +2h around now when there are no sessions.
   let windowStart: Date
   let windowEnd: Date
-  if (completedSessions.length === 0) {
+  if (stats?.night_window) {
+    const startHour = parseInt(stats.night_window.end_hhmm.split(':')[0], 10)
+    const viewStartHour = (startHour - 1 + 24) % 24
+    windowStart = new Date()
+    windowStart.setHours(viewStartHour, 0, 0, 0)
+    windowEnd = new Date(windowStart.getTime() + 24 * 60 * 60 * 1000)
+  } else if (completedSessions.length === 0) {
     const now = new Date()
     windowStart = new Date(now.getTime() - 8 * 60 * 60 * 1000)
     windowStart.setMinutes(0, 0, 0)
@@ -78,18 +83,16 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh }: Props) 
   const totalMinutes = (windowEnd.getTime() - windowStart.getTime()) / 60000
   const totalHeight = totalMinutes * PX_PER_MIN
 
-  // Scroll to show current time or near end of first session on mount
   useEffect(() => {
-    if (!diaryRef.current) return
+    if (!diaryRef.current || isLoading) return
     const now = new Date()
     const nowOffsetMin = (now.getTime() - windowStart.getTime()) / 60000
     const scrollTarget = nowOffsetMin > 0 && nowOffsetMin < totalMinutes
       ? nowOffsetMin * PX_PER_MIN - 240
       : 0
     diaryRef.current.scrollTop = Math.max(0, scrollTarget)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Hour ticks at each full local hour within the window
   const hourTicks: HourTick[] = []
   {
     let t = new Date(windowStart)
@@ -107,7 +110,6 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh }: Props) 
     }
   }
 
-  // Awake gap pills between consecutive sessions
   const gapPills: GapPill[] = []
   for (let i = 0; i < completedSessions.length - 1; i++) {
     const curr = completedSessions[i]
@@ -125,19 +127,16 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh }: Props) 
     })
   }
 
-  // Current time indicator
   const now = new Date()
   const nowOffsetMin = (now.getTime() - windowStart.getTime()) / 60000
   const showNowLine = nowOffsetMin > 0 && nowOffsetMin < totalMinutes
 
-  // Build session bar descriptors
   const sessionBars: SessionBar[] = completedSessions.flatMap(session => {
     const startMs = new Date(session.started_at).getTime()
     const endMs = new Date(session.stopped_at!).getTime()
     const offsetMin = (startMs - windowStart.getTime()) / 60000
     const durMin = (endMs - startMs) / 60000
 
-    // Skip sessions entirely outside the window
     if (offsetMin + durMin < 0 || offsetMin > totalMinutes) return []
 
     const clampedOffsetMin = Math.max(0, offsetMin)
@@ -173,6 +172,19 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh }: Props) 
     onRefresh()
   }
 
+  if (isLoading) {
+    return (
+      <div className={styles.tab}>
+        <div className={styles.summaryRow}>
+          <div className={`${styles.statPill} ${styles.skeleton}`} style={{ height: 64 }} />
+          <div className={`${styles.statPill} ${styles.skeleton}`} style={{ height: 64 }} />
+          <div className={`${styles.statPill} ${styles.skeleton}`} style={{ height: 64 }} />
+        </div>
+        <div className={styles.skeleton} style={{ flex: 1, margin: '0 16px 24px', borderRadius: 16 }} />
+      </div>
+    )
+  }
+
   return (
     <div className={styles.tab}>
       {/* Summary pills */}
@@ -180,24 +192,24 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh }: Props) 
         <div className={`${styles.statPill} ${styles.statPillNight}`}>
           <span className={styles.statLabel}>Sleep</span>
           <span className={`${styles.statValue} ${styles.statNight}`}>
-            {formatDur(stats.today.total_sleep_seconds)}
+            {formatDur(stats?.today.total_sleep_seconds ?? 0)}
           </span>
         </div>
         <div className={`${styles.statPill} ${styles.statPillNap}`}>
           <span className={styles.statLabel}>Naps</span>
           <span className={`${styles.statValue} ${styles.statNap}`}>
-            {formatDur(stats.today.total_nap_seconds)}
+            {formatDur(stats?.today.total_nap_seconds ?? 0)}
           </span>
         </div>
         <div className={`${styles.statPill} ${styles.statPillActive}`}>
           <span className={styles.statLabel}>Active</span>
           <span className={`${styles.statValue} ${styles.statActive}`}>
-            {formatDur(stats.today.total_active_seconds)}
+            {formatDur(stats?.today.total_active_seconds ?? 0)}
           </span>
         </div>
       </div>
 
-      {/* Empty state (shown in place of diary when no sessions) */}
+      {/* Empty state */}
       {completedSessions.length === 0 && (
         <div className={styles.emptyState}>
           No sleep sessions recorded today
@@ -205,7 +217,11 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh }: Props) 
       )}
 
       {/* Diary */}
-      <div className={`${styles.diaryScroll} ${completedSessions.length === 0 ? styles.diaryScrollHidden : ''}`} ref={diaryRef}>
+      <div
+        className={`${styles.diaryScroll} ${completedSessions.length === 0 ? styles.diaryScrollHidden : ''}`}
+        ref={diaryRef}
+        data-scrollable
+      >
         <div className={styles.diaryInner} style={{ height: totalHeight }}>
 
           {/* Hour label column */}
@@ -221,8 +237,7 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh }: Props) 
             ))}
           </div>
 
-          {/* Timeline column */}
-          <div className={styles.timelineCol}>
+          <div className={styles.sessionCol}>
 
             {/* Grid lines */}
             {hourTicks.map(tick => (

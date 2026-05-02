@@ -7,6 +7,7 @@ const PERIODS: Period[] = ['7d', '14d', '30d', '90d']
 
 interface Props {
   summary: Record<string, PeriodAverage>
+  isLoading: boolean
 }
 
 function formatDur(seconds: number): string {
@@ -71,9 +72,26 @@ function SparkIcon() {
   )
 }
 
-export default function SummaryTab({ summary }: Props) {
+export default function SummaryTab({ summary, isLoading }: Props) {
   const [period, setPeriod] = useState<Period>('7d')
   const data = summary[period]
+
+  if (isLoading) {
+    return (
+      <div className={styles.tab}>
+        <div className={styles.periodControl}>
+          {PERIODS.map(p => (
+            <div key={p} className={`${styles.periodBtn} ${styles.skeleton}`} />
+          ))}
+        </div>
+        <div className={styles.cards} style={{ marginTop: 42 }}>
+          <div className={`${styles.skeleton}`} style={{ height: 88, borderRadius: 24 }} />
+          <div className={`${styles.skeleton}`} style={{ height: 88, borderRadius: 24 }} />
+          <div className={`${styles.skeleton}`} style={{ height: 88, borderRadius: 24 }} />
+        </div>
+      </div>
+    )
+  }
 
   const rows: Array<{
     label: string

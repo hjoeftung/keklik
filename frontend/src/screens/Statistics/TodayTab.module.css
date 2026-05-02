@@ -104,9 +104,9 @@
   user-select: none;
 }
 
-/* ── Timeline column ────────────────────────────────────────── */
+/* ── Session column ─────────────────────────────────────────── */
 
-.timelineCol {
+.sessionCol {
   flex: 1;
   position: relative;
   min-width: 0;
@@ -229,4 +229,20 @@
 
 .diaryScrollHidden {
   display: none;
+}
+
+/* ── Skeleton shimmer ───────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.skeleton {
+  background: linear-gradient(90deg,
+    var(--kk-surface-soft) 25%,
+    var(--kk-border)       50%,
+    var(--kk-surface-soft) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 10px;
 }

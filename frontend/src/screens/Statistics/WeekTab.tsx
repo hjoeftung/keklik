@@ -1,24 +1,18 @@
-import type { SleepSession } from '@/api/endpoints'
+import type { SleepSession, NightWindowInfo } from '@/api/endpoints'
 import styles from './WeekTab.module.css'
 
 interface Props {
   sessions: SleepSession[]
+  nightWindow?: NightWindowInfo
   isLoading: boolean
 }
 
-const WIN_START = 6   // 06:00
-const WIN_END = 26    // 02:00+1d
 const COL_H = 460     // px
 
 const NIGHT_COLOR = '#5B7BB8'
 const NAP_COLOR = '#E8B86E'
 
-const HOUR_TICKS = [6, 12, 18, 24]
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-function yFor(h: number): number {
-  return ((h - WIN_START) / (WIN_END - WIN_START)) * COL_H
-}
 
 function dateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -41,7 +35,13 @@ interface Block {
   borderRadius: number
 }
 
-function buildBlocks(daySessions: SleepSession[], dayMidnight: Date): Block[] {
+function buildBlocks(
+  daySessions: SleepSession[],
+  dayMidnight: Date,
+  winStart: number,
+  winEnd: number,
+  yFor: (h: number) => number,
+): Block[] {
   return daySessions.flatMap(s => {
     if (!s.stopped_at) return []
 
@@ -52,8 +52,8 @@ function buildBlocks(daySessions: SleepSession[], dayMidnight: Date): Block[] {
     const startH = (startMs - midMs) / 3_600_000
     const endH = (endMs - midMs) / 3_600_000
 
-    const clampedStart = Math.max(WIN_START, startH)
-    const clampedEnd = Math.min(WIN_END, endH)
+    const clampedStart = Math.max(winStart, startH)
+    const clampedEnd = Math.min(winEnd, endH)
     if (clampedEnd <= clampedStart) return []
 
     const top = yFor(clampedStart)
@@ -70,8 +70,41 @@ function buildBlocks(daySessions: SleepSession[], dayMidnight: Date): Block[] {
   })
 }
 
-export default function WeekTab({ sessions, isLoading }: Props) {
+export default function WeekTab({ sessions, nightWindow, isLoading }: Props) {
   const days = getLast7Days()
+
+  const nightStartHour = nightWindow ? parseInt(nightWindow.start_hhmm.split(':')[0], 10) : 7
+  const winStart = (nightStartHour - 1 + 24) % 24
+  const winEnd = winStart + 24
+  const hourTicks = [winStart, winStart + 6, winStart + 12, winStart + 18]
+  const yFor = (h: number) => ((h - winStart) / (winEnd - winStart)) * COL_H
+
+  if (isLoading) {
+    return (
+      <div className={styles.tab}>
+        <div className={styles.legend}>
+          <div className={styles.skeleton} style={{ width: 60, height: 14, borderRadius: 999 }} />
+          <div className={styles.skeleton} style={{ width: 60, height: 14, borderRadius: 999 }} />
+        </div>
+        <div className={styles.headerRow}>
+          <div className={styles.axisGutter} />
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className={`${styles.dayHeader} ${styles.skeleton}`} style={{ height: 28, borderRadius: 6 }} />
+          ))}
+        </div>
+        <div className={styles.gridScroll} data-scrollable>
+          <div className={styles.gridInner} style={{ height: COL_H }}>
+            <div className={styles.axis} />
+            <div className={styles.columnsArea}>
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div key={i} className={styles.skeleton} style={{ flex: 1, height: COL_H, borderRadius: 8 }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Build blocks per day
   const renderedBlocks = new Map<string, Block[]>()
@@ -81,12 +114,8 @@ export default function WeekTab({ sessions, isLoading }: Props) {
       if (!s.stopped_at || s.classification === 'active') return false
       return dateKey(new Date(s.started_at)) === key
     })
-    renderedBlocks.set(key, buildBlocks(daySessions, day))
+    renderedBlocks.set(key, buildBlocks(daySessions, day, winStart, winEnd, yFor))
   })
-
-  if (isLoading) {
-    return <div className={styles.loading}>Loading…</div>
-  }
 
   return (
     <div className={styles.tab}>
@@ -114,11 +143,11 @@ export default function WeekTab({ sessions, isLoading }: Props) {
       </div>
 
       {/* Grid */}
-      <div className={styles.gridScroll}>
+      <div className={styles.gridScroll} data-scrollable>
         <div className={styles.gridInner} style={{ height: COL_H }}>
           {/* Left axis */}
           <div className={styles.axis}>
-            {HOUR_TICKS.map(h => (
+            {hourTicks.map(h => (
               <div
                 key={h}
                 className={styles.axisTick}
@@ -132,7 +161,7 @@ export default function WeekTab({ sessions, isLoading }: Props) {
           {/* Columns area */}
           <div className={styles.columnsArea}>
             {/* Hour grid lines */}
-            {HOUR_TICKS.map(h => (
+            {hourTicks.map(h => (
               <div
                 key={h}
                 className={styles.gridLine}
