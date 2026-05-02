@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { editSleepSession, deleteSleepSession, type SleepSession } from '@/api/endpoints'
 import { ApiError } from '@/api/client'
+import DrumPicker from '@/components/DrumPicker'
 import styles from './SessionDetailSheet.module.css'
 
 interface Props {
@@ -17,11 +18,6 @@ interface SleepSessionConflict {
   type?: string
   current_session?: SleepSession
   conflicting_session?: SleepSession
-}
-
-function toDatetimeLocal(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 function formatTime(iso: string): string {
@@ -47,17 +43,11 @@ function formatDur(seconds: number): string {
   return `${m}m`
 }
 
-function durationSeconds(start: string, end: string): number | null {
-  if (!start || !end) return null
-  const s = new Date(start).getTime()
-  const e = new Date(end).getTime()
-  if (isNaN(s) || isNaN(e)) return null
-  return Math.round((e - s) / 1000)
+function durationSeconds(start: Date, end: Date): number {
+  return Math.round((end.getTime() - start.getTime()) / 1000)
 }
 
-function formatDisplayTime(datetimeLocal: string): string {
-  if (!datetimeLocal) return ''
-  const d = new Date(datetimeLocal)
+function formatDisplayTime(d: Date): string {
   const today = new Date()
   const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
   if (d.toDateString() === today.toDateString()) return `Today, ${timeStr}`
@@ -65,15 +55,6 @@ function formatDisplayTime(datetimeLocal: string): string {
   yesterday.setDate(today.getDate() - 1)
   if (d.toDateString() === yesterday.toDateString()) return `Yesterday, ${timeStr}`
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + `, ${timeStr}`
-}
-
-function resetInputsFromSession(
-  session: SleepSession,
-  setStartInput: (value: string) => void,
-  setEndInput: (value: string) => void,
-): void {
-  setStartInput(toDatetimeLocal(new Date(session.started_at)))
-  setEndInput(session.stopped_at ? toDatetimeLocal(new Date(session.stopped_at)) : '')
 }
 
 function sleepSessionConflict(err: ApiError): SleepSessionConflict | null {
@@ -93,28 +74,24 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const [startInput, setStartInput] = useState(() => toDatetimeLocal(new Date(currentSession.started_at)))
-  const [endInput, setEndInput] = useState(() =>
-    currentSession.stopped_at ? toDatetimeLocal(new Date(currentSession.stopped_at)) : '',
+  const [startDate, setStartDate] = useState<Date>(() => new Date(currentSession.started_at))
+  const [endDate, setEndDate] = useState<Date>(() =>
+    currentSession.stopped_at ? new Date(currentSession.stopped_at) : new Date(),
   )
-  const [startTouched, setStartTouched] = useState(false)
-  const [endTouched, setEndTouched] = useState(false)
   const [activePicker, setActivePicker] = useState<'start' | 'end' | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const pickerRef = useRef<HTMLInputElement>(null)
 
-  const durSecs = durationSeconds(startInput, endInput)
-  const isEndBeforeStart = durSecs !== null && durSecs <= 0
+  const durSecs = durationSeconds(startDate, endDate)
+  const isEndBeforeStart = durSecs <= 0
   const isNight = currentSession.classification === 'night'
   const sessionDate = formatDate(currentSession.started_at)
   const displayTitle = isNight ? 'Night sleep' : 'Nap'
 
   useEffect(() => {
     setCurrentSession(session)
-    resetInputsFromSession(session, setStartInput, setEndInput)
-    setStartTouched(false)
-    setEndTouched(false)
+    setStartDate(new Date(session.started_at))
+    setEndDate(session.stopped_at ? new Date(session.stopped_at) : new Date())
   }, [session])
 
   useEffect(() => {
@@ -128,13 +105,6 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [activePicker, mode, onClose])
-
-  useEffect(() => {
-    if (activePicker && pickerRef.current) {
-      pickerRef.current.focus()
-      pickerRef.current.showPicker?.()
-    }
-  }, [activePicker])
 
   async function handleDelete() {
     if (!deleteConfirm) {
@@ -152,7 +122,8 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
         if (conflict?.type === 'stale_version' && conflict.current_session) {
           setCurrentSession(conflict.current_session)
           onUpdated(conflict.current_session)
-          resetInputsFromSession(conflict.current_session, setStartInput, setEndInput)
+          setStartDate(new Date(conflict.current_session.started_at))
+          setEndDate(conflict.current_session.stopped_at ? new Date(conflict.current_session.stopped_at) : new Date())
           setError('This session changed. Review the latest times before saving.')
         } else {
           setError(err.message)
@@ -166,13 +137,13 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
   }
 
   async function handleSave() {
-    if (!startInput || !endInput || isEndBeforeStart || isSaving) return
+    if (isEndBeforeStart || isSaving) return
     setError(null)
     setIsSaving(true)
     try {
       const updated = await editSleepSession(babyId, currentSession.id, {
-        started_at: new Date(startInput).toISOString(),
-        stopped_at: new Date(endInput).toISOString(),
+        started_at: startDate.toISOString(),
+        stopped_at: endDate.toISOString(),
         version: currentSession.version,
       })
       setCurrentSession(updated)
@@ -183,9 +154,8 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
         if (conflict?.type === 'stale_version' && conflict.current_session) {
           setCurrentSession(conflict.current_session)
           onUpdated(conflict.current_session)
-          resetInputsFromSession(conflict.current_session, setStartInput, setEndInput)
-          setStartTouched(false)
-          setEndTouched(false)
+          setStartDate(new Date(conflict.current_session.started_at))
+          setEndDate(conflict.current_session.stopped_at ? new Date(conflict.current_session.stopped_at) : new Date())
           setError('This session changed. Review the latest times before saving.')
         } else if (conflict?.type === 'overlap' && conflict.conflicting_session) {
           const blocking = conflict.conflicting_session
@@ -276,51 +246,41 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
             <h2 className={styles.title}>Edit session</h2>
 
             {activePicker && (
-              <div className={styles.pickerPanel}>
-                <div className={styles.pickerPanelLabel}>
-                  {activePicker === 'start' ? 'SET START TIME' : 'SET END TIME'}
-                </div>
-                <input
-                  ref={pickerRef}
-                  type="datetime-local"
-                  className={styles.pickerInput}
-                  value={activePicker === 'start' ? startInput : endInput}
-                  onChange={e => {
-                    if (activePicker === 'start') { setStartInput(e.target.value); setStartTouched(true) }
-                    else { setEndInput(e.target.value); setEndTouched(true) }
-                  }}
-                />
-                <button className={styles.pickerDoneBtn} onClick={() => setActivePicker(null)}>Done</button>
-              </div>
+              <DrumPicker
+                initialDate={activePicker === 'start' ? startDate : endDate}
+                onChange={d => activePicker === 'start' ? setStartDate(d) : setEndDate(d)}
+              />
             )}
 
             <div className={styles.timeRows}>
               <button
                 type="button"
-                className={`${styles.timeRow} ${startTouched ? styles.timeRowSet : styles.timeRowSuggested} ${activePicker === 'start' ? styles.timeRowActive : ''}`}
+                className={`${styles.timeRow} ${styles.timeRowSet} ${activePicker === 'start' ? styles.timeRowActive : ''}`}
                 onClick={() => setActivePicker(activePicker === 'start' ? null : 'start')}
               >
                 <div className={styles.timeRowInner}>
                   <div>
                     <div className={styles.timeRowLabel}>STARTED</div>
-                    <div className={styles.timeRowValue}>{formatDisplayTime(startInput)}</div>
+                    <div className={styles.timeRowValue}>{formatDisplayTime(startDate)}</div>
                   </div>
-                  <span className={styles.timeRowAction}>Change</span>
+                  <span className={styles.timeRowAction}>
+                    {activePicker === 'start' ? 'Done ✓' : 'Change'}
+                  </span>
                 </div>
               </button>
 
               <button
                 type="button"
-                className={`${styles.timeRow} ${endTouched ? styles.timeRowSet : styles.timeRowSuggested} ${isEndBeforeStart ? styles.timeRowError : ''} ${activePicker === 'end' ? styles.timeRowActive : ''}`}
+                className={`${styles.timeRow} ${styles.timeRowSet} ${isEndBeforeStart ? styles.timeRowError : ''} ${activePicker === 'end' ? styles.timeRowActive : ''}`}
                 onClick={() => setActivePicker(activePicker === 'end' ? null : 'end')}
               >
                 <div className={styles.timeRowInner}>
                   <div>
                     <div className={styles.timeRowLabel}>ENDED</div>
-                    <div className={styles.timeRowValue}>{formatDisplayTime(endInput)}</div>
+                    <div className={styles.timeRowValue}>{formatDisplayTime(endDate)}</div>
                   </div>
                   <span className={`${styles.timeRowAction} ${isEndBeforeStart ? styles.timeRowActionError : ''}`}>
-                    Change
+                    {activePicker === 'end' ? 'Done ✓' : 'Change'}
                   </span>
                 </div>
               </button>
@@ -333,7 +293,7 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
                     </svg>
                     <span className={styles.durationError}>End must be after start</span>
                   </>
-                ) : durSecs !== null ? (
+                ) : (
                   <>
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#86B6A6" strokeWidth="2" strokeLinecap="round">
                       <path d="M3 8l3 3 7-7" />
@@ -342,7 +302,7 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
                       Duration <span className={styles.durationValue}>{formatDur(durSecs)}</span>
                     </span>
                   </>
-                ) : null}
+                )}
               </div>
             </div>
 
@@ -355,7 +315,7 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
               <button
                 className={styles.saveBtn}
                 onClick={handleSave}
-                disabled={isSaving || isEndBeforeStart || !startInput || !endInput}
+                disabled={isSaving || isEndBeforeStart}
               >
                 {isSaving ? <span className={styles.spinner} /> : 'Save changes'}
               </button>

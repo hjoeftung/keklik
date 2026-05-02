@@ -177,9 +177,15 @@ export interface PeriodAverage {
   avg_active_seconds: number
 }
 
+export interface NightWindowInfo {
+  start_hhmm: string
+  end_hhmm: string
+}
+
 export interface SleepStatsResponse {
   today: TodayStats
   summary: Record<string, PeriodAverage>
+  night_window?: NightWindowInfo
 }
 
 export function getSleepStats(babyId: string): Promise<SleepStatsResponse> {

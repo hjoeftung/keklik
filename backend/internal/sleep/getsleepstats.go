@@ -24,9 +24,15 @@ type PeriodAverage struct {
 	AvgActiveSeconds float64
 }
 
+type NightWindowInfo struct {
+	StartHHMM string
+	EndHHMM   string
+}
+
 type SleepStats struct {
-	Today   TodayStats
-	Summary map[string]PeriodAverage
+	Today       TodayStats
+	Summary     map[string]PeriodAverage
+	NightWindow *NightWindowInfo
 }
 
 type GetSleepStatsHandler struct {
@@ -55,9 +61,13 @@ func (h *GetSleepStatsHandler) Handle(ctx context.Context, q GetSleepStatsQuery)
 		return SleepStats{}, fmt.Errorf("load night windows: %w", err)
 	}
 
-	_, ok := findWindowAt(windows, now)
+	w, ok := findWindowAt(windows, now)
 	if !ok {
 		return SleepStats{}, nil
+	}
+	nightWindow := &NightWindowInfo{
+		StartHHMM: fmt.Sprintf("%02d:%02d", w.Start().Hour(), w.Start().Minute()),
+		EndHHMM:   fmt.Sprintf("%02d:%02d", w.End().Hour(), w.End().Minute()),
 	}
 
 	// Fetch sessions covering 90d plus a 24h buffer for cross-midnight naps.
@@ -95,8 +105,9 @@ func (h *GetSleepStatsHandler) Handle(ctx context.Context, q GetSleepStatsQuery)
 	summary := statsSummaryAverages(classified, loc, now)
 
 	return SleepStats{
-		Today:   today,
-		Summary: summary,
+		Today:       today,
+		Summary:     summary,
+		NightWindow: nightWindow,
 	}, nil
 }
 

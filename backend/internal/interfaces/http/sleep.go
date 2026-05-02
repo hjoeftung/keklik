@@ -567,9 +567,15 @@ type periodAvgResponse struct {
 	AvgActiveSeconds float64 `json:"avg_active_seconds"`
 }
 
+type nightWindowInfoResponse struct {
+	StartHHMM string `json:"start_hhmm"`
+	EndHHMM   string `json:"end_hhmm"`
+}
+
 type sleepStatsResponse struct {
-	Today   todayStatsResponse           `json:"today"`
-	Summary map[string]periodAvgResponse `json:"summary"`
+	Today       todayStatsResponse           `json:"today"`
+	Summary     map[string]periodAvgResponse `json:"summary"`
+	NightWindow *nightWindowInfoResponse      `json:"night_window,omitempty"`
 }
 
 // getSleepStatsHandler returns diary-window totals and rolling period averages.
@@ -617,13 +623,22 @@ func getSleepStatsHandler(w http.ResponseWriter, r *http.Request, h *sleep.GetSl
 		}
 	}
 
+	var nightWindow *nightWindowInfoResponse
+	if stats.NightWindow != nil {
+		nightWindow = &nightWindowInfoResponse{
+			StartHHMM: stats.NightWindow.StartHHMM,
+			EndHHMM:   stats.NightWindow.EndHHMM,
+		}
+	}
+
 	resp := sleepStatsResponse{
 		Today: todayStatsResponse{
 			TotalSleepSeconds:  stats.Today.TotalSleepSeconds,
 			TotalNapSeconds:    stats.Today.TotalNapSeconds,
 			TotalActiveSeconds: stats.Today.TotalActiveSeconds,
 		},
-		Summary: summary,
+		Summary:     summary,
+		NightWindow: nightWindow,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
