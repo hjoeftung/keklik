@@ -1,0 +1,137 @@
+.wrapper {
+  background: var(--kk-surface);
+  border-radius: 22px;
+  padding: 16px 12px 20px;
+  border: 1px solid var(--kk-border);
+}
+
+.columns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.columnWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.columnLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--kk-ink-muted);
+  margin-bottom: 2px;
+}
+
+/* height = ITEM_H (44) * VISIBLE_ROWS (5) */
+.columnOuter {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+}
+
+/* height = ITEM_H (44) * PAD_ITEMS (2) */
+.fadeTop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 88px;
+  background: linear-gradient(to bottom, var(--kk-surface), transparent);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.fadeBottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 88px;
+  background: linear-gradient(to top, var(--kk-surface), transparent);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* top = PAD_ITEMS (2) * ITEM_H (44) */
+.highlight {
+  position: absolute;
+  top: 88px;
+  left: 6px;
+  right: 6px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--kk-primary-soft);
+  border: 1.5px solid color-mix(in srgb, var(--kk-primary) 25%, transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.scroll {
+  height: 100%;
+  overflow-y: scroll;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.item {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--kk-sans);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--kk-ink-soft);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  z-index: 3;
+  transition: font-size 0.1s, color 0.1s;
+}
+
+.itemSelected {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--kk-sans);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--kk-primary-deep);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  z-index: 3;
+  transition: font-size 0.1s, color 0.1s;
+}
+
+/* margin-top aligns the separator with the column's scroll area center (accounts for label height) */
+.dotDivider {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--kk-ink-muted);
+  margin-top: 20px;
+  margin-left: 2px;
+  margin-right: 2px;
+}
+
+.colon {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--kk-primary-deep);
+  margin-top: 20px;
+  letter-spacing: 0;
+}

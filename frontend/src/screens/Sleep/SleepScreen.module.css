@@ -12,7 +12,7 @@
 .header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 52px 24px 0;
   width: 100%;
   max-width: 480px;
@@ -24,28 +24,7 @@
   font-weight: 600;
   color: var(--kk-ink);
   letter-spacing: -0.3px;
-}
-
-.dateStr {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--kk-ink-soft);
-  margin-top: 2px;
-}
-
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--kk-surface);
-  border: 1px solid var(--kk-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--kk-primary);
-  flex-shrink: 0;
+  text-align: center;
 }
 
 /* ── Awake screen ─────────────────────────────────────────────── */
@@ -120,50 +99,6 @@
   width: 100%;
 }
 
-/* Z's floating near the pillow */
-.pillowZeeContainer {
-  position: relative;
-  display: inline-block;
-}
-
-.zee {
-  position: absolute;
-  font-family: var(--kk-serif);
-  font-weight: 700;
-  color: var(--kk-night);
-  animation: floatZee 3s ease-in-out infinite;
-  pointer-events: none;
-}
-
-.z1 {
-  font-size: 20px;
-  top: -8px;
-  right: 24px;
-  opacity: 0.65;
-  animation-delay: 0s;
-}
-
-.z2 {
-  font-size: 26px;
-  top: -28px;
-  right: 44px;
-  opacity: 0.45;
-  animation-delay: 0.9s;
-}
-
-.z3 {
-  font-size: 34px;
-  top: -52px;
-  right: 62px;
-  opacity: 0.28;
-  animation-delay: 1.8s;
-}
-
-@keyframes floatZee {
-  0%   { transform: translate(0, 0) scale(0.9);  opacity: inherit; }
-  40%  { opacity: 1; }
-  100% { transform: translate(12px, -32px) scale(1.15); opacity: 0; }
-}
 
 .wakeHint {
   margin-top: 14px;
@@ -176,6 +111,13 @@
   font-size: 14px;
   font-weight: 500;
   color: var(--kk-ink-soft);
+}
+
+.tapToWakeHint {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kk-night);
+  letter-spacing: 0.2px;
 }
 
 /* ── Quick-action cards ───────────────────────────────────────── */
@@ -305,10 +247,11 @@
 
 .editSheetTitle {
   font-family: var(--kk-serif);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 500;
   color: var(--kk-ink);
   letter-spacing: -0.3px;
+  margin: 0;
 }
 
 .editSheetSubtitle {
@@ -318,64 +261,6 @@
   margin-top: 1px;
 }
 
-
-/* ── Edit picker panel ────────────────────────────────────────── */
-.editSheetPickerPanel {
-  background: var(--kk-surface);
-  border: 1px solid var(--kk-border);
-  border-radius: 18px;
-  padding: 14px 18px 16px;
-  margin-top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.editSheetPickerLabel {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--kk-ink-soft);
-}
-
-.editSheetPickerInput {
-  font-family: var(--kk-sans);
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--kk-ink);
-  background: var(--kk-bg);
-  border: 1.5px solid var(--kk-primary);
-  border-radius: 12px;
-  padding: 10px 14px;
-  width: 100%;
-  cursor: pointer;
-  box-sizing: border-box;
-}
-
-.editSheetPickerInput:focus {
-  outline: none;
-  border-color: var(--kk-primary);
-  box-shadow: 0 0 0 3px rgba(229, 155, 106, 0.2);
-}
-
-.editSheetPickerDone {
-  align-self: flex-end;
-  padding: 8px 20px;
-  border-radius: 999px;
-  border: none;
-  background: var(--kk-primary);
-  font-family: var(--kk-sans);
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  cursor: pointer;
-  transition: opacity 0.15s ease;
-}
-
-.editSheetPickerDone:hover {
-  opacity: 0.88;
-}
 
 /* ── Edit time rows ───────────────────────────────────────────── */
 .editSheetTimeRows {
@@ -547,21 +432,6 @@
   font-weight: 500;
   color: rgba(255, 255, 255, 0.6);
   margin-top: 2px;
-}
-
-.avatarDark {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 14px;
-  color: #fff;
-  flex-shrink: 0;
 }
 
 .durationLabelDark {

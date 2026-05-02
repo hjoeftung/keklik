@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuthContext } from '@/context/AuthContext'
 import {
   startSleep,
@@ -10,20 +10,14 @@ import {
 import { ApiError } from '@/api/client'
 import PillowButton from './PillowButton'
 import LogPastSleepSheet from './LogPastSleepSheet'
+import DrumPicker from '@/components/DrumPicker'
 import styles from './SleepScreen.module.css'
 
 function fmtTime(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
-function toDatetimeLocal(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-function formatDisplayTime(datetimeLocal: string): string {
-  if (!datetimeLocal) return ''
-  const d = new Date(datetimeLocal)
+function formatDisplayTime(d: Date): string {
   const today = new Date()
   const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
   if (d.toDateString() === today.toDateString()) return `Today, ${timeStr}`
@@ -41,13 +35,6 @@ function fmtHM(secs: number): { h: number; m: number } {
   return { h: Math.floor(secs / 3600), m: Math.floor((secs % 3600) / 60) }
 }
 
-function todayTotalSecs(sessions: SleepSession[]): number {
-  const midnight = new Date()
-  midnight.setHours(0, 0, 0, 0)
-  return sessions
-    .filter(s => s.stopped_at && new Date(s.started_at) >= midnight)
-    .reduce((acc, s) => acc + (s.duration_seconds ?? 0), 0)
-}
 
 export default function SleepScreen() {
   const { family } = useAuthContext()
@@ -61,10 +48,8 @@ export default function SleepScreen() {
   const [tick, setTick] = useState(0)
   const [showLogPast, setShowLogPast] = useState(false)
   const [showEditStart, setShowEditStart] = useState(false)
-  const [editStartInput, setEditStartInput] = useState('')
-  const [showStartPicker, setShowStartPicker] = useState(false)
+  const [editStartDate, setEditStartDate] = useState<Date>(new Date())
   const [isSavingStart, setIsSavingStart] = useState(false)
-  const pickerRef = useRef<HTMLInputElement>(null)
 
   const session = sessions.find(s => !s.stopped_at) ?? null
   const isActive = session !== null
@@ -122,25 +107,17 @@ export default function SleepScreen() {
 
   function openEditStart() {
     if (!session) return
-    setEditStartInput(toDatetimeLocal(new Date(session.started_at)))
-    setShowStartPicker(false)
+    setEditStartDate(new Date(session.started_at))
     setShowEditStart(true)
   }
 
-  useEffect(() => {
-    if (showStartPicker && pickerRef.current) {
-      pickerRef.current.focus()
-      pickerRef.current.showPicker?.()
-    }
-  }, [showStartPicker])
-
   async function handleSaveStartTime() {
-    if (!session || !babyId || !editStartInput || isSavingStart) return
+    if (!session || !babyId || isSavingStart) return
     setIsSavingStart(true)
     setError(null)
     try {
       const updated = await editSleepSession(babyId, session.id, {
-        started_at: new Date(editStartInput).toISOString(),
+        started_at: editStartDate.toISOString(),
         version: session.version,
       })
       setSessions(prev => [updated, ...prev.filter(s => s.id !== updated.id)])
@@ -154,8 +131,6 @@ export default function SleepScreen() {
 
   if (isLoading) return <div className={styles.loading}>Loading…</div>
 
-  const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-
   // ── Asleep / Soft state ──────────────────────────────────────────────────
   if (isActive && session) {
     const sleeping = fmtHM(elapsedSecs(session.started_at))
@@ -164,11 +139,7 @@ export default function SleepScreen() {
     return (
       <div className={styles.screen}>
         <div className={styles.header}>
-          <div>
-            <div className={styles.greeting}>{babyName}</div>
-            <div className={styles.dateStr}>{dateStr}</div>
-          </div>
-          <div className={styles.avatar}>{babyName[0]}</div>
+          <div className={styles.greeting}>{babyName}</div>
         </div>
 
         <div className={styles.durationBlock}>
@@ -180,20 +151,14 @@ export default function SleepScreen() {
           <div className={styles.startedAtSoft}>Started at {startedAtStr}</div>
         </div>
 
-        {/* Pillow with floating Z's positioned relative to it */}
         <div className={styles.pillowWrap}>
-          <div className={styles.pillowZeeContainer}>
-            <span className={`${styles.zee} ${styles.z1}`}>z</span>
-            <span className={`${styles.zee} ${styles.z2}`}>z</span>
-            <span className={`${styles.zee} ${styles.z3}`}>Z</span>
-            <PillowButton
-              label="Tap to wake"
-              masked
-              onClick={handleToggle}
-              isDisabled={isToggling}
-            />
-          </div>
-          <div className={styles.wakeHint}>Tap pillow to wake · shhh</div>
+          <PillowButton
+            label="Tap to wake"
+            masked
+            onClick={handleToggle}
+            isDisabled={isToggling}
+          />
+          <div className={styles.tapToWakeHint}>Tap to wake · shhh</div>
         </div>
 
         <button className={styles.editStartPillSoft} onClick={openEditStart}>
@@ -211,45 +176,22 @@ export default function SleepScreen() {
               <div className={styles.editSheetHandle} />
 
               <div className={styles.editSheetHeader}>
-                <div className={styles.editSheetIcon}>
-                  <svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                    <path d="M17 11.5A7 7 0 0 1 8.5 3a7 7 0 1 0 8.5 8.5z" fill="#fff" stroke="#fff" strokeWidth="0.5" strokeLinejoin="round" />
-                  </svg>
-                </div>
                 <div>
                   <div className={styles.editSheetTitle}>Sleep in progress</div>
-                  <div className={styles.editSheetSubtitle}>Today</div>
                 </div>
               </div>
 
-              {showStartPicker && (
-                <div className={styles.editSheetPickerPanel}>
-                  <div className={styles.editSheetPickerLabel}>SET START TIME</div>
-                  <input
-                    ref={pickerRef}
-                    type="datetime-local"
-                    className={styles.editSheetPickerInput}
-                    value={editStartInput}
-                    onChange={e => setEditStartInput(e.target.value)}
-                  />
-                  <button className={styles.editSheetPickerDone} onClick={() => setShowStartPicker(false)}>Done</button>
-                </div>
-              )}
+              <DrumPicker initialDate={editStartDate} onChange={setEditStartDate} />
 
               <div className={styles.editSheetTimeRows}>
-                <button
-                  type="button"
-                  className={`${styles.editSheetTimeRow} ${showStartPicker ? styles.editSheetTimeRowActive : ''}`}
-                  onClick={() => setShowStartPicker(p => !p)}
-                >
+                <div className={styles.editSheetTimeRow}>
                   <div className={styles.editSheetTimeRowInner}>
                     <div>
                       <div className={styles.editSheetTimeRowLabel}>STARTED</div>
-                      <div className={styles.editSheetTimeRowValue}>{formatDisplayTime(editStartInput)}</div>
+                      <div className={styles.editSheetTimeRowValue}>{formatDisplayTime(editStartDate)}</div>
                     </div>
-                    <span className={styles.editSheetTimeRowAction}>Change</span>
                   </div>
-                </button>
+                </div>
               </div>
 
               {error && <p className={styles.error} role="alert">{error}</p>}
@@ -265,7 +207,7 @@ export default function SleepScreen() {
                 <button
                   className={styles.editSheetSaveBtn}
                   onClick={handleSaveStartTime}
-                  disabled={isSavingStart || !editStartInput}
+                  disabled={isSavingStart}
                 >
                   {isSavingStart ? <span className={styles.spinner} /> : 'Save changes'}
                 </button>
@@ -280,64 +222,38 @@ export default function SleepScreen() {
   // ── Awake / Minimal state ────────────────────────────────────────────────
   const awakeFrom = lastCompleted?.stopped_at
   const awake = fmtHM(awakeFrom ? elapsedSecs(awakeFrom) : 0)
-  const todayHM = fmtHM(todayTotalSecs(sessions))
-  const todaySecs = todayTotalSecs(sessions)
 
   return (
     <div className={styles.screen}>
       <div className={styles.header}>
-        <div>
-          <div className={styles.greeting}>{babyName}</div>
-          <div className={styles.dateStr}>{dateStr}</div>
-        </div>
-        <div className={styles.avatar}>{babyName[0]}</div>
+        <div className={styles.greeting}>{babyName}</div>
       </div>
 
-      <div className={styles.centerContent}>
-        <div className={styles.durationBlock}>
-          <div className={styles.durationLabel}>Active for</div>
-          <div className={styles.durationValue}>
-            {awake.h}<span className={styles.durationUnit}>h </span>
-            {String(awake.m).padStart(2, '0')}<span className={styles.durationUnit}>m</span>
-          </div>
+      <div className={styles.durationBlock}>
+        <div className={styles.durationLabel}>Active for</div>
+        <div className={styles.durationValue}>
+          {awake.h}<span className={styles.durationUnit}>h </span>
+          {String(awake.m).padStart(2, '0')}<span className={styles.durationUnit}>m</span>
         </div>
-
-        <div className={styles.pillowWrap}>
-          <PillowButton
-            label="Tap to sleep"
-            onClick={handleToggle}
-            isDisabled={isToggling}
-          />
-          {lastCompleted && (
-            <div className={styles.lastSleepEnd}>
-              Last sleep ended {fmtTime(lastCompleted.stopped_at!)}
-            </div>
-          )}
-        </div>
+        {lastCompleted && (
+          <div className={styles.startedAtSoft}>Awake since {fmtTime(lastCompleted.stopped_at!)}</div>
+        )}
       </div>
 
-      <div className={styles.quickActions}>
-        <button className={styles.quickCard} onClick={() => setShowLogPast(true)}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--kk-primary-deep)" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-            <circle cx="10" cy="10" r="7" /><path d="M10 6v4l2.5 2" />
-          </svg>
-          <div>
-            <div className={styles.quickCardLabel}>Log past</div>
-            <div className={styles.quickCardValue}>sleep</div>
-          </div>
-        </button>
-        <div className={styles.quickCard}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--kk-primary-deep)" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-            <rect x="3" y="4" width="14" height="13" rx="2" /><path d="M7 2v3M13 2v3M3 8h14" />
-          </svg>
-          <div>
-            <div className={styles.quickCardLabel}>Today</div>
-            <div className={styles.quickCardValue}>
-              {todaySecs > 0 ? `${todayHM.h}h ${todayHM.m}m sleep` : 'No sleep yet'}
-            </div>
-          </div>
-        </div>
+      <div className={styles.pillowWrap}>
+        <PillowButton
+          label="Tap to sleep"
+          onClick={handleToggle}
+          isDisabled={isToggling}
+        />
       </div>
+
+      <button className={styles.editStartPillSoft} onClick={() => setShowLogPast(true)}>
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+          <circle cx="10" cy="10" r="7" /><path d="M10 6v4l2.5 2" />
+        </svg>
+        Log past sleep
+      </button>
 
       {error && <p className={styles.error} role="alert">{error}</p>}
 

@@ -122,11 +122,6 @@
   opacity: 0.85;
 }
 
-.timeRowSuggested {
-  background: var(--kk-primary-soft);
-  border: 1.5px dashed rgba(229, 155, 106, 0.5);
-}
-
 .timeRowSet {
   background: var(--kk-surface);
   border: 1px solid var(--kk-border);
@@ -155,10 +150,6 @@
   text-transform: uppercase;
 }
 
-.timeRowSuggested .timeRowLabel {
-  color: var(--kk-primary-deep);
-}
-
 .timeRowValue {
   font-family: var(--kk-sans);
   font-variant-numeric: tabular-nums;
@@ -178,64 +169,6 @@
 
 .timeRowActionError {
   color: #D4806E;
-}
-
-/* ── Inline picker panel ──────────────────────────────────────── */
-
-.pickerPanel {
-  background: var(--kk-surface);
-  border: 1px solid var(--kk-border);
-  border-radius: 18px;
-  padding: 14px 18px 16px;
-  margin-top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.pickerPanelLabel {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--kk-ink-soft);
-}
-
-.pickerInput {
-  font-family: var(--kk-sans);
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--kk-ink);
-  background: var(--kk-bg);
-  border: 1.5px solid var(--kk-primary);
-  border-radius: 12px;
-  padding: 10px 14px;
-  width: 100%;
-  cursor: pointer;
-}
-
-.pickerInput:focus {
-  outline: none;
-  border-color: var(--kk-primary);
-  box-shadow: 0 0 0 3px rgba(229, 155, 106, 0.2);
-}
-
-.pickerDoneBtn {
-  align-self: flex-end;
-  padding: 8px 20px;
-  border-radius: 999px;
-  border: none;
-  background: var(--kk-primary);
-  font-family: var(--kk-sans);
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  cursor: pointer;
-  transition: opacity 0.15s ease;
-}
-
-.pickerDoneBtn:hover {
-  opacity: 0.88;
 }
 
 /* ── Duration row ─────────────────────────────────────────────────── */
