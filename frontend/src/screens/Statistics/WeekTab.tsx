@@ -1,4 +1,5 @@
 import type { SleepSession, NightWindowInfo } from '@/api/endpoints'
+import { computeDayWindow } from './utils'
 import styles from './WeekTab.module.css'
 
 interface Props {
@@ -73,11 +74,17 @@ function buildBlocks(
 export default function WeekTab({ sessions, nightWindow, isLoading }: Props) {
   const days = getLast7Days()
 
-  const nightStartHour = nightWindow ? parseInt(nightWindow.end_hhmm.split(':')[0], 10) : 7
-  const winStart = (nightStartHour - 1 + 24) % 24
-  const winEnd = winStart + 24
-  const hourTicks = [winStart, winStart + 6, winStart + 12, winStart + 18]
-  const yFor = (h: number) => ((h - winStart) / (winEnd - winStart)) * COL_H
+  const nightEndHhmm = nightWindow?.end_hhmm ?? '07:00'
+  const [nightEndH] = nightEndHhmm.split(':').map(Number)
+  const windowStart = (nightEndH - 1 + 24) % 24
+  const windowEnd = windowStart + 24
+  const hourTicks = [windowStart, windowStart + 6, windowStart + 12, windowStart + 18, windowStart + 24]
+  const yFor = (h: number) => ((h - windowStart) / (windowEnd - windowStart)) * COL_H
+
+  const nightStartHhmm = nightWindow?.start_hhmm ?? '20:00'
+  const [nightStartH, nightStartM] = nightStartHhmm.split(':').map(Number)
+  const nightStartHourFloat = nightStartH + nightStartM / 60
+  const nightWindowStartY = yFor(nightStartHourFloat)
 
   if (isLoading) {
     return (
@@ -110,11 +117,12 @@ export default function WeekTab({ sessions, nightWindow, isLoading }: Props) {
   const renderedBlocks = new Map<string, Block[]>()
   days.forEach(day => {
     const key = dateKey(day)
+    const { windowStart: ws, windowEnd: we } = computeDayWindow(day, nightWindow)
     const daySessions = sessions.filter(s => {
       if (!s.stopped_at || s.classification === 'active') return false
-      return dateKey(new Date(s.started_at)) === key
+      return new Date(s.started_at) < we && new Date(s.stopped_at) >= ws
     })
-    renderedBlocks.set(key, buildBlocks(daySessions, day, winStart, winEnd, yFor))
+    renderedBlocks.set(key, buildBlocks(daySessions, day, windowStart, windowEnd, yFor))
   })
 
   return (
@@ -156,6 +164,14 @@ export default function WeekTab({ sessions, nightWindow, isLoading }: Props) {
                 {String(h % 24).padStart(2, '0')}
               </div>
             ))}
+            {nightWindow && (
+              <div
+                className={`${styles.axisTick} ${styles.nightWindowTick}`}
+                style={{ top: nightWindowStartY }}
+              >
+                {String(nightStartH).padStart(2, '0')}
+              </div>
+            )}
           </div>
 
           {/* Columns area */}
@@ -168,6 +184,11 @@ export default function WeekTab({ sessions, nightWindow, isLoading }: Props) {
                 style={{ top: yFor(h) }}
               />
             ))}
+
+            {/* Night window end marker */}
+            {nightWindow && (
+              <div className={styles.nightWindowLine} style={{ top: nightWindowStartY }} />
+            )}
 
             {/* Day columns */}
             {days.map(d => {

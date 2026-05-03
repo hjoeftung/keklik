@@ -133,6 +133,23 @@
   pointer-events: none;
 }
 
+/* ── Night window end marker ────────────────────────────────── */
+
+.nightWindowLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1.5px dashed rgba(91, 123, 184, 0.55);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.nightWindowTick {
+  color: #5B7BB8 !important;
+  font-weight: 700 !important;
+}
+
 /* ── Day columns ────────────────────────────────────────────── */
 
 .dayCol {

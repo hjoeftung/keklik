@@ -65,30 +65,15 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
     .filter(s => s.stopped_at != null)
     .sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime())
 
-  let windowStart: Date
-  let windowEnd: Date
+  let windowStart = new Date(selectedDate)
+  windowStart.setHours(7, 0, 0, 0)
+  let windowEnd = new Date(windowStart.getTime() + 24 * 60 * 60 * 1000)
   if (stats?.night_window) {
     const startHour = parseInt(stats.night_window.end_hhmm.split(':')[0], 10)
     const viewStartHour = (startHour - 1 + 24) % 24
-    windowStart = new Date()
+    windowStart = new Date(selectedDate)
     windowStart.setHours(viewStartHour, 0, 0, 0)
     windowEnd = new Date(windowStart.getTime() + 24 * 60 * 60 * 1000)
-  } else if (completedSessions.length === 0) {
-    const now = new Date()
-    windowStart = new Date(now.getTime() - 8 * 60 * 60 * 1000)
-    windowStart.setMinutes(0, 0, 0)
-    windowEnd = new Date(now.getTime() + 2 * 60 * 60 * 1000)
-    windowEnd.setMinutes(0, 0, 0)
-    windowEnd = new Date(windowEnd.getTime() + 60 * 60 * 1000)
-  } else {
-    const earliest = new Date(completedSessions[0].started_at)
-    const latest = new Date(completedSessions[completedSessions.length - 1].stopped_at!)
-    windowStart = new Date(earliest)
-    windowStart.setMinutes(0, 0, 0)
-    windowStart = new Date(windowStart.getTime() - 60 * 60 * 1000)
-    windowEnd = new Date(latest)
-    windowEnd.setMinutes(0, 0, 0)
-    windowEnd = new Date(windowEnd.getTime() + 2 * 60 * 60 * 1000)
   }
   const totalMinutes = (windowEnd.getTime() - windowStart.getTime()) / 60000
   const totalHeight = totalMinutes * PX_PER_MIN
@@ -140,6 +125,15 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
   const now = new Date()
   const nowOffsetMin = (now.getTime() - windowStart.getTime()) / 60000
   const showNowLine = nowOffsetMin > 0 && nowOffsetMin < totalMinutes
+
+  let nightWindowStartOffsetMin: number | null = null
+  if (stats?.night_window) {
+    const [swH, swM] = stats.night_window.start_hhmm.split(':').map(Number)
+    const startDate = new Date(selectedDate)
+    startDate.setHours(swH, swM, 0, 0)
+    const offset = (startDate.getTime() - windowStart.getTime()) / 60000
+    if (offset > 0 && offset < totalMinutes) nightWindowStartOffsetMin = offset
+  }
 
   const sessionBars: SessionBar[] = completedSessions.flatMap(session => {
     const startMs = new Date(session.started_at).getTime()
@@ -269,6 +263,14 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
                 style={{ top: tick.offsetMin * PX_PER_MIN }}
               />
             ))}
+
+            {/* Night window end marker */}
+            {nightWindowStartOffsetMin !== null && (
+              <div
+                className={styles.nightWindowLine}
+                style={{ top: nightWindowStartOffsetMin * PX_PER_MIN }}
+              />
+            )}
 
             {/* Current time indicator */}
             {showNowLine && (

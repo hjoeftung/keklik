@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import type { PeriodAverage } from '@/api/endpoints'
 import styles from './SummaryTab.module.css'
 
@@ -99,7 +99,7 @@ export default function SummaryTab({ summary, isLoading }: Props) {
     value: number | undefined
     cardClass: string
     circleClass: string
-    Icon: () => JSX.Element
+    Icon: () => React.ReactElement
   }> = [
     {
       label: 'Avg sleep',

@@ -27,7 +27,6 @@ function formatDur(secs: number): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
-type SleepType = 'night' | 'nap'
 
 export default function LogPastSleepSheet({ babyId, onSaved, onClose }: LogPastSleepSheetProps) {
   const defaultEnd = new Date()
@@ -36,7 +35,6 @@ export default function LogPastSleepSheet({ babyId, onSaved, onClose }: LogPastS
   const [startDate, setStartDate] = useState<Date>(defaultStart)
   const [endDate, setEndDate] = useState<Date>(defaultEnd)
   const [activePicker, setActivePicker] = useState<'start' | 'end' | null>(null)
-  const [sleepType, setSleepType] = useState<SleepType>('nap')
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuthContext } from '@/context/AuthContext'
 import { useAppData } from '@/context/AppDataContext'
+import type { NightWindowInfo } from '@/api/endpoints'
 import TodayTab from './TodayTab'
 import WeekTab from './WeekTab'
 import SummaryTab from './SummaryTab'
+import { computeDayWindow } from './utils'
 import styles from './StatisticsScreen.module.css'
 
 type Tab = 'today' | 'week' | 'summary'
@@ -15,11 +17,15 @@ function formatSelectedDate(d: Date): string {
 }
 
 
-function sessionsForDate(sessions: ReturnType<typeof useAppData>['sessions7d'], date: Date) {
-  const y = date.getFullYear(), m = date.getMonth(), d = date.getDate()
+function sessionsForDate(
+  sessions: ReturnType<typeof useAppData>['sessions7d'],
+  date: Date,
+  nightWindow?: NightWindowInfo,
+) {
+  const { windowStart, windowEnd } = computeDayWindow(date, nightWindow)
   return sessions.filter(s => {
-    const start = new Date(s.started_at)
-    return start.getFullYear() === y && start.getMonth() === m && start.getDate() === d
+    if (!s.stopped_at) return false
+    return new Date(s.started_at) < windowEnd && new Date(s.stopped_at) >= windowStart
   })
 }
 
@@ -43,7 +49,7 @@ export default function StatsScreen() {
 
   useEffect(() => { refreshRef.current = refresh }, [refresh])
 
-  const filteredSessions = sessionsForDate(sessions7d, selectedDate)
+  const filteredSessions = sessionsForDate(sessions7d, selectedDate, stats?.night_window)
 
   useEffect(() => {
     const el = screenRef.current
