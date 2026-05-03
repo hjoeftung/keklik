@@ -142,6 +142,80 @@ export interface DrumPickerProps {
   onChange: (d: Date) => void
 }
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function buildYears(): string[] {
+  const currentYear = new Date().getFullYear()
+  return Array.from({ length: 6 }, (_, i) => String(currentYear - i))
+}
+
+function buildDays(): string[] {
+  return Array.from({ length: 31 }, (_, i) => pad2(i + 1))
+}
+
+export interface BirthdayPickerProps {
+  initialDate: Date
+  onChange: (d: Date) => void
+}
+
+export function BirthdayPicker({ initialDate, onChange }: BirthdayPickerProps) {
+  const years = useMemo(buildYears, [])
+  const days = useMemo(buildDays, [])
+
+  const [month, setMonth] = useState(() => MONTHS[initialDate.getMonth()])
+  const [day, setDay] = useState(() => pad2(initialDate.getDate()))
+  const [year, setYear] = useState(() => String(initialDate.getFullYear()))
+
+  const onChangeRef = useRef(onChange)
+  useEffect(() => { onChangeRef.current = onChange })
+
+  useEffect(() => {
+    const m = MONTHS.indexOf(month)
+    const result = new Date(parseInt(year, 10), m, parseInt(day, 10))
+    onChangeRef.current(result)
+  }, [month, day, year])
+
+  return (
+    <div className={styles.wrapper}>
+      <div className={styles.columns}>
+        <DrumColumn items={MONTHS} value={month} onChange={setMonth} width={72} label="MONTH" />
+        <DrumColumn items={days} value={day} onChange={setDay} width={60} label="DAY" />
+        <DrumColumn items={years} value={year} onChange={setYear} width={76} label="YEAR" />
+      </div>
+    </div>
+  )
+}
+
+export interface TimePickerProps {
+  value: string
+  onChange: (v: string) => void
+}
+
+export function TimePicker({ value, onChange }: TimePickerProps) {
+  const hourItems = useMemo(buildHours, [])
+  const minItems = useMemo(buildMinutes, [])
+
+  const [hour, setHour] = useState(() => value.split(':')[0])
+  const [minute, setMinute] = useState(() => value.split(':')[1])
+
+  const onChangeRef = useRef(onChange)
+  useEffect(() => { onChangeRef.current = onChange })
+
+  useEffect(() => {
+    onChangeRef.current(`${hour}:${minute}`)
+  }, [hour, minute])
+
+  return (
+    <div className={styles.wrapper}>
+      <div className={styles.columns}>
+        <DrumColumn items={hourItems} value={hour} onChange={setHour} width={64} label="HOUR" />
+        <div className={styles.colon}>:</div>
+        <DrumColumn items={minItems} value={minute} onChange={setMinute} width={64} label="MIN" />
+      </div>
+    </div>
+  )
+}
+
 export default function DrumPicker({ initialDate, onChange }: DrumPickerProps) {
   const dayItems = useMemo(() => buildDayItems(30), [])
   const hourItems = useMemo(buildHours, [])

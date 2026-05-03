@@ -3,109 +3,165 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 24px;
-  min-width: 0;
-  box-sizing: border-box;
   background: var(--kk-bg);
+  min-height: 100dvh;
+  overflow-y: auto;
+  padding: 70px 24px 36px;
+  box-sizing: border-box;
 }
 
-.card {
+.form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  flex: 1;
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   min-width: 0;
-  background: var(--kk-surface);
-  border-radius: 20px;
-  padding: 28px 24px;
-  box-shadow: var(--kk-shadow-md);
 }
 
-.hero {
+/* ── Header ───────────────────────────────────────────────── */
+
+.header {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding-bottom: 4px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 30px;
 }
 
-.heroIllustration {
-  font-size: 36px;
-  line-height: 1;
-  letter-spacing: 4px;
+.mascot {
+  flex-shrink: 0;
+  margin-top: -8px;
+}
+
+.stepLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--kk-primary);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
   margin-bottom: 8px;
 }
 
 .title {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--kk-ink);
   font-family: var(--kk-serif);
-  letter-spacing: -0.3px;
-  margin: 0;
-  text-align: center;
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--kk-ink);
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  margin: 6px 0 0;
 }
 
-.subtitle {
-  color: var(--kk-ink-soft);
-  margin: 0;
-  font-size: 14px;
-  text-align: center;
+/* ── Fields ───────────────────────────────────────────────── */
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   color: var(--kk-ink-soft);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
 }
 
 .input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 16px 18px;
   border: 1.5px solid var(--kk-border);
-  border-radius: 10px;
+  border-radius: 18px;
   font-family: var(--kk-sans);
-  font-size: 15px;
+  font-size: 17px;
+  font-weight: 500;
   color: var(--kk-ink);
-  background: var(--kk-surface-soft);
+  background: var(--kk-surface);
   box-sizing: border-box;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color 0.15s ease;
 }
 
 .input:focus {
   outline: none;
   border-color: var(--kk-primary);
-  background: var(--kk-surface);
 }
 
-.row {
+/* ── Display row (birthday trigger) ──────────────────────── */
+
+.displayRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px 18px;
+  background: var(--kk-surface);
+  border: 1.5px solid var(--kk-border);
+  border-radius: 18px;
+  font-family: var(--kk-sans);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--kk-ink);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease;
+}
+
+.displayRow:hover {
+  border-color: var(--kk-primary);
+}
+
+.displayRowAction {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kk-primary);
+  flex-shrink: 0;
+}
+
+/* ── Night window ─────────────────────────────────────────── */
+
+.nightHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nightHint {
+  font-size: 13px;
+  color: var(--kk-ink-soft);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.nightFields {
   display: flex;
   gap: 12px;
 }
 
-.row .field {
+.nightField {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
+/* ── Button ───────────────────────────────────────────────── */
+
 .button {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
   width: 100%;
-  padding: 14px 20px;
+  padding: 16px 20px;
   border: none;
-  border-radius: 12px;
+  border-radius: 999px;
   background: var(--kk-primary);
   color: #fff;
   font-family: var(--kk-sans);
@@ -113,9 +169,8 @@
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.15s ease;
-  box-shadow: var(--kk-shadow-sm);
-  white-space: nowrap;
-  margin-top: 4px;
+  margin-top: auto;
+  padding-top: 24px;
 }
 
 .button:hover:not(:disabled) {
@@ -128,14 +183,42 @@
 
 .button:disabled {
   cursor: not-allowed;
-  opacity: 0.65;
+  opacity: 0.55;
 }
+
+/* ── Pagination dots ──────────────────────────────────────── */
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 18px;
+}
+
+.dotInactive {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--kk-border);
+}
+
+.dotActive {
+  display: block;
+  width: 24px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--kk-primary);
+}
+
+/* ── Error ────────────────────────────────────────────────── */
 
 .error {
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 14px;
   background: #fef2f2;
   color: #dc2626;
   font-size: 14px;
   border: 1px solid #fecaca;
+  margin-bottom: 4px;
 }
