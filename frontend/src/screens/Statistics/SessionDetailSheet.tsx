@@ -88,6 +88,7 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
   const [activePicker, setActivePicker] = useState<'start' | 'end' | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const pickerRef = useRef<HTMLDivElement>(null)
 
   const durSecs = durationSeconds(startDate, endDate)
   const isEndBeforeStart = durSecs <= 0
@@ -112,6 +113,17 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [activePicker, mode, onClose])
+
+  useEffect(() => {
+    if (!activePicker) return
+    function onPointerDown(e: PointerEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setActivePicker(null)
+      }
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [activePicker])
 
   async function handleDelete() {
     if (!deleteConfirm) {
@@ -253,10 +265,12 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
             <h2 className={styles.title}>Edit session</h2>
 
             {activePicker && (
-              <DrumPicker
-                initialDate={activePicker === 'start' ? startDate : endDate}
-                onChange={d => activePicker === 'start' ? setStartDate(d) : setEndDate(d)}
-              />
+              <div ref={pickerRef}>
+                <DrumPicker
+                  initialDate={activePicker === 'start' ? startDate : endDate}
+                  onChange={d => activePicker === 'start' ? setStartDate(d) : setEndDate(d)}
+                />
+              </div>
             )}
 
             <div className={styles.timeRows}>
