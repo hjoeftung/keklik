@@ -1,0 +1,189 @@
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 16px 32px;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.back {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: var(--kk-primary);
+  cursor: pointer;
+  padding: 0 4px 0 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.title {
+  font-family: var(--kk-serif);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--kk-ink);
+  margin: 0;
+}
+
+/* ── Card ────────────────────────────────────────────────────── */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--kk-surface);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--kk-shadow-sm);
+}
+
+.hint {
+  font-size: 14px;
+  color: var(--kk-ink-soft);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Link box ────────────────────────────────────────────────── */
+
+.linkBox {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.linkInput {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1.5px solid var(--kk-border);
+  border-radius: 10px;
+  font-family: var(--kk-sans);
+  font-size: 13px;
+  color: var(--kk-ink-soft);
+  background: var(--kk-surface-soft);
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: text;
+}
+
+.linkInput:focus {
+  outline: none;
+  border-color: var(--kk-primary);
+  background: var(--kk-surface);
+}
+
+.copyBtn {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--kk-primary);
+  color: #fff;
+  font-family: var(--kk-sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.copyBtn:hover {
+  opacity: 0.88;
+}
+
+.copyBtn:active {
+  opacity: 0.78;
+}
+
+/* ── Expiry ──────────────────────────────────────────────────── */
+
+.expiry {
+  font-size: 13px;
+  color: var(--kk-ink-muted);
+  margin: 0;
+}
+
+/* ── Revoke button ───────────────────────────────────────────── */
+
+.revokeBtn {
+  background: none;
+  border: 1.5px solid var(--kk-border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-family: var(--kk-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--kk-ink-soft);
+  cursor: pointer;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+  text-align: center;
+}
+
+.revokeBtn:hover:not(:disabled) {
+  opacity: 0.75;
+  border-color: var(--kk-ink-muted);
+}
+
+.revokeBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ── Primary button (try again) ──────────────────────────────── */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 12px;
+  background: var(--kk-primary);
+  color: #fff;
+  font-family: var(--kk-sans);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  box-shadow: var(--kk-shadow-sm);
+}
+
+.button:hover {
+  opacity: 0.88;
+}
+
+/* ── States ──────────────────────────────────────────────────── */
+
+.loading {
+  font-size: 14px;
+  color: var(--kk-ink-muted);
+  padding: 20px 0;
+  text-align: center;
+}
+
+.error {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 14px;
+  border: 1px solid #fecaca;
+}

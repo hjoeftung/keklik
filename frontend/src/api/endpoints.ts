@@ -30,6 +30,7 @@ export function createFamily(req: CreateFamilyRequest): Promise<CreateFamilyResp
 export interface FamilyMember {
   id: string
   name: string
+  account_id: string
 }
 
 export interface FamilyBaby {
@@ -72,6 +73,10 @@ export interface JoinFamilyResponse {
 
 export function joinFamilyByInviteLink(req: JoinFamilyRequest): Promise<JoinFamilyResponse> {
   return api.post('/families/join-by-invite-link', req)
+}
+
+export function revokeInviteLink(token: string): Promise<void> {
+  return api.delete(`/families/invite-links/${token}`)
 }
 
 // --- Sleep sessions ---

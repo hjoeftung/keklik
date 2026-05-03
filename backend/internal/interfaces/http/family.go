@@ -66,8 +66,9 @@ func createFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.Creat
 }
 
 type getFamilyMemberResponse struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	AccountID string `json:"account_id"`
 }
 
 type getFamilyBabyResponse struct {
@@ -108,7 +109,7 @@ func getFamilyHandler(w http.ResponseWriter, r *http.Request, h *family.GetFamil
 
 	members := make([]getFamilyMemberResponse, 0, len(result.Members))
 	for _, m := range result.Members {
-		members = append(members, getFamilyMemberResponse{ID: string(m.ID), Name: m.Name})
+		members = append(members, getFamilyMemberResponse{ID: string(m.ID), Name: m.Name, AccountID: string(m.AccountID)})
 	}
 
 	w.Header().Set("Content-Type", "application/json")

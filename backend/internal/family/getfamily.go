@@ -13,8 +13,9 @@ type GetFamilyQuery struct {
 
 // GetFamilyMemberResult holds a member's public fields.
 type GetFamilyMemberResult struct {
-	ID   FamilyMemberID
-	Name string
+	ID        FamilyMemberID
+	Name      string
+	AccountID auth.AccountID
 }
 
 // GetFamilyBabyResult holds a baby's public fields.
@@ -50,7 +51,7 @@ func (h *GetFamilyHandler) Handle(ctx context.Context, q GetFamilyQuery) (GetFam
 
 	memberResults := make([]GetFamilyMemberResult, 0, len(f.Members()))
 	for _, m := range f.Members() {
-		memberResults = append(memberResults, GetFamilyMemberResult{ID: m.ID, Name: m.Name})
+		memberResults = append(memberResults, GetFamilyMemberResult{ID: m.ID, Name: m.Name, AccountID: m.AccountID})
 	}
 
 	babies := f.Babies()

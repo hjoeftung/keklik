@@ -80,15 +80,18 @@ export default function SettingsScreen() {
       <div className={styles.section}>
         <p className={styles.sectionLabel}>Family</p>
         <div className={styles.group}>
-          <div className={styles.row}>
+          <button className={styles.row} onClick={() => navigate('/settings/caregivers')}>
             <span className={styles.rowLabel}>Caregivers</span>
-            <span className={styles.rowValue}>{memberCount}</span>
-          </div>
+            <span className={styles.rowRight}>
+              <span className={styles.rowValue}>{memberCount}</span>
+              <span className={styles.rowChevron}>›</span>
+            </span>
+          </button>
           <div className={styles.divider} />
-          <div className={styles.row}>
+          <button className={styles.row} onClick={() => navigate('/settings/invite')}>
             <span className={styles.rowLabel}>Invite partner</span>
             <span className={styles.rowChevron}>›</span>
-          </div>
+          </button>
         </div>
       </div>
 

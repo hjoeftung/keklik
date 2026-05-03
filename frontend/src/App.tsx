@@ -13,6 +13,8 @@ import SleepScreen from '@/screens/Sleep/SleepScreen'
 import StatisticsScreen from '@/screens/Statistics/StatisticsScreen'
 import SettingsScreen from '@/screens/Settings/SettingsScreen'
 import NightWindowScreen from '@/screens/Settings/NightWindowScreen'
+import CaregiversScreen from '@/screens/Settings/CaregiversScreen'
+import InvitePartnerScreen from '@/screens/Settings/InvitePartnerScreen'
 
 export default function App() {
   return (
@@ -29,6 +31,8 @@ export default function App() {
               <Route path="/statistics" element={<RequireAuth><AuthenticatedLayout><StatisticsScreen /></AuthenticatedLayout></RequireAuth>} />
               <Route path="/settings" element={<RequireAuth><AuthenticatedLayout><SettingsScreen /></AuthenticatedLayout></RequireAuth>} />
               <Route path="/settings/night-window" element={<RequireAuth><AuthenticatedLayout><NightWindowScreen /></AuthenticatedLayout></RequireAuth>} />
+              <Route path="/settings/caregivers" element={<RequireAuth><AuthenticatedLayout><CaregiversScreen /></AuthenticatedLayout></RequireAuth>} />
+              <Route path="/settings/invite" element={<RequireAuth><AuthenticatedLayout><InvitePartnerScreen /></AuthenticatedLayout></RequireAuth>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AppDataProvider>
