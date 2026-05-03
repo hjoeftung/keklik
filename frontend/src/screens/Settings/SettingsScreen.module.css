@@ -1,0 +1,149 @@
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 16px 32px;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* ── Baby card ──────────────────────────────────────────────── */
+
+.babyCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--kk-surface);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 12px;
+  box-shadow: var(--kk-shadow-sm);
+}
+
+.avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--kk-primary-soft);
+  color: var(--kk-primary-deep);
+  font-family: var(--kk-serif);
+  font-size: 24px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.babyInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.babyName {
+  font-family: var(--kk-serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--kk-ink);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.babySub {
+  font-size: 13px;
+  color: var(--kk-ink-soft);
+  margin: 0;
+}
+
+/* ── Sections ───────────────────────────────────────────────── */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--kk-ink-muted);
+  margin: 0;
+  padding: 0 4px;
+}
+
+.group {
+  background: var(--kk-surface);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--kk-shadow-sm);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: default;
+}
+
+.divider {
+  height: 1px;
+  background: var(--kk-border);
+  margin: 0 16px;
+}
+
+.rowLabel {
+  font-size: 15px;
+  color: var(--kk-ink);
+  font-weight: 500;
+}
+
+.rowValue {
+  font-size: 15px;
+  color: var(--kk-ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.rowChevron {
+  font-size: 18px;
+  color: var(--kk-ink-muted);
+  line-height: 1;
+}
+
+/* ── Sign out ───────────────────────────────────────────────── */
+
+.signOutRow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  font-family: var(--kk-sans);
+  font-size: 15px;
+  font-weight: 500;
+  color: #dc2626;
+  cursor: pointer;
+  text-align: left;
+  transition: opacity 0.15s ease;
+}
+
+.signOutRow:hover {
+  opacity: 0.75;
+}
+
+/* ── Version ────────────────────────────────────────────────── */
+
+.version {
+  font-size: 12px;
+  color: var(--kk-ink-muted);
+  text-align: center;
+  margin: 8px 0 0;
+}

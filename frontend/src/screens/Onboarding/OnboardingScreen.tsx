@@ -62,7 +62,8 @@ export default function OnboardingScreen() {
   return (
     <div className={styles.screen}>
       <form className={styles.card} onSubmit={handleSubmit} noValidate>
-        <div>
+        <div className={styles.hero}>
+          <div className={styles.heroIllustration}>🌙 ☁️ ✨</div>
           <h1 className={styles.title}>Set up your family</h1>
           <p className={styles.subtitle}>Just a few details to get started.</p>
         </div>

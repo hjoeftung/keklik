@@ -7,6 +7,7 @@
   padding: 24px;
   min-width: 0;
   box-sizing: border-box;
+  background: var(--kk-bg);
 }
 
 .card {
@@ -16,21 +17,42 @@
   width: 100%;
   max-width: 400px;
   min-width: 0;
+  background: var(--kk-surface);
+  border-radius: 20px;
+  padding: 28px 24px;
+  box-shadow: var(--kk-shadow-md);
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 4px;
+}
+
+.heroIllustration {
+  font-size: 36px;
+  line-height: 1;
+  letter-spacing: 4px;
+  margin-bottom: 8px;
 }
 
 .title {
-  font-size: 28px;
-  font-weight: 500;
-  color: var(--text-h);
-  font-family: var(--heading);
-  letter-spacing: -0.5px;
-  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--kk-ink);
+  font-family: var(--kk-serif);
+  letter-spacing: -0.3px;
+  margin: 0;
+  text-align: center;
 }
 
 .subtitle {
-  color: var(--text);
+  color: var(--kk-ink-soft);
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
+  text-align: center;
 }
 
 .field {
@@ -40,27 +62,30 @@
 }
 
 .label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kk-ink-soft);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--border, #d1d5db);
-  border-radius: 8px;
-  font-family: var(--sans);
+  border: 1.5px solid var(--kk-border);
+  border-radius: 10px;
+  font-family: var(--kk-sans);
   font-size: 15px;
-  color: var(--text-h);
-  background: var(--surface, #fff);
+  color: var(--kk-ink);
+  background: var(--kk-surface-soft);
   box-sizing: border-box;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--kk-primary);
+  background: var(--kk-surface);
 }
 
 .row {
@@ -78,17 +103,17 @@
   justify-content: center;
   gap: 10px;
   width: 100%;
-  padding: 13px 20px;
+  padding: 14px 20px;
   border: none;
-  border-radius: 8px;
-  background: var(--accent);
+  border-radius: 12px;
+  background: var(--kk-primary);
   color: #fff;
-  font-family: var(--sans);
+  font-family: var(--kk-sans);
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: opacity 0.15s ease;
-  box-shadow: var(--shadow);
+  box-shadow: var(--kk-shadow-sm);
   white-space: nowrap;
   margin-top: 4px;
 }
@@ -108,9 +133,9 @@
 
 .error {
   padding: 10px 14px;
-  border-radius: 8px;
-  background: var(--error-bg, #fef2f2);
-  color: var(--error, #dc2626);
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #dc2626;
   font-size: 14px;
-  border: 1px solid var(--error-border, #fecaca);
+  border: 1px solid #fecaca;
 }
