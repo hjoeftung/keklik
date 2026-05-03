@@ -23,6 +23,7 @@
 <script type="text/babel" src="screens-sleep.jsx"></script>
 <script type="text/babel" src="screens-stats.jsx"></script>
 <script type="text/babel" src="screens-other.jsx"></script>
+<script type="text/babel" src="mascot-showcase.jsx"></script>
 
 <script type="text/babel">
   function App() {
@@ -73,6 +74,15 @@
         <DCSection id="empty" title="First-ever session (empty state)">
           <DCArtboard id="emp-pastel" label="Empty · welcome" width={W} height={H}>
             <SleepF_Empty palette={pastel} />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="datepicker" title="Date picker — Today tab" subtitle="7-day chip strip. Today: dark fill. Past selected: warm orange fill. Today unselected: primary border.">
+          <DCArtboard id="dp-today" label="Today selected (default)" width={W} height={H}>
+            <StatsToday_DatePicker_Today palette={pastel} />
+          </DCArtboard>
+          <DCArtboard id="dp-past" label="Past date selected (Thu 30)" width={W} height={H}>
+            <StatsToday_DatePicker_Past palette={pastel} />
           </DCArtboard>
         </DCSection>
 

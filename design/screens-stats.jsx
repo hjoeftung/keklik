@@ -252,4 +252,223 @@ function StatsSummary({ palette }) {
   );
 }
 
-Object.assign(window, { StatsToday, StatsWeek, StatsSummary });
+// ─── Date Picker chip sub-component ────────────────────────────────────────
+function DatePickerStrip({ palette, selectedIdx = 0 }) {
+  const p = palette;
+  // 7 days ending today (Sat May 2, 2026); today = index 0 (leftmost)
+  const days = [
+    { num: '2',  day: 'Sat' }, // today
+    { num: '1',  day: 'Fri' },
+    { num: '30', day: 'Thu' },
+    { num: '29', day: 'Wed' },
+    { num: '28', day: 'Tue' },
+    { num: '27', day: 'Mon' },
+    { num: '26', day: 'Sun' },
+  ];
+  const todayIdx = 0;
+
+  return (
+    <div style={{ display: 'flex', gap: 6, padding: '10px 24px 4px' }}>
+      {days.map((d, i) => {
+        const isSelected = i === selectedIdx;
+        const isToday    = i === todayIdx;
+        const isTodayUnselected = isToday && !isSelected;
+
+        let bg, border, textColor;
+        if (isSelected && isToday) {
+          bg = p.ink; border = 'none'; textColor = '#fff';
+        } else if (isSelected) {
+          bg = p.primary; border = 'none'; textColor = '#fff';
+        } else if (isTodayUnselected) {
+          bg = 'transparent'; border = `1.5px solid ${p.primary}`; textColor = p.primary;
+        } else {
+          bg = 'transparent'; border = `1.5px solid ${p.border}`; textColor = p.inkSoft;
+        }
+
+        return (
+          <div key={i} style={{
+            flex: 1, height: 54, borderRadius: 14,
+            background: bg, border,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 1, cursor: 'pointer', boxSizing: 'border-box',
+          }}>
+            <span style={{ fontSize: 18, fontWeight: 700, color: textColor, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}
+                  className="kk-num">{d.num}</span>
+            <span style={{ fontSize: 10, fontWeight: 600, color: textColor, letterSpacing: 0.3, opacity: isSelected ? 0.75 : 0.9 }}>{d.day}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Today tab — with date picker, today selected ──────────────────────────
+function StatsToday_DatePicker_Today({ palette }) {
+  const p = palette;
+  const sessions = [
+    { kind: 'nap', startH: 9.5, endH: 10.83, dur: '1h 20m' },
+    { kind: 'nap', startH: 13.0, endH: 14.5, dur: '1h 30m' },
+    { kind: 'night', startH: 19.78, endH: 25.5, dur: '5h 43m' },
+  ];
+  const winStart = 6, winEnd = 26;
+  const TOTAL_H = 480;
+  const hours = []; for (let h = winStart; h <= winEnd; h++) hours.push(h);
+  const yFor = h => ((h - winStart) / (winEnd - winStart)) * TOTAL_H;
+
+  return (
+    <PhoneShell palette={p}>
+      <StatsHeader palette={p} tab="today" />
+      <DatePickerStrip palette={p} selectedIdx={0} />
+      {/* Summary cards */}
+      <div style={{ padding: '10px 24px 8px', display: 'flex', gap: 10 }}>
+        {[
+          { label: 'Sleep', val: '5h 43m', color: p.night, soft: p.nightSoft },
+          { label: 'Naps', val: '2h 50m', color: p.nap, soft: p.napSoft },
+          { label: 'Active', val: '11h 27m', color: p.primary, soft: p.primarySoft },
+        ].map(s => (
+          <div key={s.label} style={{ flex: 1, background: s.soft, borderRadius: 16, padding: '10px 12px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: p.inkSoft, letterSpacing: 0.4, textTransform: 'uppercase' }}>{s.label}</div>
+            <div className="kk-num" style={{ fontSize: 17, fontWeight: 700, color: p.ink, marginTop: 2, letterSpacing: -0.3 }}>{s.val}</div>
+          </div>
+        ))}
+      </div>
+      {/* Timeline */}
+      <div className="kk-scroll" style={{ position: 'absolute', top: 290, bottom: 80, left: 0, right: 0, padding: '12px 24px 24px' }}>
+        <div style={{ position: 'relative', height: TOTAL_H, paddingLeft: 36 }}>
+          {hours.map(h => (
+            <div key={h} style={{ position: 'absolute', left: 0, top: yFor(h) - 6, fontSize: 11, color: p.inkMuted, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+              {String(h % 24).padStart(2, '0')}
+            </div>
+          ))}
+          {hours.map(h => (
+            <div key={'l' + h} style={{ position: 'absolute', left: 28, right: 0, top: yFor(h), height: 1, background: p.border, opacity: 0.5 }}/>
+          ))}
+          {sessions.map((s, i) => {
+            const next = sessions[i + 1];
+            if (!next) return null;
+            const gapTop = yFor(s.endH), gapH = yFor(next.startH) - gapTop;
+            if (gapH < 14) return null;
+            const gapDur = next.startH - s.endH;
+            const hh = Math.floor(gapDur), mm = Math.round((gapDur - hh) * 60);
+            return (
+              <div key={'g' + i} style={{ position: 'absolute', left: 28, right: 0, top: gapTop, height: gapH, display: 'flex', alignItems: 'center', justifyContent: 'center', color: p.inkMuted, fontSize: 11, fontWeight: 600, letterSpacing: 0.3 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, background: p.surfaceSoft, border: `1px dashed ${p.border}` }}>
+                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="8" cy="8" r="3.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+                  awake · {hh > 0 ? `${hh}h ` : ''}{mm}m
+                </span>
+              </div>
+            );
+          })}
+          {sessions.map((s, i) => {
+            const top = yFor(s.startH), height = yFor(s.endH) - top;
+            const isNight = s.kind === 'night';
+            return (
+              <div key={i} style={{ position: 'absolute', left: 28, right: 0, top, height, background: isNight ? p.night : p.nap, borderRadius: height < 30 ? 4 : (height < 80 ? 6 : 10), padding: height < 60 ? '6px 12px' : '8px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', color: '#fff', boxShadow: `0 4px 12px ${isNight ? p.night : p.nap}40` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>{isNight ? 'Night sleep' : 'Nap'}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, opacity: 0.85 }} className="kk-num">{s.dur}</span>
+                </div>
+                {height > 60 && <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 500 }} className="kk-num">
+                  {String(Math.floor(s.startH)).padStart(2,'0')}:{String(Math.round((s.startH%1)*60)).padStart(2,'0')} – {String(Math.floor(s.endH)%24).padStart(2,'0')}:{String(Math.round((s.endH%1)*60)).padStart(2,'0')}
+                </div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <TabBar palette={p} active="stats" />
+    </PhoneShell>
+  );
+}
+
+// ─── Today tab — with date picker, past date selected ─────────────────────
+function StatsToday_DatePicker_Past({ palette }) {
+  const p = palette;
+  // Thu Apr 30 — different sessions
+  const sessions = [
+    { kind: 'nap', startH: 8.5, endH: 10.0, dur: '1h 30m' },
+    { kind: 'nap', startH: 12.5, endH: 14.0, dur: '1h 30m' },
+    { kind: 'night', startH: 20.0, endH: 25.2, dur: '5h 12m' },
+  ];
+  const winStart = 6, winEnd = 26;
+  const TOTAL_H = 480;
+  const hours = []; for (let h = winStart; h <= winEnd; h++) hours.push(h);
+  const yFor = h => ((h - winStart) / (winEnd - winStart)) * TOTAL_H;
+
+  return (
+    <PhoneShell palette={p}>
+      {/* Header — date line shows past date */}
+      <div style={{ paddingTop: 56, padding: '56px 24px 12px' }}>
+        <div className="kk-display" style={{ fontSize: 28, fontWeight: 500, color: p.ink, letterSpacing: -0.5 }}>Sofia's sleep</div>
+        <div style={{ fontSize: 13, color: p.inkSoft, marginTop: 2 }}>Thursday · April 30</div>
+      </div>
+      <div style={{ padding: '8px 24px 0', display: 'flex', gap: 8 }}>
+        {[{ id: 'today', label: 'Today' }, { id: 'week', label: 'Week' }, { id: 'summary', label: 'Summary' }].map(t => (
+          <div key={t.id} style={{ padding: '9px 18px', borderRadius: 999, background: t.id === 'today' ? p.ink : 'transparent', color: t.id === 'today' ? '#fff' : p.inkSoft, fontWeight: 600, fontSize: 14, border: t.id === 'today' ? 'none' : `1px solid ${p.border}` }}>{t.label}</div>
+        ))}
+      </div>
+      {/* selectedIdx=2 → Thu 30; todayIdx=0 → Sat 2 gets primary border */}
+      <DatePickerStrip palette={p} selectedIdx={2} />
+      {/* Summary cards */}
+      <div style={{ padding: '10px 24px 8px', display: 'flex', gap: 10 }}>
+        {[
+          { label: 'Sleep', val: '5h 12m', color: p.night, soft: p.nightSoft },
+          { label: 'Naps', val: '3h 0m', color: p.nap, soft: p.napSoft },
+          { label: 'Active', val: '15h 48m', color: p.primary, soft: p.primarySoft },
+        ].map(s => (
+          <div key={s.label} style={{ flex: 1, background: s.soft, borderRadius: 16, padding: '10px 12px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: p.inkSoft, letterSpacing: 0.4, textTransform: 'uppercase' }}>{s.label}</div>
+            <div className="kk-num" style={{ fontSize: 17, fontWeight: 700, color: p.ink, marginTop: 2, letterSpacing: -0.3 }}>{s.val}</div>
+          </div>
+        ))}
+      </div>
+      {/* Timeline */}
+      <div className="kk-scroll" style={{ position: 'absolute', top: 290, bottom: 80, left: 0, right: 0, padding: '12px 24px 24px' }}>
+        <div style={{ position: 'relative', height: TOTAL_H, paddingLeft: 36 }}>
+          {hours.map(h => (
+            <div key={h} style={{ position: 'absolute', left: 0, top: yFor(h) - 6, fontSize: 11, color: p.inkMuted, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+              {String(h % 24).padStart(2, '0')}
+            </div>
+          ))}
+          {hours.map(h => (
+            <div key={'l' + h} style={{ position: 'absolute', left: 28, right: 0, top: yFor(h), height: 1, background: p.border, opacity: 0.5 }}/>
+          ))}
+          {sessions.map((s, i) => {
+            const next = sessions[i + 1];
+            if (!next) return null;
+            const gapTop = yFor(s.endH), gapH = yFor(next.startH) - gapTop;
+            if (gapH < 14) return null;
+            const gapDur = next.startH - s.endH;
+            const hh = Math.floor(gapDur), mm = Math.round((gapDur - hh) * 60);
+            return (
+              <div key={'g' + i} style={{ position: 'absolute', left: 28, right: 0, top: gapTop, height: gapH, display: 'flex', alignItems: 'center', justifyContent: 'center', color: p.inkMuted, fontSize: 11, fontWeight: 600, letterSpacing: 0.3 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, background: p.surfaceSoft, border: `1px dashed ${p.border}` }}>
+                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="8" cy="8" r="3.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+                  awake · {hh > 0 ? `${hh}h ` : ''}{mm}m
+                </span>
+              </div>
+            );
+          })}
+          {sessions.map((s, i) => {
+            const top = yFor(s.startH), height = yFor(s.endH) - top;
+            const isNight = s.kind === 'night';
+            return (
+              <div key={i} style={{ position: 'absolute', left: 28, right: 0, top, height, background: isNight ? p.night : p.nap, borderRadius: height < 30 ? 4 : (height < 80 ? 6 : 10), padding: height < 60 ? '6px 12px' : '8px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', color: '#fff', boxShadow: `0 4px 12px ${isNight ? p.night : p.nap}40` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>{isNight ? 'Night sleep' : 'Nap'}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, opacity: 0.85 }} className="kk-num">{s.dur}</span>
+                </div>
+                {height > 60 && <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 500 }} className="kk-num">
+                  {String(Math.floor(s.startH)).padStart(2,'0')}:{String(Math.round((s.startH%1)*60)).padStart(2,'0')} – {String(Math.floor(s.endH)%24).padStart(2,'0')}:{String(Math.round((s.endH%1)*60)).padStart(2,'0')}
+                </div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <TabBar palette={p} active="stats" />
+    </PhoneShell>
+  );
+}
+
+Object.assign(window, { StatsToday, StatsWeek, StatsSummary, StatsToday_DatePicker_Today, StatsToday_DatePicker_Past });
