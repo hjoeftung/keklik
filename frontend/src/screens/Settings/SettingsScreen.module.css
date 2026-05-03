@@ -138,6 +138,35 @@ button.row:hover {
   line-height: 1;
 }
 
+/* ── Time format toggle ─────────────────────────────────────── */
+
+.formatToggle {
+  display: flex;
+  gap: 2px;
+  background: var(--kk-border);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.formatBtn {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 6px;
+  font-family: var(--kk-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  color: var(--kk-ink-soft);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.formatBtnActive {
+  background: var(--kk-surface);
+  color: var(--kk-ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
 /* ── Sign out ───────────────────────────────────────────────── */
 
 .signOutRow {

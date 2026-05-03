@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { editSleepSession, deleteSleepSession, type SleepSession } from '@/api/endpoints'
 import { ApiError } from '@/api/client'
 import DrumPicker from '@/components/DrumPicker'
+import { useTimeFormatContext } from '@/context/TimeFormatContext'
 import styles from './SessionDetailSheet.module.css'
 
 interface Props {
@@ -20,8 +21,9 @@ interface SleepSessionConflict {
   conflicting_session?: SleepSession
 }
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+function makeFormatTime(use24h: boolean) {
+  return (iso: string) =>
+    new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !use24h })
 }
 
 function formatDate(iso: string): string {
@@ -47,14 +49,16 @@ function durationSeconds(start: Date, end: Date): number {
   return Math.round((end.getTime() - start.getTime()) / 1000)
 }
 
-function formatDisplayTime(d: Date): string {
-  const today = new Date()
-  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-  if (d.toDateString() === today.toDateString()) return `Today, ${timeStr}`
-  const yesterday = new Date(today)
-  yesterday.setDate(today.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return `Yesterday, ${timeStr}`
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + `, ${timeStr}`
+function makeFormatDisplayTime(use24h: boolean) {
+  return (d: Date): string => {
+    const today = new Date()
+    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !use24h })
+    if (d.toDateString() === today.toDateString()) return `Today, ${timeStr}`
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+    if (d.toDateString() === yesterday.toDateString()) return `Yesterday, ${timeStr}`
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + `, ${timeStr}`
+  }
 }
 
 function sleepSessionConflict(err: ApiError): SleepSessionConflict | null {
@@ -69,6 +73,9 @@ const CLASSIFICATION_NOTE: Record<string, string> = {
 }
 
 export default function SessionDetailSheet({ session, babyId, onClose, onUpdated, onDeleted }: Props) {
+  const { use24h } = useTimeFormatContext()
+  const formatTime = makeFormatTime(use24h)
+  const formatDisplayTime = makeFormatDisplayTime(use24h)
   const [currentSession, setCurrentSession] = useState(session)
   const [mode, setMode] = useState<Mode>('detail')
   const [deleteConfirm, setDeleteConfirm] = useState(false)

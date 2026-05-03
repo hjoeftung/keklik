@@ -18,10 +18,11 @@ export function formatDuration(seconds: number): string {
   return `${h} h ${m} min`
 }
 
-export function formatTime(isoString: string): string {
+export function formatTime(isoString: string, use24h = false): string {
   return new Intl.DateTimeFormat(undefined, {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: !use24h,
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   }).format(new Date(isoString))
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '@/context/AuthContext'
+import { useTimeFormatContext } from '@/context/TimeFormatContext'
 import { getSleepStats } from '@/api/endpoints'
 import { hhmmToDisplay } from '@/utils/time'
 import styles from './SettingsScreen.module.css'
@@ -8,6 +9,7 @@ import styles from './SettingsScreen.module.css'
 export default function SettingsScreen() {
   const navigate = useNavigate()
   const { family, signOut } = useAuthContext()
+  const { format, setFormat, use24h } = useTimeFormatContext()
 
   const baby = family?.baby
   const memberCount = family?.members.length ?? 0
@@ -19,13 +21,13 @@ export default function SettingsScreen() {
     getSleepStats(baby.id)
       .then(stats => {
         if (stats.night_window) {
-          const start = hhmmToDisplay(stats.night_window.start_hhmm)
-          const end = hhmmToDisplay(stats.night_window.end_hhmm)
+          const start = hhmmToDisplay(stats.night_window.start_hhmm, use24h)
+          const end = hhmmToDisplay(stats.night_window.end_hhmm, use24h)
           setNightWindowLabel(`${start} – ${end}`)
         }
       })
       .catch(() => {})
-  }, [baby?.id])
+  }, [baby?.id, use24h])
 
   async function handleSignOut() {
     await signOut()
@@ -62,7 +64,20 @@ export default function SettingsScreen() {
           <div className={styles.divider} />
           <div className={styles.row}>
             <span className={styles.rowLabel}>Time format</span>
-            <span className={styles.rowChevron}>›</span>
+            <div className={styles.formatToggle}>
+              <button
+                className={`${styles.formatBtn} ${format === '12h' ? styles.formatBtnActive : ''}`}
+                onClick={() => setFormat('12h')}
+              >
+                12h
+              </button>
+              <button
+                className={`${styles.formatBtn} ${format === '24h' ? styles.formatBtnActive : ''}`}
+                onClick={() => setFormat('24h')}
+              >
+                24h
+              </button>
+            </div>
           </div>
         </div>
       </div>

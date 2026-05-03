@@ -35,6 +35,7 @@ export interface FamilyMember {
 export interface FamilyBaby {
   id: string
   name: string
+  day_start_hhmm: string
 }
 
 export interface GetFamilyResponse {

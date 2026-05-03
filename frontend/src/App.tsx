@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from '@/context/AuthContext'
 import { AppDataProvider } from '@/context/AppDataContext'
+import { TimeFormatProvider } from '@/context/TimeFormatContext'
 import { RequireAuth } from '@/components/RequireAuth'
 import { RequireNoFamily } from '@/components/RequireNoFamily'
 import { AuthenticatedLayout } from '@/components/NavBar/AuthenticatedLayout'
@@ -17,19 +18,21 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppDataProvider>
-          <Routes>
-            <Route path="/" element={<SignInScreen />} />
-            <Route path="/auth/callback" element={<AuthCallbackScreen />} />
-            <Route path="/sleep" element={<RequireAuth><AuthenticatedLayout><SleepScreen /></AuthenticatedLayout></RequireAuth>} />
-            <Route path="/onboarding" element={<RequireNoFamily><OnboardingScreen /></RequireNoFamily>} />
-            <Route path="/invite/:token" element={<InviteScreen />} />
-            <Route path="/statistics" element={<RequireAuth><AuthenticatedLayout><StatisticsScreen /></AuthenticatedLayout></RequireAuth>} />
-            <Route path="/settings" element={<RequireAuth><AuthenticatedLayout><SettingsScreen /></AuthenticatedLayout></RequireAuth>} />
-            <Route path="/settings/night-window" element={<RequireAuth><AuthenticatedLayout><NightWindowScreen /></AuthenticatedLayout></RequireAuth>} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AppDataProvider>
+        <TimeFormatProvider>
+          <AppDataProvider>
+            <Routes>
+              <Route path="/" element={<SignInScreen />} />
+              <Route path="/auth/callback" element={<AuthCallbackScreen />} />
+              <Route path="/sleep" element={<RequireAuth><AuthenticatedLayout><SleepScreen /></AuthenticatedLayout></RequireAuth>} />
+              <Route path="/onboarding" element={<RequireNoFamily><OnboardingScreen /></RequireNoFamily>} />
+              <Route path="/invite/:token" element={<InviteScreen />} />
+              <Route path="/statistics" element={<RequireAuth><AuthenticatedLayout><StatisticsScreen /></AuthenticatedLayout></RequireAuth>} />
+              <Route path="/settings" element={<RequireAuth><AuthenticatedLayout><SettingsScreen /></AuthenticatedLayout></RequireAuth>} />
+              <Route path="/settings/night-window" element={<RequireAuth><AuthenticatedLayout><NightWindowScreen /></AuthenticatedLayout></RequireAuth>} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AppDataProvider>
+        </TimeFormatProvider>
       </AuthProvider>
     </BrowserRouter>
   )

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuthContext } from '@/context/AuthContext'
+import { useTimeFormatContext } from '@/context/TimeFormatContext'
 import {
   startSleep,
   stopSleep,
@@ -13,18 +14,21 @@ import LogPastSleepSheet from './LogPastSleepSheet'
 import DrumPicker from '@/components/DrumPicker'
 import styles from './SleepScreen.module.css'
 
-function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+function makeFmtTime(use24h: boolean) {
+  return (iso: string) =>
+    new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !use24h })
 }
 
-function formatDisplayTime(d: Date): string {
-  const today = new Date()
-  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-  if (d.toDateString() === today.toDateString()) return `Today, ${timeStr}`
-  const yesterday = new Date(today)
-  yesterday.setDate(today.getDate() - 1)
-  if (d.toDateString() === yesterday.toDateString()) return `Yesterday, ${timeStr}`
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + `, ${timeStr}`
+function makeFormatDisplayTime(use24h: boolean) {
+  return (d: Date): string => {
+    const today = new Date()
+    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !use24h })
+    if (d.toDateString() === today.toDateString()) return `Today, ${timeStr}`
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+    if (d.toDateString() === yesterday.toDateString()) return `Yesterday, ${timeStr}`
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + `, ${timeStr}`
+  }
 }
 
 function elapsedSecs(from: string): number {
@@ -37,6 +41,9 @@ function fmtHM(secs: number): { h: number; m: number } {
 
 
 export default function SleepScreen() {
+  const { use24h } = useTimeFormatContext()
+  const fmtTime = makeFmtTime(use24h)
+  const formatDisplayTime = makeFormatDisplayTime(use24h)
   const { family } = useAuthContext()
   const babyId = family?.baby.id ?? ''
   const babyName = family?.baby.name ?? 'Baby'
