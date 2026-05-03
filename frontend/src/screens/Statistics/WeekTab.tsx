@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react'
 import type { SleepSession, NightWindowInfo } from '@/api/endpoints'
+import SessionDetailSheet from './SessionDetailSheet'
 import { computeDayWindow } from './utils'
 import styles from './WeekTab.module.css'
 
@@ -6,6 +8,8 @@ interface Props {
   sessions: SleepSession[]
   nightWindow?: NightWindowInfo
   isLoading: boolean
+  babyId: string
+  onRefresh: () => void
 }
 
 const COL_H = 460     // px
@@ -30,6 +34,7 @@ function getLast7Days(): Date[] {
 }
 
 interface Block {
+  session: SleepSession
   top: number
   height: number
   color: string
@@ -63,6 +68,7 @@ function buildBlocks(
     const isNight = s.classification === 'night'
 
     return [{
+      session: s,
       top,
       height,
       color: isNight ? NIGHT_COLOR : NAP_COLOR,
@@ -71,7 +77,25 @@ function buildBlocks(
   })
 }
 
-export default function WeekTab({ sessions, nightWindow, isLoading }: Props) {
+export default function WeekTab({ sessions, nightWindow, isLoading, babyId, onRefresh }: Props) {
+  const [selectedSession, setSelectedSession] = useState<SleepSession | null>(null)
+  const [localSessions, setLocalSessions] = useState(sessions)
+
+  useEffect(() => {
+    if (!selectedSession) setLocalSessions(sessions)
+  }, [sessions]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleSessionUpdated(updated: SleepSession) {
+    setLocalSessions(prev => prev.map(s => s.id === updated.id ? updated : s))
+    setSelectedSession(null)
+    onRefresh()
+  }
+
+  function handleSessionDeleted() {
+    if (selectedSession) setLocalSessions(prev => prev.filter(s => s.id !== selectedSession.id))
+    setSelectedSession(null)
+    onRefresh()
+  }
   const days = getLast7Days()
 
   const nightEndHhmm = nightWindow?.end_hhmm ?? '07:00'
@@ -118,7 +142,7 @@ export default function WeekTab({ sessions, nightWindow, isLoading }: Props) {
   days.forEach(day => {
     const key = dateKey(day)
     const { windowStart: ws, windowEnd: we } = computeDayWindow(day, nightWindow)
-    const daySessions = sessions.filter(s => {
+    const daySessions = localSessions.filter(s => {
       if (!s.stopped_at || s.classification === 'active') return false
       return new Date(s.started_at) < we && new Date(s.stopped_at) >= ws
     })
@@ -197,7 +221,7 @@ export default function WeekTab({ sessions, nightWindow, isLoading }: Props) {
               return (
                 <div key={key} className={styles.dayCol}>
                   {blocks.map((b, i) => (
-                    <div
+                    <button
                       key={i}
                       className={styles.block}
                       style={{
@@ -206,6 +230,8 @@ export default function WeekTab({ sessions, nightWindow, isLoading }: Props) {
                         background: b.color,
                         borderRadius: b.borderRadius,
                       }}
+                      onClick={() => setSelectedSession(b.session)}
+                      aria-label={`${b.session.classification === 'night' ? 'Night sleep' : 'Nap'}, tap to edit`}
                     />
                   ))}
                 </div>
@@ -214,6 +240,16 @@ export default function WeekTab({ sessions, nightWindow, isLoading }: Props) {
           </div>
         </div>
       </div>
+
+      {selectedSession && (
+        <SessionDetailSheet
+          session={selectedSession}
+          babyId={babyId}
+          onClose={() => setSelectedSession(null)}
+          onUpdated={handleSessionUpdated}
+          onDeleted={handleSessionDeleted}
+        />
+      )}
     </div>
   )
 }

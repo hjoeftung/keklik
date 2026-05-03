@@ -164,6 +164,15 @@
   position: absolute;
   left: 1px;
   right: 1px;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  opacity: 1;
+  transition: opacity 0.12s;
+}
+
+.block:active {
+  opacity: 0.75;
 }
 
 /* ── Skeleton shimmer ───────────────────────────────────────── */

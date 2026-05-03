@@ -129,7 +129,7 @@ export default function StatsScreen() {
         />
       )}
       {!error && activeTab === 'week' && (
-        <WeekTab sessions={sessions7d} nightWindow={stats?.night_window} isLoading={isLoading} />
+        <WeekTab sessions={sessions7d} nightWindow={stats?.night_window} isLoading={isLoading} babyId={babyId} onRefresh={refresh} />
       )}
       {!error && activeTab === 'summary' && (
         <SummaryTab summary={stats?.summary ?? {}} isLoading={isLoading} />

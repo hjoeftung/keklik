@@ -11,7 +11,7 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   filter: drop-shadow(0 16px 32px rgba(229, 155, 106, 0.4));
-  animation: breathe 4s ease-in-out infinite;
+  animation: breathe 6s ease-in-out infinite;
   transition: filter 0.15s ease;
 }
 
@@ -49,8 +49,8 @@
 }
 
 /* z1 = largest Z, starts first → floats to top of stream */
-.z1 { animation-delay: 1s; }
+.z1 { animation-delay: 0s; }
 /* z2 = medium z → middle of stream */
-.z2 { animation-delay: 2s; }
+.z2 { animation-delay: 1s; }
 /* z3 = smallest z, starts last → near bottom of stream */
-.z3 { animation-delay: 3s; }
+.z3 { animation-delay: 2s; }
