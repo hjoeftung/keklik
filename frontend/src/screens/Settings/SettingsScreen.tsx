@@ -58,11 +58,6 @@ export default function SettingsScreen() {
           </button>
           <div className={styles.divider} />
           <div className={styles.row}>
-            <span className={styles.rowLabel}>Day starts at</span>
-            <span className={styles.rowChevron}>›</span>
-          </div>
-          <div className={styles.divider} />
-          <div className={styles.row}>
             <span className={styles.rowLabel}>Time format</span>
             <div className={styles.formatToggle}>
               <button
