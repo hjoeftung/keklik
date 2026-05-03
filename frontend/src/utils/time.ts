@@ -1,3 +1,14 @@
+// hhmm is "HH:MM" as returned by the backend (e.g. "22:00")
+export function hhmmToDisplay(hhmm: string, use24h = false): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  if (use24h) {
+    return m === 0 ? `${String(h).padStart(2, '0')}:00` : `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+  }
+  const period = h < 12 ? 'AM' : 'PM'
+  const hour12 = h % 12 === 0 ? 12 : h % 12
+  return m === 0 ? `${hour12} ${period}` : `${hour12}:${String(m).padStart(2, '0')} ${period}`
+}
+
 export function formatDuration(seconds: number): string {
   if (seconds === 0) return '0 min'
   const h = Math.floor(seconds / 3600)

@@ -1,5 +1,8 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '@/context/AuthContext'
+import { getSleepStats } from '@/api/endpoints'
+import { hhmmToDisplay } from '@/utils/time'
 import styles from './SettingsScreen.module.css'
 
 export default function SettingsScreen() {
@@ -8,6 +11,21 @@ export default function SettingsScreen() {
 
   const baby = family?.baby
   const memberCount = family?.members.length ?? 0
+
+  const [nightWindowLabel, setNightWindowLabel] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!baby?.id) return
+    getSleepStats(baby.id)
+      .then(stats => {
+        if (stats.night_window) {
+          const start = hhmmToDisplay(stats.night_window.start_hhmm)
+          const end = hhmmToDisplay(stats.night_window.end_hhmm)
+          setNightWindowLabel(`${start} – ${end}`)
+        }
+      })
+      .catch(() => {})
+  }, [baby?.id])
 
   async function handleSignOut() {
     await signOut()
@@ -29,10 +47,13 @@ export default function SettingsScreen() {
       <div className={styles.section}>
         <p className={styles.sectionLabel}>Sleep</p>
         <div className={styles.group}>
-          <div className={styles.row}>
+          <button className={styles.row} onClick={() => navigate('/settings/night-window')}>
             <span className={styles.rowLabel}>Night window</span>
-            <span className={styles.rowChevron}>›</span>
-          </div>
+            <span className={styles.rowRight}>
+              {nightWindowLabel && <span className={styles.rowValue}>{nightWindowLabel}</span>}
+              <span className={styles.rowChevron}>›</span>
+            </span>
+          </button>
           <div className={styles.divider} />
           <div className={styles.row}>
             <span className={styles.rowLabel}>Day starts at</span>

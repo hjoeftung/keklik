@@ -11,6 +11,7 @@ import InviteScreen from '@/screens/Invite/InviteScreen'
 import SleepScreen from '@/screens/Sleep/SleepScreen'
 import StatisticsScreen from '@/screens/Statistics/StatisticsScreen'
 import SettingsScreen from '@/screens/Settings/SettingsScreen'
+import NightWindowScreen from '@/screens/Settings/NightWindowScreen'
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="/invite/:token" element={<InviteScreen />} />
             <Route path="/statistics" element={<RequireAuth><AuthenticatedLayout><StatisticsScreen /></AuthenticatedLayout></RequireAuth>} />
             <Route path="/settings" element={<RequireAuth><AuthenticatedLayout><SettingsScreen /></AuthenticatedLayout></RequireAuth>} />
+            <Route path="/settings/night-window" element={<RequireAuth><AuthenticatedLayout><NightWindowScreen /></AuthenticatedLayout></RequireAuth>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AppDataProvider>

@@ -91,6 +91,27 @@
   justify-content: space-between;
   padding: 14px 16px;
   cursor: default;
+  background: none;
+  border: none;
+  width: 100%;
+  font-family: var(--kk-sans);
+  text-align: left;
+}
+
+.row[role="button"],
+button.row {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+button.row:hover {
+  opacity: 0.75;
+}
+
+.rowRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .divider {

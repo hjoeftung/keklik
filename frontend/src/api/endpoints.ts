@@ -193,6 +193,20 @@ export function getSleepStats(babyId: string): Promise<SleepStatsResponse> {
   return api.get(`/babies/${babyId}/sleep-stats?timezone=${encodeURIComponent(tz)}`)
 }
 
+// --- Night window ---
+
+export interface SetNightWindowRequest {
+  start_hour: number
+  start_minute: number
+  end_hour: number
+  end_minute: number
+  effective_from: string
+}
+
+export function setNightWindow(babyId: string, req: SetNightWindowRequest): Promise<void> {
+  return api.post(`/babies/${babyId}/night-windows`, req)
+}
+
 // --- Sleep profiles ---
 
 export interface NightWindowRequest {
