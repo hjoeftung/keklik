@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '@/context/AuthContext'
-import { createFamily, createSleepProfile } from '@/api/endpoints'
+import { createFamily, setNightWindow } from '@/api/endpoints'
 import { ApiError } from '@/api/client'
 import { BirthdayPicker, TimePicker } from '@/components/DrumPicker'
 import styles from './OnboardingScreen.module.css'
 
-const DEFAULT_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone
 
 function parseTime(value: string): { hour: number; minute: number } {
   const [h, m] = value.split(':').map(Number)
@@ -100,14 +99,12 @@ export default function OnboardingScreen() {
       const start = parseTime(nightStart)
       const end = parseTime(nightEnd)
 
-      await createSleepProfile(family.baby_id, {
-        timezone: DEFAULT_TZ,
-        night_window: {
-          start_hour: start.hour,
-          start_minute: start.minute,
-          end_hour: end.hour,
-          end_minute: end.minute,
-        },
+      await setNightWindow(family.baby_id, {
+        start_hour: start.hour,
+        start_minute: start.minute,
+        end_hour: end.hour,
+        end_minute: end.minute,
+        effective_from: new Date().toISOString(),
       })
 
       await refreshFamily()
