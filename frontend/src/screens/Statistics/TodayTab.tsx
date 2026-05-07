@@ -70,6 +70,7 @@ export default function TodayTab({
   const diaryRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalSessions(sessions)
   }, [sessions])
 
@@ -339,6 +340,7 @@ export default function TodayTab({
       {/* Session detail sheet */}
       {selectedSession && (
         <SessionDetailSheet
+          key={selectedSession.id}
           session={selectedSession}
           babyId={babyId}
           onClose={() => setSelectedSession(null)}

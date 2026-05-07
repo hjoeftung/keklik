@@ -78,6 +78,7 @@ export default function SleepScreen() {
   }, [babyId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSessions()
   }, [loadSessions])
 

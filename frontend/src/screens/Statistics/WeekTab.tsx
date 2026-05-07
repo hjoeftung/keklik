@@ -84,6 +84,7 @@ export default function WeekTab({ sessions, nightWindow, isLoading, babyId, onRe
   const [localSessions, setLocalSessions] = useState(sessions)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!selectedSession) setLocalSessions(sessions)
   }, [sessions]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -251,6 +252,7 @@ export default function WeekTab({ sessions, nightWindow, isLoading, babyId, onRe
 
       {selectedSession && (
         <SessionDetailSheet
+          key={selectedSession.id}
           session={selectedSession}
           babyId={babyId}
           onClose={() => setSelectedSession(null)}

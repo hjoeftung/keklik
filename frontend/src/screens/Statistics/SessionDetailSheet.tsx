@@ -107,12 +107,6 @@ export default function SessionDetailSheet({
   const displayTitle = isNight ? 'Night sleep' : 'Nap'
 
   useEffect(() => {
-    setCurrentSession(session)
-    setStartDate(new Date(session.started_at))
-    setEndDate(session.stopped_at ? new Date(session.stopped_at) : new Date())
-  }, [session])
-
-  useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         if (activePicker) setActivePicker(null)

@@ -165,8 +165,8 @@ export interface BirthdayPickerProps {
 }
 
 export function BirthdayPicker({ initialDate, onChange }: BirthdayPickerProps) {
-  const years = useMemo(buildYears, [])
-  const days = useMemo(buildDays, [])
+  const years = useMemo(() => buildYears(), [])
+  const days = useMemo(() => buildDays(), [])
 
   const [month, setMonth] = useState(() => MONTHS[initialDate.getMonth()])
   const [day, setDay] = useState(() => pad2(initialDate.getDate()))
@@ -200,8 +200,8 @@ export interface TimePickerProps {
 }
 
 export function TimePicker({ value, onChange }: TimePickerProps) {
-  const hourItems = useMemo(buildHours, [])
-  const minItems = useMemo(buildMinutes, [])
+  const hourItems = useMemo(() => buildHours(), [])
+  const minItems = useMemo(() => buildMinutes(), [])
 
   const [hour, setHour] = useState(() => value.split(':')[0])
   const [minute, setMinute] = useState(() => value.split(':')[1])
@@ -228,8 +228,8 @@ export function TimePicker({ value, onChange }: TimePickerProps) {
 
 export default function DrumPicker({ initialDate, onChange }: DrumPickerProps) {
   const dayItems = useMemo(() => buildDayItems(30), [])
-  const hourItems = useMemo(buildHours, [])
-  const minItems = useMemo(buildMinutes, [])
+  const hourItems = useMemo(() => buildHours(), [])
+  const minItems = useMemo(() => buildMinutes(), [])
   const dayLabels = useMemo(() => dayItems.map((d) => d.label), [dayItems])
 
   const [day, setDay] = useState(() => {

@@ -46,6 +46,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [babyId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh()
   }, [refresh])
 
