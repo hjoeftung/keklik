@@ -149,6 +149,63 @@ export default function SleepScreen() {
 
   if (isLoading) return <div className={styles.loading}>Loading…</div>
 
+  // ── Empty state: brand new family, no sessions yet ───────────────────────
+  if (sessions.length === 0) {
+    return (
+      <div className={styles.screen}>
+        <div className={styles.header}>
+          <div className={styles.greeting}>{babyName}</div>
+        </div>
+
+        <div className={styles.durationBlock}>
+          <div className={styles.emptyHeadline}>hasn't slept yet</div>
+          <div className={styles.emptySubtitle}>
+            Tap the pillow when they doze off. We'll keep track from there.
+          </div>
+        </div>
+
+        <div className={styles.pillowWrap}>
+          <PillowButton label="Start sleep" mascot="awake" onClick={handleToggle} isDisabled={isToggling} />
+          <div className={styles.tapToWakeHint}>Tap to start sleep</div>
+        </div>
+
+        <button className={styles.editStartPillSoft} onClick={() => setShowLogPast(true)}>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="10" cy="10" r="7" />
+            <path d="M10 6v4l2.5 2" />
+          </svg>
+          Log past sleep
+        </button>
+
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
+
+        {showLogPast && (
+          <LogPastSleepSheet
+            babyId={babyId}
+            onSaved={() => {
+              setShowLogPast(false)
+              loadSessions()
+            }}
+            onClose={() => setShowLogPast(false)}
+          />
+        )}
+      </div>
+    )
+  }
+
   // ── Asleep / Soft state ──────────────────────────────────────────────────
   if (isActive && session) {
     const sleeping = fmtHM(elapsedSecs(session.started_at))
@@ -172,7 +229,7 @@ export default function SleepScreen() {
         </div>
 
         <div className={styles.pillowWrap}>
-          <PillowButton label="Tap to wake" masked onClick={handleToggle} isDisabled={isToggling} />
+          <PillowButton label="Tap to wake" mascot="sleeping" onClick={handleToggle} isDisabled={isToggling} />
           <div className={styles.tapToWakeHint}>Tap to wake · shhh</div>
         </div>
 
@@ -290,7 +347,8 @@ export default function SleepScreen() {
       </div>
 
       <div className={styles.pillowWrap}>
-        <PillowButton label="Tap to sleep" onClick={handleToggle} isDisabled={isToggling} />
+        <PillowButton label="Tap to sleep" mascot="awake" onClick={handleToggle} isDisabled={isToggling} />
+        <div className={styles.tapToWakeHint}>Tap to start sleep</div>
       </div>
 
       <button className={styles.editStartPillSoft} onClick={() => setShowLogPast(true)}>

@@ -27,6 +27,48 @@
   text-align: center;
 }
 
+/* ── Empty state ──────────────────────────────────────────────── */
+.emptyMascot {
+  margin-bottom: 16px;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 32px;
+  text-align: center;
+}
+
+.emptyHeadline {
+  font-family: var(--kk-serif);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--kk-ink);
+  letter-spacing: -0.4px;
+}
+
+.emptySubtitle {
+  font-size: 14px;
+  color: var(--kk-ink-soft);
+  margin-top: 8px;
+  line-height: 1.5;
+  max-width: 280px;
+}
+
+.logPastLink {
+  margin-top: 28px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--kk-primary);
+  font-family: var(--kk-sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* ── Awake screen ─────────────────────────────────────────────── */
 .screen {
   display: flex;
@@ -41,6 +83,7 @@
 .durationBlock {
   text-align: center;
   padding: 0 24px;
+  min-height: 104px;
 }
 
 .durationLabel {
@@ -118,6 +161,7 @@
   color: var(--kk-night);
   letter-spacing: 0.2px;
 }
+
 
 /* ── Quick-action cards ───────────────────────────────────────── */
 .quickActions {

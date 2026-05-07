@@ -2,12 +2,12 @@ import styles from './PillowButton.module.css'
 
 interface PillowButtonProps {
   label: string
-  masked?: boolean
+  mascot?: 'awake' | 'sleeping'
   isDisabled?: boolean
   onClick: () => void
 }
 
-export default function PillowButton({ label, masked, isDisabled, onClick }: PillowButtonProps) {
+export default function PillowButton({ label, mascot, isDisabled, onClick }: PillowButtonProps) {
   return (
     <button className={styles.wrapper} onClick={onClick} disabled={isDisabled} aria-label={label}>
       <span className={styles.pillow}>
@@ -50,9 +50,9 @@ export default function PillowButton({ label, masked, isDisabled, onClick }: Pil
           <circle cx="42" cy="126" r="2.2" fill="var(--kk-primary-deep)" opacity="0.35" />
           <circle cx="158" cy="126" r="2.2" fill="var(--kk-primary-deep)" opacity="0.35" />
 
-          {masked ? (
+          {mascot ? (
             <>
-              {/* Mascot sleeping in upper-right corner of pillow */}
+              {/* Mascot in upper-right corner of pillow */}
               <g transform="translate(85, -40) scale(1.2)">
                 {/* Hair tufts */}
                 <g fill="#FBE4D1" stroke="#C97B4D" strokeWidth="1.4" strokeOpacity="0.3">
@@ -87,21 +87,20 @@ export default function PillowButton({ label, masked, isDisabled, onClick }: Pil
                 {/* Rosy cheeks */}
                 <ellipse cx="40" cy="76" rx="5.5" ry="3.6" fill="#E59B6A" opacity="0.35" />
                 <ellipse cx="78" cy="76" rx="5.5" ry="3.6" fill="#E59B6A" opacity="0.35" />
-                {/* Closed sleeping eyes */}
-                <path
-                  d="M 46 69 Q 49 65 52 69"
-                  fill="none"
-                  stroke="#2E2A33"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M 68 69 Q 71 65 74 69"
-                  fill="none"
-                  stroke="#2E2A33"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
+                {/* Eyes — open when awake, closed arcs when sleeping */}
+                {mascot === 'sleeping' ? (
+                  <>
+                    <path d="M 46 69 Q 49 65 52 69" fill="none" stroke="#2E2A33" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M 68 69 Q 71 65 74 69" fill="none" stroke="#2E2A33" strokeWidth="2" strokeLinecap="round" />
+                  </>
+                ) : (
+                  <>
+                    <ellipse cx="49" cy="69" rx="3.2" ry="3.6" fill="#2E2A33" />
+                    <ellipse cx="71" cy="69" rx="3.2" ry="3.6" fill="#2E2A33" />
+                    <circle cx="50" cy="67.5" r="1" fill="#fff" />
+                    <circle cx="72" cy="67.5" r="1" fill="#fff" />
+                  </>
+                )}
                 {/* Nose */}
                 <path
                   d="M 56 78 L 60 84 L 64 78 Q 60 76, 56 78 Z"
@@ -112,16 +111,14 @@ export default function PillowButton({ label, masked, isDisabled, onClick }: Pil
                   strokeLinejoin="round"
                 />
               </g>
-              {/* Floating Z's — originate from the top of the mascot's head (SVG coords ~175,5) */}
-              <text x="175" y="5" fontSize="22" className={`${styles.zee} ${styles.z1}`}>
-                Z
-              </text>
-              <text x="175" y="5" fontSize="16" className={`${styles.zee} ${styles.z2}`}>
-                z
-              </text>
-              <text x="175" y="5" fontSize="12" className={`${styles.zee} ${styles.z3}`}>
-                z
-              </text>
+              {/* Floating Z's — only when sleeping */}
+              {mascot === 'sleeping' && (
+                <>
+                  <text x="175" y="5" fontSize="22" className={`${styles.zee} ${styles.z1}`}>Z</text>
+                  <text x="175" y="5" fontSize="16" className={`${styles.zee} ${styles.z2}`}>z</text>
+                  <text x="175" y="5" fontSize="12" className={`${styles.zee} ${styles.z3}`}>z</text>
+                </>
+              )}
             </>
           ) : (
             <text
