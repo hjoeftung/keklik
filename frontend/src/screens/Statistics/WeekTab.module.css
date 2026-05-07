@@ -146,7 +146,7 @@
 }
 
 .nightWindowTick {
-  color: #5B7BB8 !important;
+  color: #5b7bb8 !important;
   font-weight: 700 !important;
 }
 
@@ -177,13 +177,18 @@
 
 /* ── Skeleton shimmer ───────────────────────────────────────── */
 @keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position:  200% center; }
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
 }
 .skeleton {
-  background: linear-gradient(90deg,
+  background: linear-gradient(
+    90deg,
     var(--kk-surface-soft) 25%,
-    var(--kk-border)       50%,
+    var(--kk-border) 50%,
     var(--kk-surface-soft) 75%
   );
   background-size: 200% 100%;

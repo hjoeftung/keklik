@@ -1,6 +1,11 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 import { useAuthContext } from './AuthContext'
-import { getSleepHistory, getSleepStats, type SleepSession, type SleepStatsResponse } from '@/api/endpoints'
+import {
+  getSleepHistory,
+  getSleepStats,
+  type SleepSession,
+  type SleepStatsResponse,
+} from '@/api/endpoints'
 import { ApiError } from '@/api/client'
 
 interface AppDataContextValue {

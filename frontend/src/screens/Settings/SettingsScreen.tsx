@@ -19,7 +19,7 @@ export default function SettingsScreen() {
   useEffect(() => {
     if (!baby?.id) return
     getSleepStats(baby.id)
-      .then(stats => {
+      .then((stats) => {
         if (stats.night_window) {
           const start = hhmmToDisplay(stats.night_window.start_hhmm, use24h)
           const end = hhmmToDisplay(stats.night_window.end_hhmm, use24h)
@@ -37,12 +37,12 @@ export default function SettingsScreen() {
   return (
     <div className={styles.screen}>
       <div className={styles.babyCard}>
-        <div className={styles.avatar}>
-          {baby?.name?.[0]?.toUpperCase() ?? '?'}
-        </div>
+        <div className={styles.avatar}>{baby?.name?.[0]?.toUpperCase() ?? '?'}</div>
         <div className={styles.babyInfo}>
           <p className={styles.babyName}>{baby?.name ?? '—'}</p>
-          <p className={styles.babySub}>{memberCount} caregiver{memberCount !== 1 ? 's' : ''}</p>
+          <p className={styles.babySub}>
+            {memberCount} caregiver{memberCount !== 1 ? 's' : ''}
+          </p>
         </div>
       </div>
 

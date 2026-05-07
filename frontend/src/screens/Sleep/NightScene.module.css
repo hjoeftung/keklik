@@ -69,8 +69,20 @@
 }
 
 @keyframes floatZ {
-  0%   { transform: translateY(0)   scale(1);    opacity: 0.55; }
-  40%  { transform: translateY(-20px) scale(1.05); opacity: 0.8;  }
-  80%  { transform: translateY(-38px) scale(0.95); opacity: 0.2;  }
-  100% { transform: translateY(-50px) scale(0.9);  opacity: 0;    }
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.55;
+  }
+  40% {
+    transform: translateY(-20px) scale(1.05);
+    opacity: 0.8;
+  }
+  80% {
+    transform: translateY(-38px) scale(0.95);
+    opacity: 0.2;
+  }
+  100% {
+    transform: translateY(-50px) scale(0.9);
+    opacity: 0;
+  }
 }

@@ -47,10 +47,22 @@ interface SessionBar {
 
 function isToday(d: Date): boolean {
   const now = new Date()
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  )
 }
 
-export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading, selectedDate, onDateChange }: Props) {
+export default function TodayTab({
+  sessions,
+  stats,
+  babyId,
+  onRefresh,
+  isLoading,
+  selectedDate,
+  onDateChange,
+}: Props) {
   const selectedIsToday = isToday(selectedDate)
 
   const [selectedSession, setSelectedSession] = useState<SleepSession | null>(null)
@@ -62,7 +74,7 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
   }, [sessions])
 
   const completedSessions = localSessions
-    .filter(s => s.stopped_at != null)
+    .filter((s) => s.stopped_at != null)
     .sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime())
 
   let windowStart = new Date(selectedDate)
@@ -82,9 +94,8 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
     if (!diaryRef.current || isLoading) return
     const now = new Date()
     const nowOffsetMin = (now.getTime() - windowStart.getTime()) / 60000
-    const scrollTarget = nowOffsetMin > 0 && nowOffsetMin < totalMinutes
-      ? nowOffsetMin * PX_PER_MIN - 240
-      : 0
+    const scrollTarget =
+      nowOffsetMin > 0 && nowOffsetMin < totalMinutes ? nowOffsetMin * PX_PER_MIN - 240 : 0
     diaryRef.current.scrollTop = Math.max(0, scrollTarget)
   }, [isLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -135,7 +146,7 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
     if (offset > 0 && offset < totalMinutes) nightWindowStartOffsetMin = offset
   }
 
-  const sessionBars: SessionBar[] = completedSessions.flatMap(session => {
+  const sessionBars: SessionBar[] = completedSessions.flatMap((session) => {
     const startMs = new Date(session.started_at).getTime()
     const endMs = new Date(session.stopped_at!).getTime()
     const offsetMin = (startMs - windowStart.getTime()) / 60000
@@ -144,33 +155,36 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
     if (offsetMin + durMin < 0 || offsetMin > totalMinutes) return []
 
     const clampedOffsetMin = Math.max(0, offsetMin)
-    const clampedDurMin = Math.min(durMin, totalMinutes - clampedOffsetMin) - Math.max(0, -offsetMin)
+    const clampedDurMin =
+      Math.min(durMin, totalMinutes - clampedOffsetMin) - Math.max(0, -offsetMin)
     const top = clampedOffsetMin * PX_PER_MIN
     const height = Math.max(6, clampedDurMin * PX_PER_MIN)
     const isNight = session.classification === 'night'
     const color = isNight ? '#5B7BB8' : '#E8B86E'
     const borderRadius = Math.min(12, Math.max(3, height * 0.18))
 
-    return [{
-      session,
-      top,
-      height,
-      color,
-      borderRadius,
-      showLabel: height >= 22,
-      showDuration: height >= 22,
-    }]
+    return [
+      {
+        session,
+        top,
+        height,
+        color,
+        borderRadius,
+        showLabel: height >= 22,
+        showDuration: height >= 22,
+      },
+    ]
   })
 
   function handleSessionUpdated(updated: SleepSession) {
-    setLocalSessions(prev => prev.map(s => s.id === updated.id ? updated : s))
+    setLocalSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
     setSelectedSession(null)
     onRefresh()
   }
 
   function handleSessionDeleted() {
     if (selectedSession) {
-      setLocalSessions(prev => prev.filter(s => s.id !== selectedSession.id))
+      setLocalSessions((prev) => prev.filter((s) => s.id !== selectedSession.id))
     }
     setSelectedSession(null)
     onRefresh()
@@ -184,20 +198,29 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
           <div className={`${styles.statPill} ${styles.skeleton}`} style={{ height: 64 }} />
           <div className={`${styles.statPill} ${styles.skeleton}`} style={{ height: 64 }} />
         </div>
-        <div className={styles.skeleton} style={{ flex: 1, margin: '0 16px 24px', borderRadius: 16 }} />
+        <div
+          className={styles.skeleton}
+          style={{ flex: 1, margin: '0 16px 24px', borderRadius: 16 }}
+        />
       </div>
     )
   }
 
   const totalSleepSec = selectedIsToday
     ? (stats?.today.total_sleep_seconds ?? 0)
-    : localSessions.filter(s => s.classification === 'night').reduce((a, s) => a + (s.duration_seconds ?? 0), 0)
+    : localSessions
+        .filter((s) => s.classification === 'night')
+        .reduce((a, s) => a + (s.duration_seconds ?? 0), 0)
   const totalNapSec = selectedIsToday
     ? (stats?.today.total_nap_seconds ?? 0)
-    : localSessions.filter(s => s.classification === 'nap').reduce((a, s) => a + (s.duration_seconds ?? 0), 0)
+    : localSessions
+        .filter((s) => s.classification === 'nap')
+        .reduce((a, s) => a + (s.duration_seconds ?? 0), 0)
   const totalActiveSec = selectedIsToday
     ? (stats?.today.total_active_seconds ?? 0)
-    : localSessions.filter(s => s.classification === 'active').reduce((a, s) => a + (s.duration_seconds ?? 0), 0)
+    : localSessions
+        .filter((s) => s.classification === 'active')
+        .reduce((a, s) => a + (s.duration_seconds ?? 0), 0)
 
   return (
     <div className={styles.tab}>
@@ -213,9 +236,7 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
         </div>
         <div className={`${styles.statPill} ${styles.statPillNap}`}>
           <span className={styles.statLabel}>Naps</span>
-          <span className={`${styles.statValue} ${styles.statNap}`}>
-            {formatDur(totalNapSec)}
-          </span>
+          <span className={`${styles.statValue} ${styles.statNap}`}>{formatDur(totalNapSec)}</span>
         </div>
         <div className={`${styles.statPill} ${styles.statPillActive}`}>
           <span className={styles.statLabel}>Active</span>
@@ -227,9 +248,7 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
 
       {/* Empty state */}
       {completedSessions.length === 0 && (
-        <div className={styles.emptyState}>
-          No sleep sessions recorded
-        </div>
+        <div className={styles.emptyState}>No sleep sessions recorded</div>
       )}
 
       {/* Diary */}
@@ -239,10 +258,9 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
         data-scrollable
       >
         <div className={styles.diaryInner} style={{ height: totalHeight }}>
-
           {/* Hour label column */}
           <div className={styles.hourLabels}>
-            {hourTicks.map(tick => (
+            {hourTicks.map((tick) => (
               <div
                 key={tick.label}
                 className={styles.hourLabel}
@@ -254,9 +272,8 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
           </div>
 
           <div className={styles.sessionCol}>
-
             {/* Grid lines */}
-            {hourTicks.map(tick => (
+            {hourTicks.map((tick) => (
               <div
                 key={tick.label}
                 className={styles.gridLine}
@@ -274,35 +291,36 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
 
             {/* Current time indicator */}
             {showNowLine && (
-              <div
-                className={styles.nowLine}
-                style={{ top: nowOffsetMin * PX_PER_MIN }}
-              />
+              <div className={styles.nowLine} style={{ top: nowOffsetMin * PX_PER_MIN }} />
             )}
 
             {/* Session bars */}
-            {sessionBars.map(({ session, top, height, color, borderRadius, showLabel, showDuration }) => (
-              <button
-                key={session.id}
-                className={styles.sessionBar}
-                style={{ top, height, background: color, borderRadius }}
-                onClick={() => setSelectedSession(session)}
-                aria-label={`${session.classification === 'night' ? 'Night sleep' : 'Nap'}, ${formatDur(session.duration_seconds ?? 0)}`}
-              >
-                {(showLabel || showDuration) && (
-                  <div className={styles.barContent}>
-                    {showLabel && (
-                      <span className={styles.barLabel}>
-                        {session.classification === 'night' ? 'Night sleep' : 'Nap'}
-                      </span>
-                    )}
-                    {showDuration && (
-                      <span className={styles.barDuration}>{formatDur(session.duration_seconds ?? 0)}</span>
-                    )}
-                  </div>
-                )}
-              </button>
-            ))}
+            {sessionBars.map(
+              ({ session, top, height, color, borderRadius, showLabel, showDuration }) => (
+                <button
+                  key={session.id}
+                  className={styles.sessionBar}
+                  style={{ top, height, background: color, borderRadius }}
+                  onClick={() => setSelectedSession(session)}
+                  aria-label={`${session.classification === 'night' ? 'Night sleep' : 'Nap'}, ${formatDur(session.duration_seconds ?? 0)}`}
+                >
+                  {(showLabel || showDuration) && (
+                    <div className={styles.barContent}>
+                      {showLabel && (
+                        <span className={styles.barLabel}>
+                          {session.classification === 'night' ? 'Night sleep' : 'Nap'}
+                        </span>
+                      )}
+                      {showDuration && (
+                        <span className={styles.barDuration}>
+                          {formatDur(session.duration_seconds ?? 0)}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </button>
+              ),
+            )}
 
             {/* Awake gap pills */}
             {gapPills.map((pill, i) => (
@@ -314,7 +332,6 @@ export default function TodayTab({ sessions, stats, babyId, onRefresh, isLoading
                 {pill.label}
               </div>
             ))}
-
           </div>
         </div>
       </div>

@@ -1,6 +1,11 @@
 @keyframes breathe {
-  0%, 100% { transform: scale(1); }
-  50%       { transform: scale(1.035); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.035);
+  }
 }
 
 .wrapper {
@@ -33,13 +38,21 @@
 }
 
 @keyframes floatZee {
-  0%   { transform: translate(0, 0);        opacity: 0.85; }
-  80%  {                                    opacity: 0.5;  }
-  100% { transform: translate(14px, -48px); opacity: 0;   }
+  0% {
+    transform: translate(0, 0);
+    opacity: 0.85;
+  }
+  80% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(14px, -48px);
+    opacity: 0;
+  }
 }
 
 .zee {
-  fill: var(--kk-night, #2E2A33);
+  fill: var(--kk-night, #2e2a33);
   font-family: var(--kk-serif, Georgia, serif);
   font-weight: 700;
   transform-box: fill-box;
@@ -49,8 +62,14 @@
 }
 
 /* z1 = largest Z, starts first → floats to top of stream */
-.z1 { animation-delay: 0s; }
+.z1 {
+  animation-delay: 0s;
+}
 /* z2 = medium z → middle of stream */
-.z2 { animation-delay: 1s; }
+.z2 {
+  animation-delay: 1s;
+}
 /* z3 = smallest z, starts last → near bottom of stream */
-.z3 { animation-delay: 2s; }
+.z3 {
+  animation-delay: 2s;
+}

@@ -10,18 +10,18 @@ export default function CaregiversScreen() {
   return (
     <div className={styles.screen}>
       <div className={styles.header}>
-        <button className={styles.back} onClick={() => navigate('/settings')}>‹</button>
+        <button className={styles.back} onClick={() => navigate('/settings')}>
+          ‹
+        </button>
         <h1 className={styles.title}>Caregivers</h1>
       </div>
 
       <div className={styles.list}>
-        {members.map(member => (
+        {members.map((member) => (
           <div key={member.id} className={styles.item}>
             <div className={styles.avatar}>{member.name[0]?.toUpperCase() ?? '?'}</div>
             <span className={styles.name}>{member.name}</span>
-            {member.account_id === user?.accountId && (
-              <span className={styles.you}>You</span>
-            )}
+            {member.account_id === user?.accountId && <span className={styles.you}>You</span>}
           </div>
         ))}
       </div>

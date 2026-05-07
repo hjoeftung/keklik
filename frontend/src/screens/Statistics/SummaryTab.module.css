@@ -5,7 +5,9 @@
   scrollbar-width: none;
   padding: 18px 24px 32px;
 }
-.tab::-webkit-scrollbar { display: none; }
+.tab::-webkit-scrollbar {
+  display: none;
+}
 
 /* ── Period segmented control ─────────────────────────────── */
 .periodControl {
@@ -27,7 +29,10 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
 }
 
 .periodBtnActive {
@@ -74,9 +79,15 @@
   gap: 16px;
 }
 
-.cardNight  { background: var(--kk-night-soft); }
-.cardNap    { background: var(--kk-nap-soft); }
-.cardActive { background: var(--kk-primary-soft); }
+.cardNight {
+  background: var(--kk-night-soft);
+}
+.cardNap {
+  background: var(--kk-nap-soft);
+}
+.cardActive {
+  background: var(--kk-primary-soft);
+}
 
 /* ── Icon circle ──────────────────────────────────────────── */
 .iconCircle {
@@ -89,9 +100,15 @@
   justify-content: center;
 }
 
-.iconCircleNight  { background: var(--kk-night); }
-.iconCircleNap    { background: var(--kk-nap); }
-.iconCircleActive { background: var(--kk-primary); }
+.iconCircleNight {
+  background: var(--kk-night);
+}
+.iconCircleNap {
+  background: var(--kk-nap);
+}
+.iconCircleActive {
+  background: var(--kk-primary);
+}
 
 /* ── Card body ────────────────────────────────────────────── */
 .cardBody {
@@ -126,13 +143,18 @@
 
 /* ── Skeleton shimmer ─────────────────────────────────────── */
 @keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position:  200% center; }
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
 }
 .skeleton {
-  background: linear-gradient(90deg,
+  background: linear-gradient(
+    90deg,
     var(--kk-surface-soft) 25%,
-    var(--kk-border)       50%,
+    var(--kk-border) 50%,
     var(--kk-surface-soft) 75%
   );
   background-size: 200% 100%;

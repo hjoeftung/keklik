@@ -39,11 +39,7 @@ export class NetworkError extends Error {
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
-async function executeRequest(
-  method: string,
-  path: string,
-  body: unknown,
-): Promise<Response> {
+async function executeRequest(method: string, path: string, body: unknown): Promise<Response> {
   try {
     return await fetch(`${BASE_URL}${path}`, {
       method,

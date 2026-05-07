@@ -150,7 +150,7 @@
 }
 
 .timeRowError {
-  border-color: #D4806E !important;
+  border-color: #d4806e !important;
 }
 
 .timeRowActive {
@@ -190,7 +190,7 @@
 }
 
 .timeRowActionError {
-  color: #D4806E;
+  color: #d4806e;
 }
 
 .durationRow {
@@ -215,14 +215,14 @@
 }
 
 .durationError {
-  color: #D4806E;
+  color: #d4806e;
 }
 
 /* ── Error ──────────────────────────────────────────────────── */
 
 .error {
   font-size: 13px;
-  color: #D4806E;
+  color: #d4806e;
   text-align: center;
   margin-top: 10px;
   margin-bottom: 0;
@@ -247,15 +247,18 @@
   font-weight: 500;
   color: var(--kk-ink-soft);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .deleteBtnConfirm {
-  border-color: #D4806E;
-  color: #D4806E;
+  border-color: #d4806e;
+  color: #d4806e;
 }
 
 .deleteBtn:hover:not(:disabled) {
@@ -334,15 +337,25 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }

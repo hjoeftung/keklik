@@ -9,14 +9,16 @@ interface PillowButtonProps {
 
 export default function PillowButton({ label, masked, isDisabled, onClick }: PillowButtonProps) {
   return (
-    <button
-      className={styles.wrapper}
-      onClick={onClick}
-      disabled={isDisabled}
-      aria-label={label}
-    >
+    <button className={styles.wrapper} onClick={onClick} disabled={isDisabled} aria-label={label}>
       <span className={styles.pillow}>
-        <svg width="260" height="208" viewBox="0 0 200 160" className={styles.svg} aria-hidden="true" overflow="visible">
+        <svg
+          width="260"
+          height="208"
+          viewBox="0 0 200 160"
+          className={styles.svg}
+          aria-hidden="true"
+          overflow="visible"
+        >
           {/* Pillow body */}
           <path
             d="M 28 32
@@ -67,22 +69,59 @@ export default function PillowButton({ label, masked, isDisabled, onClick }: Pil
                   strokeOpacity="0.22"
                 />
                 {/* Left ear */}
-                <path d="M 28 74 Q 18 70, 16 64 Q 20 70, 24 72 Q 18 74, 20 78 Q 24 76, 28 76 Z" fill="#FBE4D1" stroke="#E59B6A" strokeWidth="1.4" strokeOpacity="0.25" />
+                <path
+                  d="M 28 74 Q 18 70, 16 64 Q 20 70, 24 72 Q 18 74, 20 78 Q 24 76, 28 76 Z"
+                  fill="#FBE4D1"
+                  stroke="#E59B6A"
+                  strokeWidth="1.4"
+                  strokeOpacity="0.25"
+                />
                 {/* Right ear */}
-                <path d="M 92 74 Q 102 70, 104 64 Q 100 70, 96 72 Q 102 74, 100 78 Q 96 76, 92 76 Z" fill="#FBE4D1" stroke="#E59B6A" strokeWidth="1.4" strokeOpacity="0.25" />
+                <path
+                  d="M 92 74 Q 102 70, 104 64 Q 100 70, 96 72 Q 102 74, 100 78 Q 96 76, 92 76 Z"
+                  fill="#FBE4D1"
+                  stroke="#E59B6A"
+                  strokeWidth="1.4"
+                  strokeOpacity="0.25"
+                />
                 {/* Rosy cheeks */}
                 <ellipse cx="40" cy="76" rx="5.5" ry="3.6" fill="#E59B6A" opacity="0.35" />
                 <ellipse cx="78" cy="76" rx="5.5" ry="3.6" fill="#E59B6A" opacity="0.35" />
                 {/* Closed sleeping eyes */}
-                <path d="M 46 69 Q 49 65 52 69" fill="none" stroke="#2E2A33" strokeWidth="2" strokeLinecap="round" />
-                <path d="M 68 69 Q 71 65 74 69" fill="none" stroke="#2E2A33" strokeWidth="2" strokeLinecap="round" />
+                <path
+                  d="M 46 69 Q 49 65 52 69"
+                  fill="none"
+                  stroke="#2E2A33"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M 68 69 Q 71 65 74 69"
+                  fill="none"
+                  stroke="#2E2A33"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
                 {/* Nose */}
-                <path d="M 56 78 L 60 84 L 64 78 Q 60 76, 56 78 Z" fill="#E8B86E" stroke="#C97B4D" strokeWidth="1.2" strokeOpacity="0.4" strokeLinejoin="round" />
+                <path
+                  d="M 56 78 L 60 84 L 64 78 Q 60 76, 56 78 Z"
+                  fill="#E8B86E"
+                  stroke="#C97B4D"
+                  strokeWidth="1.2"
+                  strokeOpacity="0.4"
+                  strokeLinejoin="round"
+                />
               </g>
               {/* Floating Z's — originate from the top of the mascot's head (SVG coords ~175,5) */}
-              <text x="175" y="5" fontSize="22" className={`${styles.zee} ${styles.z1}`}>Z</text>
-              <text x="175" y="5" fontSize="16" className={`${styles.zee} ${styles.z2}`}>z</text>
-              <text x="175" y="5" fontSize="12" className={`${styles.zee} ${styles.z3}`}>z</text>
+              <text x="175" y="5" fontSize="22" className={`${styles.zee} ${styles.z1}`}>
+                Z
+              </text>
+              <text x="175" y="5" fontSize="16" className={`${styles.zee} ${styles.z2}`}>
+                z
+              </text>
+              <text x="175" y="5" fontSize="12" className={`${styles.zee} ${styles.z3}`}>
+                z
+              </text>
             </>
           ) : (
             <text

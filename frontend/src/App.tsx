@@ -25,14 +25,75 @@ export default function App() {
             <Routes>
               <Route path="/" element={<SignInScreen />} />
               <Route path="/auth/callback" element={<AuthCallbackScreen />} />
-              <Route path="/sleep" element={<RequireAuth><AuthenticatedLayout><SleepScreen /></AuthenticatedLayout></RequireAuth>} />
-              <Route path="/onboarding" element={<RequireNoFamily><OnboardingScreen /></RequireNoFamily>} />
+              <Route
+                path="/sleep"
+                element={
+                  <RequireAuth>
+                    <AuthenticatedLayout>
+                      <SleepScreen />
+                    </AuthenticatedLayout>
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/onboarding"
+                element={
+                  <RequireNoFamily>
+                    <OnboardingScreen />
+                  </RequireNoFamily>
+                }
+              />
               <Route path="/invite/:token" element={<InviteScreen />} />
-              <Route path="/statistics" element={<RequireAuth><AuthenticatedLayout><StatisticsScreen /></AuthenticatedLayout></RequireAuth>} />
-              <Route path="/settings" element={<RequireAuth><AuthenticatedLayout><SettingsScreen /></AuthenticatedLayout></RequireAuth>} />
-              <Route path="/settings/night-window" element={<RequireAuth><AuthenticatedLayout><NightWindowScreen /></AuthenticatedLayout></RequireAuth>} />
-              <Route path="/settings/caregivers" element={<RequireAuth><AuthenticatedLayout><CaregiversScreen /></AuthenticatedLayout></RequireAuth>} />
-              <Route path="/settings/invite" element={<RequireAuth><AuthenticatedLayout><InvitePartnerScreen /></AuthenticatedLayout></RequireAuth>} />
+              <Route
+                path="/statistics"
+                element={
+                  <RequireAuth>
+                    <AuthenticatedLayout>
+                      <StatisticsScreen />
+                    </AuthenticatedLayout>
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <RequireAuth>
+                    <AuthenticatedLayout>
+                      <SettingsScreen />
+                    </AuthenticatedLayout>
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/settings/night-window"
+                element={
+                  <RequireAuth>
+                    <AuthenticatedLayout>
+                      <NightWindowScreen />
+                    </AuthenticatedLayout>
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/settings/caregivers"
+                element={
+                  <RequireAuth>
+                    <AuthenticatedLayout>
+                      <CaregiversScreen />
+                    </AuthenticatedLayout>
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/settings/invite"
+                element={
+                  <RequireAuth>
+                    <AuthenticatedLayout>
+                      <InvitePartnerScreen />
+                    </AuthenticatedLayout>
+                  </RequireAuth>
+                }
+              />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AppDataProvider>

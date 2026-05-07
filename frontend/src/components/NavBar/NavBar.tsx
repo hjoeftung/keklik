@@ -37,9 +37,33 @@ function IconStats({ active }: { active: boolean }) {
       strokeLinecap="round"
       aria-hidden="true"
     >
-      <rect x="4" y="13" width="4" height="7" rx="1.2" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.18 : 0} />
-      <rect x="10" y="9" width="4" height="11" rx="1.2" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.18 : 0} />
-      <rect x="16" y="5" width="4" height="15" rx="1.2" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.18 : 0} />
+      <rect
+        x="4"
+        y="13"
+        width="4"
+        height="7"
+        rx="1.2"
+        fill={active ? 'currentColor' : 'none'}
+        fillOpacity={active ? 0.18 : 0}
+      />
+      <rect
+        x="10"
+        y="9"
+        width="4"
+        height="11"
+        rx="1.2"
+        fill={active ? 'currentColor' : 'none'}
+        fillOpacity={active ? 0.18 : 0}
+      />
+      <rect
+        x="16"
+        y="5"
+        width="4"
+        height="15"
+        rx="1.2"
+        fill={active ? 'currentColor' : 'none'}
+        fillOpacity={active ? 0.18 : 0}
+      />
     </svg>
   )
 }
@@ -57,7 +81,13 @@ function IconSettings({ active }: { active: boolean }) {
       strokeLinecap="round"
       aria-hidden="true"
     >
-      <circle cx="12" cy="12" r="3" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.18 : 0} />
+      <circle
+        cx="12"
+        cy="12"
+        r="3"
+        fill={active ? 'currentColor' : 'none'}
+        fillOpacity={active ? 0.18 : 0}
+      />
       <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4" />
     </svg>
   )
@@ -130,12 +160,7 @@ export function NavBar() {
         </NavLink>
       </div>
 
-      <button
-        type="button"
-        className="navbar__signout"
-        onClick={signOut}
-        aria-label="Sign out"
-      >
+      <button type="button" className="navbar__signout" onClick={signOut} aria-label="Sign out">
         <IconSignOut />
         <span className="navbar__label">Sign out</span>
       </button>

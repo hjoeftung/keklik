@@ -16,9 +16,11 @@ function buildDayItems(maxDaysBack: number): { date: Date; label: string }[] {
     const d = new Date(today)
     d.setDate(today.getDate() - i)
     const label =
-      i === 0 ? 'Today'
-      : i === 1 ? 'Yesterday'
-      : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+      i === 0
+        ? 'Today'
+        : i === 1
+          ? 'Yesterday'
+          : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
     items.push({ date: d, label })
   }
   return items
@@ -59,7 +61,9 @@ function DrumColumn({ items, value, onChange, width, label }: DrumColumnProps) {
     if (!ref.current) return
     ignoreScroll.current = true
     ref.current.scrollTop = selectedIdx * ITEM_H
-    setTimeout(() => { ignoreScroll.current = false }, 50)
+    setTimeout(() => {
+      ignoreScroll.current = false
+    }, 50)
   }, [value, selectedIdx])
 
   useEffect(() => {
@@ -123,7 +127,9 @@ function DrumColumn({ items, value, onChange, width, label }: DrumColumnProps) {
                   if (item === null || !ref.current) return
                   ignoreScroll.current = true
                   ref.current.scrollTop = items.indexOf(item) * ITEM_H
-                  setTimeout(() => { ignoreScroll.current = false }, 50)
+                  setTimeout(() => {
+                    ignoreScroll.current = false
+                  }, 50)
                   onChange(item)
                 }}
               >
@@ -167,7 +173,9 @@ export function BirthdayPicker({ initialDate, onChange }: BirthdayPickerProps) {
   const [year, setYear] = useState(() => String(initialDate.getFullYear()))
 
   const onChangeRef = useRef(onChange)
-  useEffect(() => { onChangeRef.current = onChange })
+  useEffect(() => {
+    onChangeRef.current = onChange
+  })
 
   useEffect(() => {
     const m = MONTHS.indexOf(month)
@@ -199,7 +207,9 @@ export function TimePicker({ value, onChange }: TimePickerProps) {
   const [minute, setMinute] = useState(() => value.split(':')[1])
 
   const onChangeRef = useRef(onChange)
-  useEffect(() => { onChangeRef.current = onChange })
+  useEffect(() => {
+    onChangeRef.current = onChange
+  })
 
   useEffect(() => {
     onChangeRef.current(`${hour}:${minute}`)
@@ -220,7 +230,7 @@ export default function DrumPicker({ initialDate, onChange }: DrumPickerProps) {
   const dayItems = useMemo(() => buildDayItems(30), [])
   const hourItems = useMemo(buildHours, [])
   const minItems = useMemo(buildMinutes, [])
-  const dayLabels = useMemo(() => dayItems.map(d => d.label), [dayItems])
+  const dayLabels = useMemo(() => dayItems.map((d) => d.label), [dayItems])
 
   const [day, setDay] = useState(() => {
     const today = new Date()
@@ -228,16 +238,22 @@ export default function DrumPicker({ initialDate, onChange }: DrumPickerProps) {
     yest.setDate(today.getDate() - 1)
     if (initialDate.toDateString() === today.toDateString()) return 'Today'
     if (initialDate.toDateString() === yest.toDateString()) return 'Yesterday'
-    return initialDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    return initialDate.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    })
   })
   const [hour, setHour] = useState(() => pad2(initialDate.getHours()))
   const [minute, setMinute] = useState(() => pad2(initialDate.getMinutes()))
 
   const onChangeRef = useRef(onChange)
-  useEffect(() => { onChangeRef.current = onChange })
+  useEffect(() => {
+    onChangeRef.current = onChange
+  })
 
   useEffect(() => {
-    const dayObj = dayItems.find(d => d.label === day)
+    const dayObj = dayItems.find((d) => d.label === day)
     if (!dayObj) return
     const result = new Date(dayObj.date)
     result.setHours(parseInt(hour, 10), parseInt(minute, 10), 0, 0)

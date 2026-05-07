@@ -6,8 +6,8 @@ interface ElapsedTimerProps {
 }
 
 export default function ElapsedTimer({ startedAt }: ElapsedTimerProps) {
-  const [elapsed, setElapsed] = useState(
-    () => Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000),
+  const [elapsed, setElapsed] = useState(() =>
+    Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000),
   )
 
   useEffect(() => {

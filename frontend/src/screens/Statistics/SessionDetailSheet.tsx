@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { editSleepSession, deleteSleepSession, type SleepSession } from '@/api/endpoints'
 import { ApiError } from '@/api/client'
 import DrumPicker from '@/components/DrumPicker'
@@ -52,7 +52,11 @@ function durationSeconds(start: Date, end: Date): number {
 function makeFormatDisplayTime(use24h: boolean) {
   return (d: Date): string => {
     const today = new Date()
-    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !use24h })
+    const timeStr = d.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: !use24h,
+    })
     if (d.toDateString() === today.toDateString()) return `Today, ${timeStr}`
     const yesterday = new Date(today)
     yesterday.setDate(today.getDate() - 1)
@@ -72,7 +76,13 @@ const CLASSIFICATION_NOTE: Record<string, string> = {
   nap: 'Nap — falls outside the night window.',
 }
 
-export default function SessionDetailSheet({ session, babyId, onClose, onUpdated, onDeleted }: Props) {
+export default function SessionDetailSheet({
+  session,
+  babyId,
+  onClose,
+  onUpdated,
+  onDeleted,
+}: Props) {
   const { use24h } = useTimeFormatContext()
   const formatTime = makeFormatTime(use24h)
   const formatDisplayTime = makeFormatDisplayTime(use24h)
@@ -142,7 +152,11 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
           setCurrentSession(conflict.current_session)
           onUpdated(conflict.current_session)
           setStartDate(new Date(conflict.current_session.started_at))
-          setEndDate(conflict.current_session.stopped_at ? new Date(conflict.current_session.stopped_at) : new Date())
+          setEndDate(
+            conflict.current_session.stopped_at
+              ? new Date(conflict.current_session.stopped_at)
+              : new Date(),
+          )
           setError('This session changed. Review the latest times before saving.')
         } else {
           setError(err.message)
@@ -174,12 +188,18 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
           setCurrentSession(conflict.current_session)
           onUpdated(conflict.current_session)
           setStartDate(new Date(conflict.current_session.started_at))
-          setEndDate(conflict.current_session.stopped_at ? new Date(conflict.current_session.stopped_at) : new Date())
+          setEndDate(
+            conflict.current_session.stopped_at
+              ? new Date(conflict.current_session.stopped_at)
+              : new Date(),
+          )
           setError('This session changed. Review the latest times before saving.')
         } else if (conflict?.type === 'overlap' && conflict.conflicting_session) {
           const blocking = conflict.conflicting_session
           const end = blocking.stopped_at ? formatTime(blocking.stopped_at) : 'now'
-          setError(`This time overlaps another session from ${formatTime(blocking.started_at)} to ${end}.`)
+          setError(
+            `This time overlaps another session from ${formatTime(blocking.started_at)} to ${end}.`,
+          )
         } else {
           setError('This time overlaps another session.')
         }
@@ -192,18 +212,30 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
   }
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div
+      className={styles.overlay}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div className={styles.sheet} role="dialog" aria-modal="true">
         <div className={styles.handle} />
 
         {mode === 'detail' ? (
           <>
             <div className={styles.titleRow}>
-              <div className={`${styles.typeIcon} ${isNight ? styles.typeIconNight : styles.typeIconNap}`}>
+              <div
+                className={`${styles.typeIcon} ${isNight ? styles.typeIconNight : styles.typeIconNap}`}
+              >
                 {isNight ? (
                   <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                    <path d="M17 11.5A7 7 0 0 1 8.5 3a7 7 0 1 0 8.5 8.5z"
-                      fill="#fff" stroke="#fff" strokeWidth="0.5" strokeLinejoin="round" />
+                    <path
+                      d="M17 11.5A7 7 0 0 1 8.5 3a7 7 0 1 0 8.5 8.5z"
+                      fill="#fff"
+                      stroke="#fff"
+                      strokeWidth="0.5"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 ) : (
                   <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -234,18 +266,25 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
               {currentSession.duration_seconds != null && (
                 <div className={styles.infoRow}>
                   <span className={styles.infoLabel}>Duration</span>
-                  <span className={styles.infoValue}>{formatDur(currentSession.duration_seconds)}</span>
+                  <span className={styles.infoValue}>
+                    {formatDur(currentSession.duration_seconds)}
+                  </span>
                 </div>
               )}
             </div>
 
             {currentSession.classification && (
               <p className={styles.classNote}>
-                {CLASSIFICATION_NOTE[currentSession.classification] ?? `Classified as ${currentSession.classification}.`}
+                {CLASSIFICATION_NOTE[currentSession.classification] ??
+                  `Classified as ${currentSession.classification}.`}
               </p>
             )}
 
-            {error && <p className={styles.error} role="alert">{error}</p>}
+            {error && (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            )}
 
             <div className={styles.actions}>
               <button
@@ -253,7 +292,13 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
                 onClick={handleDelete}
                 disabled={isDeleting}
               >
-                {isDeleting ? <span className={styles.spinner} /> : deleteConfirm ? 'Confirm delete' : 'Delete'}
+                {isDeleting ? (
+                  <span className={styles.spinner} />
+                ) : deleteConfirm ? (
+                  'Confirm delete'
+                ) : (
+                  'Delete'
+                )}
               </button>
               <button className={styles.editBtn} onClick={() => setMode('edit')}>
                 Edit session
@@ -268,7 +313,7 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
               <div ref={pickerRef}>
                 <DrumPicker
                   initialDate={activePicker === 'start' ? startDate : endDate}
-                  onChange={d => activePicker === 'start' ? setStartDate(d) : setEndDate(d)}
+                  onChange={(d) => (activePicker === 'start' ? setStartDate(d) : setEndDate(d))}
                 />
               </div>
             )}
@@ -300,7 +345,9 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
                     <div className={styles.timeRowLabel}>ENDED</div>
                     <div className={styles.timeRowValue}>{formatDisplayTime(endDate)}</div>
                   </div>
-                  <span className={`${styles.timeRowAction} ${isEndBeforeStart ? styles.timeRowActionError : ''}`}>
+                  <span
+                    className={`${styles.timeRowAction} ${isEndBeforeStart ? styles.timeRowActionError : ''}`}
+                  >
                     {activePicker === 'end' ? 'Done ✓' : 'Change'}
                   </span>
                 </div>
@@ -309,14 +356,31 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
               <div className={styles.durationRow}>
                 {isEndBeforeStart ? (
                   <>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" strokeWidth="2" strokeLinecap="round" stroke="#D4806E">
-                      <circle cx="8" cy="8" r="6.5" /><path d="M8 5v3M8 11h.01" />
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      stroke="#D4806E"
+                    >
+                      <circle cx="8" cy="8" r="6.5" />
+                      <path d="M8 5v3M8 11h.01" />
                     </svg>
                     <span className={styles.durationError}>End must be after start</span>
                   </>
                 ) : (
                   <>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#86B6A6" strokeWidth="2" strokeLinecap="round">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="#86B6A6"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    >
                       <path d="M3 8l3 3 7-7" />
                     </svg>
                     <span className={styles.durationText}>
@@ -327,10 +391,21 @@ export default function SessionDetailSheet({ session, babyId, onClose, onUpdated
               </div>
             </div>
 
-            {error && <p className={styles.error} role="alert">{error}</p>}
+            {error && (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            )}
 
             <div className={styles.actions}>
-              <button className={styles.cancelBtn} onClick={() => { setMode('detail'); setError(null) }} disabled={isSaving}>
+              <button
+                className={styles.cancelBtn}
+                onClick={() => {
+                  setMode('detail')
+                  setError(null)
+                }}
+                disabled={isSaving}
+              >
                 Cancel
               </button>
               <button

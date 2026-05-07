@@ -132,7 +132,9 @@
   font-weight: 500;
   color: var(--kk-ink-soft);
   cursor: pointer;
-  transition: opacity 0.15s ease, border-color 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    border-color 0.15s ease;
   text-align: center;
 }
 

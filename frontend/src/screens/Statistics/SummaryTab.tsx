@@ -27,8 +27,7 @@ function formatDateRange(period: Period): string {
   const start = new Date(today.getTime() - days * 86_400_000)
   const fmtLong = (d: Date) =>
     d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-  const fmtShort = (d: Date) =>
-    d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
+  const fmtShort = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
   if (start.getFullYear() === end.getFullYear()) {
     return `${fmtShort(start)} – ${fmtLong(end)}`
   }
@@ -80,7 +79,7 @@ export default function SummaryTab({ summary, isLoading }: Props) {
     return (
       <div className={styles.tab}>
         <div className={styles.periodControl}>
-          {PERIODS.map(p => (
+          {PERIODS.map((p) => (
             <div key={p} className={`${styles.periodBtn} ${styles.skeleton}`} />
           ))}
         </div>
@@ -130,7 +129,7 @@ export default function SummaryTab({ summary, isLoading }: Props) {
   return (
     <div className={styles.tab}>
       <div className={styles.periodControl}>
-        {PERIODS.map(p => (
+        {PERIODS.map((p) => (
           <button
             key={p}
             className={`${styles.periodBtn} ${p === period ? styles.periodBtnActive : ''}`}
@@ -151,9 +150,7 @@ export default function SummaryTab({ summary, isLoading }: Props) {
             </div>
             <div className={styles.cardBody}>
               <div className={styles.cardLabel}>{label}</div>
-              <div className={styles.cardValue}>
-                {value != null ? formatDur(value) : '—'}
-              </div>
+              <div className={styles.cardValue}>{value != null ? formatDur(value) : '—'}</div>
               <div className={styles.cardSub}>{sub}</div>
             </div>
           </div>

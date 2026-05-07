@@ -15,11 +15,7 @@ export default function SignInScreen() {
       <div className={styles.card}>
         <h1 className={styles.title}>Keklik</h1>
         <p className={styles.subtitle}>Track your baby's sleep</p>
-        <button
-          className={styles.button}
-          onClick={handleSignIn}
-          disabled={isSigningIn}
-        >
+        <button className={styles.button} onClick={handleSignIn} disabled={isSigningIn}>
           {isSigningIn ? (
             <>
               <span className={styles.spinner} aria-hidden="true" />

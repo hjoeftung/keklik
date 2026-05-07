@@ -12,7 +12,7 @@ interface Props {
   onRefresh: () => void
 }
 
-const COL_H = 460     // px
+const COL_H = 460 // px
 
 const NIGHT_COLOR = '#5B7BB8'
 const NAP_COLOR = '#E8B86E'
@@ -48,7 +48,7 @@ function buildBlocks(
   winEnd: number,
   yFor: (h: number) => number,
 ): Block[] {
-  return daySessions.flatMap(s => {
+  return daySessions.flatMap((s) => {
     if (!s.stopped_at) return []
 
     const startMs = new Date(s.started_at).getTime()
@@ -67,13 +67,15 @@ function buildBlocks(
     const dur = endH - startH
     const isNight = s.classification === 'night'
 
-    return [{
-      session: s,
-      top,
-      height,
-      color: isNight ? NIGHT_COLOR : NAP_COLOR,
-      borderRadius: dur < 0.6 ? 1.5 : dur < 1.2 ? 2.5 : 4,
-    }]
+    return [
+      {
+        session: s,
+        top,
+        height,
+        color: isNight ? NIGHT_COLOR : NAP_COLOR,
+        borderRadius: dur < 0.6 ? 1.5 : dur < 1.2 ? 2.5 : 4,
+      },
+    ]
   })
 }
 
@@ -86,13 +88,13 @@ export default function WeekTab({ sessions, nightWindow, isLoading, babyId, onRe
   }, [sessions]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleSessionUpdated(updated: SleepSession) {
-    setLocalSessions(prev => prev.map(s => s.id === updated.id ? updated : s))
+    setLocalSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
     setSelectedSession(null)
     onRefresh()
   }
 
   function handleSessionDeleted() {
-    if (selectedSession) setLocalSessions(prev => prev.filter(s => s.id !== selectedSession.id))
+    if (selectedSession) setLocalSessions((prev) => prev.filter((s) => s.id !== selectedSession.id))
     setSelectedSession(null)
     onRefresh()
   }
@@ -102,7 +104,13 @@ export default function WeekTab({ sessions, nightWindow, isLoading, babyId, onRe
   const [nightEndH] = nightEndHhmm.split(':').map(Number)
   const windowStart = (nightEndH - 1 + 24) % 24
   const windowEnd = windowStart + 24
-  const hourTicks = [windowStart, windowStart + 6, windowStart + 12, windowStart + 18, windowStart + 24]
+  const hourTicks = [
+    windowStart,
+    windowStart + 6,
+    windowStart + 12,
+    windowStart + 18,
+    windowStart + 24,
+  ]
   const yFor = (h: number) => ((h - windowStart) / (windowEnd - windowStart)) * COL_H
 
   const nightStartHhmm = nightWindow?.start_hhmm ?? '20:00'
@@ -120,7 +128,11 @@ export default function WeekTab({ sessions, nightWindow, isLoading, babyId, onRe
         <div className={styles.headerRow}>
           <div className={styles.axisGutter} />
           {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className={`${styles.dayHeader} ${styles.skeleton}`} style={{ height: 28, borderRadius: 6 }} />
+            <div
+              key={i}
+              className={`${styles.dayHeader} ${styles.skeleton}`}
+              style={{ height: 28, borderRadius: 6 }}
+            />
           ))}
         </div>
         <div className={styles.gridScroll} data-scrollable>
@@ -128,7 +140,11 @@ export default function WeekTab({ sessions, nightWindow, isLoading, babyId, onRe
             <div className={styles.axis} />
             <div className={styles.columnsArea}>
               {Array.from({ length: 7 }).map((_, i) => (
-                <div key={i} className={styles.skeleton} style={{ flex: 1, height: COL_H, borderRadius: 8 }} />
+                <div
+                  key={i}
+                  className={styles.skeleton}
+                  style={{ flex: 1, height: COL_H, borderRadius: 8 }}
+                />
               ))}
             </div>
           </div>
@@ -139,10 +155,10 @@ export default function WeekTab({ sessions, nightWindow, isLoading, babyId, onRe
 
   // Build blocks per day
   const renderedBlocks = new Map<string, Block[]>()
-  days.forEach(day => {
+  days.forEach((day) => {
     const key = dateKey(day)
     const { windowStart: ws, windowEnd: we } = computeDayWindow(day, nightWindow)
-    const daySessions = localSessions.filter(s => {
+    const daySessions = localSessions.filter((s) => {
       if (!s.stopped_at || s.classification === 'active') return false
       return new Date(s.started_at) < we && new Date(s.stopped_at) >= ws
     })
@@ -166,7 +182,7 @@ export default function WeekTab({ sessions, nightWindow, isLoading, babyId, onRe
       {/* Column headers */}
       <div className={styles.headerRow}>
         <div className={styles.axisGutter} />
-        {days.map(d => (
+        {days.map((d) => (
           <div key={dateKey(d)} className={styles.dayHeader}>
             <span className={styles.dayName}>{DAY_NAMES[d.getDay()]}</span>
             <span className={styles.dayNum}>{d.getDate()}</span>
@@ -179,12 +195,8 @@ export default function WeekTab({ sessions, nightWindow, isLoading, babyId, onRe
         <div className={styles.gridInner} style={{ height: COL_H }}>
           {/* Left axis */}
           <div className={styles.axis}>
-            {hourTicks.map(h => (
-              <div
-                key={h}
-                className={styles.axisTick}
-                style={{ top: yFor(h) }}
-              >
+            {hourTicks.map((h) => (
+              <div key={h} className={styles.axisTick} style={{ top: yFor(h) }}>
                 {String(h % 24).padStart(2, '0')}
               </div>
             ))}
@@ -201,12 +213,8 @@ export default function WeekTab({ sessions, nightWindow, isLoading, babyId, onRe
           {/* Columns area */}
           <div className={styles.columnsArea}>
             {/* Hour grid lines */}
-            {hourTicks.map(h => (
-              <div
-                key={h}
-                className={styles.gridLine}
-                style={{ top: yFor(h) }}
-              />
+            {hourTicks.map((h) => (
+              <div key={h} className={styles.gridLine} style={{ top: yFor(h) }} />
             ))}
 
             {/* Night window end marker */}
@@ -215,7 +223,7 @@ export default function WeekTab({ sessions, nightWindow, isLoading, babyId, onRe
             )}
 
             {/* Day columns */}
-            {days.map(d => {
+            {days.map((d) => {
               const key = dateKey(d)
               const blocks = renderedBlocks.get(key) ?? []
               return (

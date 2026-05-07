@@ -16,14 +16,13 @@ function formatSelectedDate(d: Date): string {
   return d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
 }
 
-
 function sessionsForDate(
   sessions: ReturnType<typeof useAppData>['sessions7d'],
   date: Date,
   nightWindow?: NightWindowInfo,
 ) {
   const { windowStart, windowEnd } = computeDayWindow(date, nightWindow)
-  return sessions.filter(s => {
+  return sessions.filter((s) => {
     if (!s.stopped_at) return false
     return new Date(s.started_at) < windowEnd && new Date(s.stopped_at) >= windowStart
   })
@@ -47,7 +46,9 @@ export default function StatsScreen() {
   const refreshRef = useRef(refresh)
   const pullDeltaRef = useRef(0)
 
-  useEffect(() => { refreshRef.current = refresh }, [refresh])
+  useEffect(() => {
+    refreshRef.current = refresh
+  }, [refresh])
 
   const filteredSessions = sessionsForDate(sessions7d, selectedDate, stats?.night_window)
 
@@ -103,9 +104,11 @@ export default function StatsScreen() {
       )}
       <div className={styles.header}>
         <h1 className={styles.babyName}>{babyName}'s sleep</h1>
-        <p className={styles.headerDate}>{formatSelectedDate(activeTab === 'today' ? selectedDate : new Date())}</p>
+        <p className={styles.headerDate}>
+          {formatSelectedDate(activeTab === 'today' ? selectedDate : new Date())}
+        </p>
         <div className={styles.tabs}>
-          {(['today', 'week', 'summary'] as Tab[]).map(tab => (
+          {(['today', 'week', 'summary'] as Tab[]).map((tab) => (
             <button
               key={tab}
               className={`${styles.tabBtn} ${activeTab === tab ? styles.tabBtnActive : ''}`}
@@ -129,7 +132,13 @@ export default function StatsScreen() {
         />
       )}
       {!error && activeTab === 'week' && (
-        <WeekTab sessions={sessions7d} nightWindow={stats?.night_window} isLoading={isLoading} babyId={babyId} onRefresh={refresh} />
+        <WeekTab
+          sessions={sessions7d}
+          nightWindow={stats?.night_window}
+          isLoading={isLoading}
+          babyId={babyId}
+          onRefresh={refresh}
+        />
       )}
       {!error && activeTab === 'summary' && (
         <SummaryTab summary={stats?.summary ?? {}} isLoading={isLoading} />

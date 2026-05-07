@@ -49,7 +49,9 @@ export default function AuthCallbackScreen() {
         <div className={styles.card}>
           <p className={styles.errorTitle}>Sign-in failed</p>
           <p className={styles.message}>Missing account information from the sign-in response.</p>
-          <Link to="/" className={styles.link}>Back to sign in</Link>
+          <Link to="/" className={styles.link}>
+            Back to sign in
+          </Link>
         </div>
       </div>
     )
@@ -61,7 +63,9 @@ export default function AuthCallbackScreen() {
         <div className={styles.card}>
           <p className={styles.errorTitle}>Sign-in failed</p>
           <p className={styles.message}>{error}</p>
-          <Link to="/" className={styles.link}>Back to sign in</Link>
+          <Link to="/" className={styles.link}>
+            Back to sign in
+          </Link>
         </div>
       </div>
     )

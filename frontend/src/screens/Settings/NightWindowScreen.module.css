@@ -88,7 +88,9 @@
   color: var(--kk-ink);
   background: var(--kk-surface-soft);
   box-sizing: border-box;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .input:focus {

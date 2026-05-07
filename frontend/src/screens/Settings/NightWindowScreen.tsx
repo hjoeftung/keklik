@@ -29,7 +29,7 @@ export default function NightWindowScreen() {
   useEffect(() => {
     if (!babyId) return
     getSleepStats(babyId)
-      .then(stats => {
+      .then((stats) => {
         if (stats.night_window) {
           setNightStart(hhmmToTimeInput(stats.night_window.start_hhmm))
           setNightEnd(hhmmToTimeInput(stats.night_window.end_hhmm))
@@ -70,7 +70,9 @@ export default function NightWindowScreen() {
   return (
     <div className={styles.screen}>
       <div className={styles.header}>
-        <button className={styles.back} onClick={() => navigate('/settings')}>‹</button>
+        <button className={styles.back} onClick={() => navigate('/settings')}>
+          ‹
+        </button>
         <h1 className={styles.title}>Night window</h1>
       </div>
 
@@ -83,29 +85,35 @@ export default function NightWindowScreen() {
           </p>
 
           {error && (
-            <div className={styles.error} role="alert">{error}</div>
+            <div className={styles.error} role="alert">
+              {error}
+            </div>
           )}
 
           <div className={styles.fields}>
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="nightStart">Night starts</label>
+              <label className={styles.label} htmlFor="nightStart">
+                Night starts
+              </label>
               <input
                 id="nightStart"
                 className={styles.input}
                 type="time"
                 value={nightStart}
-                onChange={e => setNightStart(e.target.value)}
+                onChange={(e) => setNightStart(e.target.value)}
                 required
               />
             </div>
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="nightEnd">Night ends</label>
+              <label className={styles.label} htmlFor="nightEnd">
+                Night ends
+              </label>
               <input
                 id="nightEnd"
                 className={styles.input}
                 type="time"
                 value={nightEnd}
-                onChange={e => setNightEnd(e.target.value)}
+                onChange={(e) => setNightEnd(e.target.value)}
                 required
               />
             </div>

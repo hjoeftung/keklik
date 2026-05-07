@@ -34,7 +34,7 @@
   align-items: center;
   flex: 1;
   min-height: 0;
-  background: var(--kk-bg, #FBF6EE);
+  background: var(--kk-bg, #fbf6ee);
   padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
 }
 
@@ -98,7 +98,6 @@
   gap: 14px;
   width: 100%;
 }
-
 
 .wakeHint {
   margin-top: 14px;
@@ -177,7 +176,9 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .editStartPillSoft:hover {
@@ -260,7 +261,6 @@
   font-variant-numeric: tabular-nums;
   margin-top: 1px;
 }
-
 
 /* ── Edit time rows ───────────────────────────────────────────── */
 .editSheetTimeRows {
@@ -375,13 +375,21 @@
 }
 
 @keyframes fadeInOverlay {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUpSheet {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 .editCancelBtnSoft {
@@ -577,7 +585,7 @@
 /* ── Shared ───────────────────────────────────────────────────── */
 .error {
   font-size: 13px;
-  color: var(--kk-danger, #D4806E);
+  color: var(--kk-danger, #d4806e);
   text-align: center;
   margin-top: 12px;
   padding: 0 24px;
@@ -594,5 +602,7 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }

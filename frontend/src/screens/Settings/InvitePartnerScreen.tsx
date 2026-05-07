@@ -45,7 +45,9 @@ export default function InvitePartnerScreen() {
     }
   }
 
-  useEffect(() => { fetchLink() }, [])
+  useEffect(() => {
+    fetchLink()
+  }, [])
 
   async function handleCopy() {
     if (!inviteUrl) return
@@ -75,7 +77,9 @@ export default function InvitePartnerScreen() {
   return (
     <div className={styles.screen}>
       <div className={styles.header}>
-        <button className={styles.back} onClick={() => navigate('/settings')}>‹</button>
+        <button className={styles.back} onClick={() => navigate('/settings')}>
+          ‹
+        </button>
         <h1 className={styles.title}>Invite partner</h1>
       </div>
 
@@ -83,13 +87,18 @@ export default function InvitePartnerScreen() {
         <div className={styles.loading}>Generating link…</div>
       ) : error ? (
         <div className={styles.card}>
-          <div className={styles.error} role="alert">{error}</div>
-          <button className={styles.button} onClick={fetchLink}>Try again</button>
+          <div className={styles.error} role="alert">
+            {error}
+          </div>
+          <button className={styles.button} onClick={fetchLink}>
+            Try again
+          </button>
         </div>
       ) : (
         <div className={styles.card}>
           <p className={styles.hint}>
-            Share this link with your partner. They'll be able to join your family and start tracking sleep together.
+            Share this link with your partner. They'll be able to join your family and start
+            tracking sleep together.
           </p>
 
           <div className={styles.linkBox}>
@@ -98,22 +107,16 @@ export default function InvitePartnerScreen() {
               type="text"
               readOnly
               value={inviteUrl ?? ''}
-              onFocus={e => e.target.select()}
+              onFocus={(e) => e.target.select()}
             />
             <button className={styles.copyBtn} onClick={handleCopy}>
               {copied ? 'Copied!' : 'Copy link'}
             </button>
           </div>
 
-          {expiresAt && (
-            <p className={styles.expiry}>{formatExpiry(expiresAt)}</p>
-          )}
+          {expiresAt && <p className={styles.expiry}>{formatExpiry(expiresAt)}</p>}
 
-          <button
-            className={styles.revokeBtn}
-            onClick={handleRevoke}
-            disabled={isRevoking}
-          >
+          <button className={styles.revokeBtn} onClick={handleRevoke} disabled={isRevoking}>
             {isRevoking ? 'Revoking…' : 'Revoke and generate new link'}
           </button>
         </div>

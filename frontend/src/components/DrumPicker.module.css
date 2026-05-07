@@ -97,7 +97,9 @@
   user-select: none;
   position: relative;
   z-index: 3;
-  transition: font-size 0.1s, color 0.1s;
+  transition:
+    font-size 0.1s,
+    color 0.1s;
 }
 
 .itemSelected {
@@ -115,7 +117,9 @@
   user-select: none;
   position: relative;
   z-index: 3;
-  transition: font-size 0.1s, color 0.1s;
+  transition:
+    font-size 0.1s,
+    color 0.1s;
 }
 
 /* margin-top aligns the separator with the column's scroll area center (accounts for label height) */

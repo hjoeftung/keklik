@@ -152,10 +152,7 @@ export interface LogPastSleepRequest {
   stopped_at: string
 }
 
-export function logPastSleep(
-  babyId: string,
-  req: LogPastSleepRequest,
-): Promise<SleepSession> {
+export function logPastSleep(babyId: string, req: LogPastSleepRequest): Promise<SleepSession> {
   return api.post(`/babies/${babyId}/sleep-sessions`, req)
 }
 
@@ -166,7 +163,9 @@ export function getSleepHistory(
   period: SleepHistoryPeriod = '7d',
 ): Promise<SleepSession[]> {
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-  return api.get(`/babies/${babyId}/sleep-sessions?period=${period}&timezone=${encodeURIComponent(tz)}`)
+  return api.get(
+    `/babies/${babyId}/sleep-sessions?period=${period}&timezone=${encodeURIComponent(tz)}`,
+  )
 }
 
 // --- Sleep stats ---
@@ -227,9 +226,6 @@ export interface CreateSleepProfileRequest {
   night_window: NightWindowRequest
 }
 
-export function createSleepProfile(
-  babyId: string,
-  req: CreateSleepProfileRequest,
-): Promise<void> {
+export function createSleepProfile(babyId: string, req: CreateSleepProfileRequest): Promise<void> {
   return api.post(`/babies/${babyId}/sleep-profiles`, req)
 }

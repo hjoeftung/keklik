@@ -22,7 +22,11 @@ function makeFmtTime(use24h: boolean) {
 function makeFormatDisplayTime(use24h: boolean) {
   return (d: Date): string => {
     const today = new Date()
-    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !use24h })
+    const timeStr = d.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: !use24h,
+    })
     if (d.toDateString() === today.toDateString()) return `Today, ${timeStr}`
     const yesterday = new Date(today)
     yesterday.setDate(today.getDate() - 1)
@@ -38,7 +42,6 @@ function elapsedSecs(from: string): number {
 function fmtHM(secs: number): { h: number; m: number } {
   return { h: Math.floor(secs / 3600), m: Math.floor((secs % 3600) / 60) }
 }
-
 
 export default function SleepScreen() {
   const { use24h } = useTimeFormatContext()
@@ -58,9 +61,9 @@ export default function SleepScreen() {
   const [editStartDate, setEditStartDate] = useState<Date>(new Date())
   const [isSavingStart, setIsSavingStart] = useState(false)
 
-  const session = sessions.find(s => !s.stopped_at) ?? null
+  const session = sessions.find((s) => !s.stopped_at) ?? null
   const isActive = session !== null
-  const lastCompleted = sessions.find(s => !!s.stopped_at) ?? null
+  const lastCompleted = sessions.find((s) => !!s.stopped_at) ?? null
 
   const loadSessions = useCallback(async () => {
     if (!babyId) return
@@ -74,10 +77,12 @@ export default function SleepScreen() {
     }
   }, [babyId])
 
-  useEffect(() => { loadSessions() }, [loadSessions])
+  useEffect(() => {
+    loadSessions()
+  }, [loadSessions])
 
   useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 60_000)
+    const id = setInterval(() => setTick((t) => t + 1), 60_000)
     return () => clearInterval(id)
   }, [])
 
@@ -99,11 +104,16 @@ export default function SleepScreen() {
           classification: stopped.classification,
           version: stopped.version,
         }
-        setSessions(prev => [updated, ...prev.filter(s => s.id !== updated.id)])
+        setSessions((prev) => [updated, ...prev.filter((s) => s.id !== updated.id)])
       } else {
         const started = await startSleep(babyId)
-        const active: SleepSession = { id: started.id, baby_id: babyId, started_at: started.started_at, version: started.version }
-        setSessions(prev => [active, ...prev])
+        const active: SleepSession = {
+          id: started.id,
+          baby_id: babyId,
+          started_at: started.started_at,
+          version: started.version,
+        }
+        setSessions((prev) => [active, ...prev])
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to update sleep')
@@ -127,7 +137,7 @@ export default function SleepScreen() {
         started_at: editStartDate.toISOString(),
         version: session.version,
       })
-      setSessions(prev => [updated, ...prev.filter(s => s.id !== updated.id)])
+      setSessions((prev) => [updated, ...prev.filter((s) => s.id !== updated.id)])
       setShowEditStart(false)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to update start time')
@@ -152,34 +162,55 @@ export default function SleepScreen() {
         <div className={styles.durationBlock}>
           <div className={styles.durationLabel}>Sleeping for</div>
           <div className={styles.durationValue}>
-            {sleeping.h}<span className={styles.durationUnit}>h </span>
-            {String(sleeping.m).padStart(2, '0')}<span className={styles.durationUnit}>m</span>
+            {sleeping.h}
+            <span className={styles.durationUnit}>h </span>
+            {String(sleeping.m).padStart(2, '0')}
+            <span className={styles.durationUnit}>m</span>
           </div>
           <div className={styles.startedAtSoft}>Started at {startedAtStr}</div>
         </div>
 
         <div className={styles.pillowWrap}>
-          <PillowButton
-            label="Tap to wake"
-            masked
-            onClick={handleToggle}
-            isDisabled={isToggling}
-          />
+          <PillowButton label="Tap to wake" masked onClick={handleToggle} isDisabled={isToggling} />
           <div className={styles.tapToWakeHint}>Tap to wake · shhh</div>
         </div>
 
         <button className={styles.editStartPillSoft} onClick={openEditStart}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
             <path d="M3 11l1.5-4.5L9 2l3 3-4.5 4.5L3 11zM2 13h12" />
           </svg>
           Edit start time · {startedAtStr}
         </button>
 
-        {error && <p className={styles.error} role="alert">{error}</p>}
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
 
         {showEditStart && (
-          <div className={styles.editSheetOverlay} onClick={e => { if (e.target === e.currentTarget) setShowEditStart(false) }}>
-            <div className={styles.editSheet} role="dialog" aria-modal="true" aria-label="Edit start time">
+          <div
+            className={styles.editSheetOverlay}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowEditStart(false)
+            }}
+          >
+            <div
+              className={styles.editSheet}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Edit start time"
+            >
               <div className={styles.editSheetHandle} />
 
               <div className={styles.editSheetHeader}>
@@ -195,13 +226,19 @@ export default function SleepScreen() {
                   <div className={styles.editSheetTimeRowInner}>
                     <div>
                       <div className={styles.editSheetTimeRowLabel}>STARTED</div>
-                      <div className={styles.editSheetTimeRowValue}>{formatDisplayTime(editStartDate)}</div>
+                      <div className={styles.editSheetTimeRowValue}>
+                        {formatDisplayTime(editStartDate)}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {error && <p className={styles.error} role="alert">{error}</p>}
+              {error && (
+                <p className={styles.error} role="alert">
+                  {error}
+                </p>
+              )}
 
               <div className={styles.editSheetActions}>
                 <button
@@ -239,35 +276,52 @@ export default function SleepScreen() {
       <div className={styles.durationBlock}>
         <div className={styles.durationLabel}>Active for</div>
         <div className={styles.durationValue}>
-          {awake.h}<span className={styles.durationUnit}>h </span>
-          {String(awake.m).padStart(2, '0')}<span className={styles.durationUnit}>m</span>
+          {awake.h}
+          <span className={styles.durationUnit}>h </span>
+          {String(awake.m).padStart(2, '0')}
+          <span className={styles.durationUnit}>m</span>
         </div>
         {lastCompleted && (
-          <div className={styles.startedAtSoft}>Awake since {fmtTime(lastCompleted.stopped_at!)}</div>
+          <div className={styles.startedAtSoft}>
+            Awake since {fmtTime(lastCompleted.stopped_at!)}
+          </div>
         )}
       </div>
 
       <div className={styles.pillowWrap}>
-        <PillowButton
-          label="Tap to sleep"
-          onClick={handleToggle}
-          isDisabled={isToggling}
-        />
+        <PillowButton label="Tap to sleep" onClick={handleToggle} isDisabled={isToggling} />
       </div>
 
       <button className={styles.editStartPillSoft} onClick={() => setShowLogPast(true)}>
-        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-          <circle cx="10" cy="10" r="7" /><path d="M10 6v4l2.5 2" />
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          aria-hidden="true"
+        >
+          <circle cx="10" cy="10" r="7" />
+          <path d="M10 6v4l2.5 2" />
         </svg>
         Log past sleep
       </button>
 
-      {error && <p className={styles.error} role="alert">{error}</p>}
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
 
       {showLogPast && (
         <LogPastSleepSheet
           babyId={babyId}
-          onSaved={() => { setShowLogPast(false); loadSessions() }}
+          onSaved={() => {
+            setShowLogPast(false)
+            loadSessions()
+          }}
           onClose={() => setShowLogPast(false)}
         />
       )}

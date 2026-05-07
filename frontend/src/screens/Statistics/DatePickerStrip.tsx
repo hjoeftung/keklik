@@ -6,9 +6,11 @@ interface Props {
 }
 
 function sameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() &&
+  return (
+    a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
+  )
 }
 
 export default function DatePickerStrip({ selectedDate, onChange }: Props) {
@@ -22,22 +24,22 @@ export default function DatePickerStrip({ selectedDate, onChange }: Props) {
 
   return (
     <div className={styles.strip}>
-      {days.map(day => {
+      {days.map((day) => {
         const isToday = sameDay(day, today)
         const isSelected = sameDay(day, selectedDate)
         const chipClass = [
           styles.chip,
-          isSelected ? styles.chipSelected :
-          isToday ? styles.chipTodayUnselected :
-          styles.chipDefault,
-        ].filter(Boolean).join(' ')
+          isSelected
+            ? styles.chipSelected
+            : isToday
+              ? styles.chipTodayUnselected
+              : styles.chipDefault,
+        ]
+          .filter(Boolean)
+          .join(' ')
 
         return (
-          <button
-            key={day.getTime()}
-            className={chipClass}
-            onClick={() => onChange(day)}
-          >
+          <button key={day.getTime()} className={chipClass} onClick={() => onChange(day)}>
             <span className={`${styles.dayNum} kk-num`}>{day.getDate()}</span>
             <span className={styles.weekday}>
               {day.toLocaleDateString([], { weekday: 'short' })}

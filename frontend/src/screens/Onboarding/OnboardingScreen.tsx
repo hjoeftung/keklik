@@ -1,4 +1,4 @@
-import { useState, useId } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '@/context/AuthContext'
 import { createFamily, createSleepProfile } from '@/api/endpoints'
@@ -20,39 +20,49 @@ function formatTime(value: string): string {
   return `${h12}:${String(m).padStart(2, '0')} ${period}`
 }
 
-function CrescentMoon({ size = 22 }: { size?: number }) {
-  const id = useId()
-  return (
-    <svg width={size} height={size} viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <mask id={id}>
-          <rect width="60" height="60" fill="white" />
-          <circle cx="38" cy="22" r="24" fill="black" />
-        </mask>
-      </defs>
-      <circle cx="28" cy="30" r="22" fill="var(--kk-primary)" mask={`url(#${id})`} />
-    </svg>
-  )
-}
-
 function BunMascot() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="104" height="104" viewBox="0 0 120 120">
       <g fill="#FBE4D1" stroke="#C97B4D" strokeWidth="1.4" strokeOpacity="0.3">
-        <path d="M 58 36 C 56 28, 50 24, 48 20 Q 54 26, 60 28 Q 60 32, 58 36 Z"/>
-        <path d="M 64 35 C 70 28, 78 28, 80 22 Q 76 30, 72 32 Q 70 36, 64 35 Z"/>
-        <path d="M 50 38 C 46 34, 40 36, 38 32 Q 44 36, 48 36 Q 50 37, 50 38 Z"/>
+        <path d="M 58 36 C 56 28, 50 24, 48 20 Q 54 26, 60 28 Q 60 32, 58 36 Z" />
+        <path d="M 64 35 C 70 28, 78 28, 80 22 Q 76 30, 72 32 Q 70 36, 64 35 Z" />
+        <path d="M 50 38 C 46 34, 40 36, 38 32 Q 44 36, 48 36 Q 50 37, 50 38 Z" />
       </g>
-      <path d="M 60 36 C 38 36, 24 56, 24 78 C 24 100, 40 116, 60 116 C 80 116, 96 100, 96 78 C 96 56, 82 36, 60 36 Z" fill="#FBE4D1" stroke="#E59B6A" strokeWidth="2" strokeOpacity="0.22"/>
-      <path d="M 28 74 Q 18 70, 16 64 Q 20 70, 24 72 Q 18 74, 20 78 Q 24 76, 28 76 Z" fill="#FBE4D1" stroke="#E59B6A" strokeWidth="1.4" strokeOpacity="0.25"/>
-      <path d="M 92 74 Q 102 70, 104 64 Q 100 70, 96 72 Q 102 74, 100 78 Q 96 76, 92 76 Z" fill="#FBE4D1" stroke="#E59B6A" strokeWidth="1.4" strokeOpacity="0.25"/>
-      <ellipse cx="40" cy="76" rx="5.5" ry="3.6" fill="#E59B6A" opacity="0.35"/>
-      <ellipse cx="78" cy="76" rx="5.5" ry="3.6" fill="#E59B6A" opacity="0.35"/>
-      <ellipse cx="49" cy="69" rx="3.2" ry="3.6" fill="#2E2A33"/>
-      <ellipse cx="71" cy="69" rx="3.2" ry="3.6" fill="#2E2A33"/>
-      <circle cx="50" cy="67.5" r="1" fill="#fff"/>
-      <circle cx="72" cy="67.5" r="1" fill="#fff"/>
-      <path d="M 56 78 L 60 84 L 64 78 Q 60 76, 56 78 Z" fill="#E8B86E" stroke="#C97B4D" strokeWidth="1.2" strokeOpacity="0.4" strokeLinejoin="round"/>
+      <path
+        d="M 60 36 C 38 36, 24 56, 24 78 C 24 100, 40 116, 60 116 C 80 116, 96 100, 96 78 C 96 56, 82 36, 60 36 Z"
+        fill="#FBE4D1"
+        stroke="#E59B6A"
+        strokeWidth="2"
+        strokeOpacity="0.22"
+      />
+      <path
+        d="M 28 74 Q 18 70, 16 64 Q 20 70, 24 72 Q 18 74, 20 78 Q 24 76, 28 76 Z"
+        fill="#FBE4D1"
+        stroke="#E59B6A"
+        strokeWidth="1.4"
+        strokeOpacity="0.25"
+      />
+      <path
+        d="M 92 74 Q 102 70, 104 64 Q 100 70, 96 72 Q 102 74, 100 78 Q 96 76, 92 76 Z"
+        fill="#FBE4D1"
+        stroke="#E59B6A"
+        strokeWidth="1.4"
+        strokeOpacity="0.25"
+      />
+      <ellipse cx="40" cy="76" rx="5.5" ry="3.6" fill="#E59B6A" opacity="0.35" />
+      <ellipse cx="78" cy="76" rx="5.5" ry="3.6" fill="#E59B6A" opacity="0.35" />
+      <ellipse cx="49" cy="69" rx="3.2" ry="3.6" fill="#2E2A33" />
+      <ellipse cx="71" cy="69" rx="3.2" ry="3.6" fill="#2E2A33" />
+      <circle cx="50" cy="67.5" r="1" fill="#fff" />
+      <circle cx="72" cy="67.5" r="1" fill="#fff" />
+      <path
+        d="M 56 78 L 60 84 L 64 78 Q 60 76, 56 78 Z"
+        fill="#E8B86E"
+        stroke="#C97B4D"
+        strokeWidth="1.2"
+        strokeOpacity="0.4"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }
@@ -119,7 +129,9 @@ export default function OnboardingScreen() {
           <div>
             <div className={styles.stepLabel}>Step 2 of 2</div>
             <h1 className={styles.title}>
-              Tell us about your<br />little one
+              Tell us about your
+              <br />
+              little one
             </h1>
           </div>
           <div className={styles.mascot}>
@@ -135,13 +147,15 @@ export default function OnboardingScreen() {
 
         <div className={styles.fields}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="yourName">Your name</label>
+            <label className={styles.label} htmlFor="yourName">
+              Your name
+            </label>
             <input
               id="yourName"
               className={styles.input}
               type="text"
               value={yourName}
-              onChange={e => setYourName(e.target.value)}
+              onChange={(e) => setYourName(e.target.value)}
               required
               autoComplete="name"
               autoFocus
@@ -149,13 +163,15 @@ export default function OnboardingScreen() {
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="babyName">Baby's name</label>
+            <label className={styles.label} htmlFor="babyName">
+              Baby's name
+            </label>
             <input
               id="babyName"
               className={styles.input}
               type="text"
               value={babyName}
-              onChange={e => setBabyName(e.target.value)}
+              onChange={(e) => setBabyName(e.target.value)}
               required
             />
           </div>
@@ -165,9 +181,15 @@ export default function OnboardingScreen() {
             <button
               type="button"
               className={styles.displayRow}
-              onClick={() => setBirthdayOpen(o => !o)}
+              onClick={() => setBirthdayOpen((o) => !o)}
             >
-              <span>{birthday.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+              <span>
+                {birthday.toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </span>
               <span className={styles.displayRowAction}>{birthdayOpen ? 'Done' : 'Edit'}</span>
             </button>
             {birthdayOpen && <BirthdayPicker initialDate={birthday} onChange={setBirthday} />}
@@ -178,7 +200,7 @@ export default function OnboardingScreen() {
             <button
               type="button"
               className={styles.displayRow}
-              onClick={() => setNightStartOpen(o => !o)}
+              onClick={() => setNightStartOpen((o) => !o)}
             >
               <span>{formatTime(nightStart)}</span>
               <span className={styles.displayRowAction}>{nightStartOpen ? 'Done' : 'Edit'}</span>
@@ -191,7 +213,7 @@ export default function OnboardingScreen() {
             <button
               type="button"
               className={styles.displayRow}
-              onClick={() => setNightEndOpen(o => !o)}
+              onClick={() => setNightEndOpen((o) => !o)}
             >
               <span>{formatTime(nightEnd)}</span>
               <span className={styles.displayRowAction}>{nightEndOpen ? 'Done' : 'Edit'}</span>
@@ -200,7 +222,11 @@ export default function OnboardingScreen() {
           </div>
         </div>
 
-        <button className={styles.button} type="submit" disabled={isSubmitting || !yourName.trim() || !babyName.trim()}>
+        <button
+          className={styles.button}
+          type="submit"
+          disabled={isSubmitting || !yourName.trim() || !babyName.trim()}
+        >
           {isSubmitting ? 'Setting up…' : 'Start tracking'}
         </button>
 

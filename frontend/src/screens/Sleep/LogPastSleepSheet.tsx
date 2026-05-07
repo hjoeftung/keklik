@@ -27,7 +27,6 @@ function formatDur(secs: number): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
-
 export default function LogPastSleepSheet({ babyId, onSaved, onClose }: LogPastSleepSheetProps) {
   const defaultEnd = new Date()
   const defaultStart = new Date(defaultEnd.getTime() - 60 * 60 * 1000)
@@ -74,7 +73,12 @@ export default function LogPastSleepSheet({ babyId, onSaved, onClose }: LogPastS
   }
 
   return (
-    <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div
+      className={styles.overlay}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div className={styles.sheet} role="dialog" aria-modal="true" aria-label="Log past sleep">
         <div className={styles.handle} />
 
@@ -84,7 +88,7 @@ export default function LogPastSleepSheet({ babyId, onSaved, onClose }: LogPastS
         {activePicker && (
           <DrumPicker
             initialDate={activePicker === 'start' ? startDate : endDate}
-            onChange={d => activePicker === 'start' ? setStartDate(d) : setEndDate(d)}
+            onChange={(d) => (activePicker === 'start' ? setStartDate(d) : setEndDate(d))}
           />
         )}
 
@@ -116,7 +120,9 @@ export default function LogPastSleepSheet({ babyId, onSaved, onClose }: LogPastS
                 <div className={styles.timeRowLabel}>ENDED</div>
                 <div className={styles.timeRowValue}>{formatDisplayTime(endDate)}</div>
               </div>
-              <span className={`${styles.timeRowAction} ${isEndBeforeStart ? styles.timeRowActionError : ''}`}>
+              <span
+                className={`${styles.timeRowAction} ${isEndBeforeStart ? styles.timeRowActionError : ''}`}
+              >
                 {activePicker === 'end' ? 'Done ✓' : 'Change'}
               </span>
             </div>
@@ -126,14 +132,31 @@ export default function LogPastSleepSheet({ babyId, onSaved, onClose }: LogPastS
           <div className={styles.durationRow}>
             {isEndBeforeStart ? (
               <>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" strokeWidth="2" strokeLinecap="round" stroke="#D4806E">
-                  <circle cx="8" cy="8" r="6.5" /><path d="M8 5v3M8 11h.01" />
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  stroke="#D4806E"
+                >
+                  <circle cx="8" cy="8" r="6.5" />
+                  <path d="M8 5v3M8 11h.01" />
                 </svg>
                 <span className={styles.durationError}>End must be after start</span>
               </>
             ) : (
               <>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#86B6A6" strokeWidth="2" strokeLinecap="round">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="#86B6A6"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
                   <path d="M3 8l3 3 7-7" />
                 </svg>
                 <span className={styles.durationText}>
@@ -144,7 +167,11 @@ export default function LogPastSleepSheet({ babyId, onSaved, onClose }: LogPastS
           </div>
         </div>
 
-        {error && <p className={styles.error} role="alert">{error}</p>}
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
 
         <div className={styles.actions}>
           <button className={styles.cancelBtn} onClick={onClose} disabled={isSaving}>
