@@ -12,6 +12,7 @@ interface Props {
   isLoading: boolean
   selectedDate: Date
   onDateChange: (d: Date) => void
+  scrollContainerRef: React.RefObject<HTMLDivElement | null>
 }
 
 const PX_PER_MIN = 0.9
@@ -62,6 +63,7 @@ export default function TodayTab({
   isLoading,
   selectedDate,
   onDateChange,
+  scrollContainerRef,
 }: Props) {
   const selectedIsToday = isToday(selectedDate)
 
@@ -92,12 +94,12 @@ export default function TodayTab({
   const totalHeight = totalMinutes * PX_PER_MIN
 
   useEffect(() => {
-    if (!diaryRef.current || isLoading) return
+    if (!scrollContainerRef.current || isLoading) return
     const now = new Date()
     const nowOffsetMin = (now.getTime() - windowStart.getTime()) / 60000
     const scrollTarget =
       nowOffsetMin > 0 && nowOffsetMin < totalMinutes ? nowOffsetMin * PX_PER_MIN - 240 : 0
-    diaryRef.current.scrollTop = Math.max(0, scrollTarget)
+    scrollContainerRef.current.scrollTop = Math.max(0, scrollTarget)
   }, [isLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const hourTicks: HourTick[] = []
@@ -256,7 +258,6 @@ export default function TodayTab({
       <div
         className={`${styles.diaryScroll} ${completedSessions.length === 0 ? styles.diaryScrollHidden : ''}`}
         ref={diaryRef}
-        data-scrollable
       >
         <div className={styles.diaryInner} style={{ height: totalHeight }}>
           {/* Hour label column */}

@@ -136,7 +136,7 @@ export default function WeekTab({ sessions, nightWindow, isLoading, babyId, onRe
             />
           ))}
         </div>
-        <div className={styles.gridScroll} data-scrollable>
+        <div className={styles.gridScroll}>
           <div className={styles.gridInner} style={{ height: COL_H }}>
             <div className={styles.axis} />
             <div className={styles.columnsArea}>
@@ -192,7 +192,7 @@ export default function WeekTab({ sessions, nightWindow, isLoading, babyId, onRe
       </div>
 
       {/* Grid */}
-      <div className={styles.gridScroll} data-scrollable>
+      <div className={styles.gridScroll}>
         <div className={styles.gridInner} style={{ height: COL_H }}>
           {/* Left axis */}
           <div className={styles.axis}>

@@ -64,8 +64,7 @@ export default function StatsScreen() {
     function onMove(e: TouchEvent) {
       if (!el) return
       const delta = e.touches[0].clientY - startY
-      const scroller = el.querySelector('[data-scrollable]') as HTMLElement | null
-      if (delta > 0 && (!scroller || scroller.scrollTop <= 0)) {
+      if (delta > 0 && el.scrollTop <= 0) {
         pullDeltaRef.current = Math.min(PULL_THRESHOLD * 1.5, delta * 0.4)
         setPullDisplay(pullDeltaRef.current)
         e.preventDefault()
@@ -129,6 +128,7 @@ export default function StatsScreen() {
           isLoading={isLoading}
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
+          scrollContainerRef={screenRef}
         />
       )}
       {!error && activeTab === 'week' && (

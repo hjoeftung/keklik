@@ -1,12 +1,9 @@
 /* ── Tab shell ──────────────────────────────────────────────── */
 
 .tab {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
   padding: 14px 16px 0;
-  overflow: hidden;
 }
 
 /* ── Legend ─────────────────────────────────────────────────── */
@@ -72,18 +69,8 @@
 /* ── Grid scroll ────────────────────────────────────────────── */
 
 .gridScroll {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-height: 0;
   padding-top: 8px;
   padding-bottom: 24px;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.gridScroll::-webkit-scrollbar {
-  display: none;
 }
 
 .gridInner {
