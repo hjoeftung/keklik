@@ -12,7 +12,6 @@ interface Props {
   isLoading: boolean
   selectedDate: Date
   onDateChange: (d: Date) => void
-  scrollContainerRef: React.RefObject<HTMLDivElement | null>
 }
 
 const PX_PER_MIN = 0.9
@@ -63,7 +62,6 @@ export default function TodayTab({
   isLoading,
   selectedDate,
   onDateChange,
-  scrollContainerRef,
 }: Props) {
   const selectedIsToday = isToday(selectedDate)
 
@@ -93,16 +91,7 @@ export default function TodayTab({
   const totalMinutes = (windowEnd.getTime() - windowStart.getTime()) / 60000
   const totalHeight = totalMinutes * PX_PER_MIN
 
-  useEffect(() => {
-    if (!scrollContainerRef.current || isLoading) return
-    const now = new Date()
-    const nowOffsetMin = (now.getTime() - windowStart.getTime()) / 60000
-    const scrollTarget =
-      nowOffsetMin > 0 && nowOffsetMin < totalMinutes ? nowOffsetMin * PX_PER_MIN - 240 : 0
-    scrollContainerRef.current.scrollTop = Math.max(0, scrollTarget)
-  }, [isLoading]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const hourTicks: HourTick[] = []
+const hourTicks: HourTick[] = []
   {
     let t = new Date(windowStart)
     t.setMinutes(0, 0, 0)

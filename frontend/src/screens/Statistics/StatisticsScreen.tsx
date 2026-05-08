@@ -128,7 +128,6 @@ export default function StatsScreen() {
           isLoading={isLoading}
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
-          scrollContainerRef={screenRef}
         />
       )}
       {!error && activeTab === 'week' && (
