@@ -119,3 +119,8 @@
 - Acceptance criteria:
   - No interface name in `internal/sleep` encodes query mechanics rather than domain role
   - All call sites compile with the new names
+
+
+### Task-043: Update docker-compose (envs + frontend) and README.md
+
+### Task-044: Fix CI
