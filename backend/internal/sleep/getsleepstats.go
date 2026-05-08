@@ -148,17 +148,20 @@ type statsCS struct {
 	cls SleepClassification
 }
 
-// statsTodayTotals computes active, nap, and total sleep seconds for today.
-//
-// Active is awake time since the last completed night sleep that ended today,
-// or since dayStart if none exists. If the baby is currently in a night sleep
-// (activeSession is a night classification), active is 0.
-// Naps counts completed nap sessions that overlap [anchor, now).
-// Total sleep is naps + completed night sessions whose StartedAt falls in today.
-func statsTodayTotals(classified []statsCS, activeSession *statsCS, loc *time.Location, now time.Time) TodayStats {
-	localNow := now.In(loc)
-	dayStart := time.Date(localNow.Year(), localNow.Month(), localNow.Day(), 0, 0, 0, 0, loc).UTC()
-	dayEnd := dayStart.Add(24 * time.Hour)
+// statsDayTotals computes active, nap, and total sleep seconds for the calendar
+// day defined by [dayStart, dayEnd) (UTC boundaries). now is the real wall-clock
+// time and is used only to cap active-session durations; it must not be used to
+// derive day boundaries.
+func statsDayTotals(
+	classified []statsCS,
+	activeSession *statsCS,
+	dayStart, dayEnd time.Time,
+	now time.Time,
+) TodayStats {
+	effectiveEnd := dayEnd
+	if now.Before(dayEnd) {
+		effectiveEnd = now
+	}
 
 	// a. Anchor detection.
 	anchor := dayStart
@@ -176,7 +179,9 @@ func statsTodayTotals(classified []statsCS, activeSession *statsCS, loc *time.Lo
 		}
 	}
 
-	// b. Naps since anchor.
+	// b. Naps since anchor that stopped within this day's boundary.
+	// The dayEnd upper bound ensures a cross-midnight nap is attributed to the
+	// day it ends on, not the day it starts on.
 	var napSessions []SleepSession
 	var totalNap time.Duration
 	for _, cs := range classified {
@@ -184,7 +189,7 @@ func statsTodayTotals(classified []statsCS, activeSession *statsCS, loc *time.Lo
 			continue
 		}
 		stoppedAt, _ := cs.s.StoppedAt()
-		if cs.s.StartedAt().Before(now) && stoppedAt.After(anchor) {
+		if cs.s.StartedAt().Before(effectiveEnd) && stoppedAt.After(anchor) && !stoppedAt.After(dayEnd) {
 			napSessions = append(napSessions, cs.s)
 			totalNap += attributedDuration(cs.s, now)
 		}
@@ -194,9 +199,9 @@ func statsTodayTotals(classified []statsCS, activeSession *statsCS, loc *time.Lo
 	sort.Slice(napSessions, func(i, j int) bool {
 		return napSessions[i].StartedAt().Before(napSessions[j].StartedAt())
 	})
-	active := activeTimeInWindow(napSessions, anchor, now, now)
+	active := activeTimeInWindow(napSessions, anchor, effectiveEnd, now)
 
-	// d. Night sleep started today (StartedAt within [dayStart, dayEnd)).
+	// d. Night sleep started within [dayStart, dayEnd).
 	var totalNight time.Duration
 	for _, cs := range classified {
 		if cs.cls != SleepClassificationNight {
@@ -215,6 +220,20 @@ func statsTodayTotals(classified []statsCS, activeSession *statsCS, loc *time.Lo
 	}
 }
 
+// statsTodayTotals computes active, nap, and total sleep seconds for today.
+//
+// Active is awake time since the last completed night sleep that ended today,
+// or since dayStart if none exists. If the baby is currently in a night sleep
+// (activeSession is a night classification), active is 0.
+// Naps counts completed nap sessions that overlap [anchor, now).
+// Total sleep is naps + completed night sessions whose StartedAt falls in today.
+func statsTodayTotals(classified []statsCS, activeSession *statsCS, loc *time.Location, now time.Time) TodayStats {
+	localNow := now.In(loc)
+	dayStart := time.Date(localNow.Year(), localNow.Month(), localNow.Day(), 0, 0, 0, 0, loc).UTC()
+	dayEnd := dayStart.Add(24 * time.Hour)
+	return statsDayTotals(classified, activeSession, dayStart, dayEnd, now)
+}
+
 // statsSummaryAverages computes rolling averages for 7d, 14d, 30d, 90d.
 // Today (the partial calendar day) is excluded from all averages.
 func statsSummaryAverages(classified []statsCS, loc *time.Location, now time.Time) map[string]PeriodAverage {
@@ -225,44 +244,24 @@ func statsSummaryAverages(classified []statsCS, loc *time.Location, now time.Tim
 	daily := make([]dayStats, 90)
 
 	for i := 0; i < 90; i++ {
-		dayStart := today.AddDate(0, 0, -(i + 1))
-		dayEnd := dayStart.AddDate(0, 0, 1)
-		dayStartUTC := dayStart.UTC()
-		dayEndUTC := dayEnd.UTC()
+		dayStart := today.AddDate(0, 0, -(i + 1)).UTC()
+		dayEnd := dayStart.Add(24 * time.Hour)
 
-		var inDay []SleepSession
-		var totalSleep, totalNap time.Duration
-
+		// Include sessions whose StartedAt falls within [dayStart-24h, dayEnd).
+		// The -24h buffer captures night sleeps that started the prior evening.
+		var inDay []statsCS
 		for _, cs := range classified {
-			if !includeInDay(cs.s, dayStartUTC, dayEndUTC) {
-				continue
-			}
-			inDay = append(inDay, cs.s)
-			d := attributedDuration(cs.s, now)
-			totalSleep += d
-			if cs.cls == SleepClassificationNap {
-				totalNap += d
+			start := cs.s.StartedAt()
+			if start.Before(dayEnd) && start.After(dayStart.Add(-24*time.Hour)) {
+				inDay = append(inDay, cs)
 			}
 		}
 
-		sort.Slice(inDay, func(a, b int) bool {
-			return inDay[a].StartedAt().Before(inDay[b].StartedAt())
-		})
-
-		effectiveEnd := dayEndUTC
-		if now.Before(dayEndUTC) {
-			effectiveEnd = now
-		}
-
-		var active time.Duration
-		if now.After(dayStartUTC) {
-			active = activeTimeInWindow(inDay, dayStartUTC, effectiveEnd, now)
-		}
-
+		totals := statsDayTotals(inDay, nil, dayStart, dayEnd, now)
 		daily[i] = dayStats{
-			sleep:  totalSleep.Seconds(),
-			nap:    totalNap.Seconds(),
-			active: active.Seconds(),
+			sleep:  totals.TotalSleepSeconds,
+			nap:    totals.TotalNapSeconds,
+			active: totals.TotalActiveSeconds,
 		}
 	}
 
@@ -287,20 +286,6 @@ func statsSummaryAverages(classified []statsCS, loc *time.Location, now time.Tim
 		"30d": avg(30),
 		"90d": avg(90),
 	}
-}
-
-// includeInDay reports whether s contributes to the daily summary for [dayStart, dayEnd).
-//
-// Naps are included when they overlap the window (started before dayEnd and, if
-// completed, ended after dayStart). Night sleeps are included only when they
-// started within the window. Active (unclassified) sessions are treated like naps.
-func includeInDay(s SleepSession, dayStart, dayEnd time.Time) bool {
-	start := s.StartedAt()
-	if s.IsActive() {
-		return start.Before(dayEnd)
-	}
-	stoppedAt, _ := s.StoppedAt()
-	return start.Before(dayEnd) && stoppedAt.After(dayStart)
 }
 
 // attributedDuration returns the full duration to credit to s in the daily sleep
