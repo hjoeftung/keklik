@@ -68,7 +68,8 @@ func TestGetSleepStatsHandlerTodayTotals(t *testing.T) {
 		t.Fatalf("TotalNapSeconds: want %.0f, got %.0f", wantNap, stats.Today.TotalNapSeconds)
 	}
 
-	wantSleep := (1*time.Hour + 10*time.Hour).Seconds()
+	// Night sleep started April 28 (before dayStart), so it is not counted in today's total sleep.
+	wantSleep := (1 * time.Hour).Seconds()
 	if stats.Today.TotalSleepSeconds != wantSleep {
 		t.Fatalf("TotalSleepSeconds: want %.0f, got %.0f", wantSleep, stats.Today.TotalSleepSeconds)
 	}
