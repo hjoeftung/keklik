@@ -288,3 +288,86 @@ func statsSummaryAverages(classified []statsCS, loc *time.Location, now time.Tim
 		"90d": avg(90),
 	}
 }
+
+// includeInDay reports whether s contributes to the daily summary for [dayStart, dayEnd).
+//
+// Naps are included when they overlap the window (started before dayEnd and, if
+// completed, ended after dayStart). Night sleeps are included only when they
+// started within the window. Active (unclassified) sessions are treated like naps.
+func includeInDay(s SleepSession, dayStart, dayEnd time.Time) bool {
+	start := s.StartedAt()
+	if s.IsActive() {
+		return start.Before(dayEnd)
+	}
+	stoppedAt, _ := s.StoppedAt()
+	return start.Before(dayEnd) && stoppedAt.After(dayStart)
+}
+
+// attributedDuration returns the full duration to credit to s in the daily sleep
+// total. Completed sessions use their stored duration; active sessions are
+// measured from start to now.
+func attributedDuration(s SleepSession, now time.Time) time.Duration {
+	if d, ok := s.Duration(); ok {
+		return d
+	}
+	if d := now.Sub(s.StartedAt()); d > 0 {
+		return d
+	}
+	return 0
+}
+
+// activeTimeInWindow returns the awake time within [windowStart, windowEnd] by
+// computing the window duration minus the total sleep clipped to that window.
+//
+// Sessions are expected to be sorted by start time and non-overlapping (the
+// domain allows only one active session per baby at a time). Overlapping
+// intervals are merged defensively before subtraction.
+func activeTimeInWindow(sessions []SleepSession, windowStart, windowEnd, now time.Time) time.Duration {
+	if !windowEnd.After(windowStart) {
+		return 0
+	}
+
+	type interval struct{ start, end time.Time }
+	intervals := make([]interval, 0, len(sessions))
+	for _, s := range sessions {
+		start := s.StartedAt()
+		var end time.Time
+		if stopped, ok := s.StoppedAt(); ok {
+			end = stopped
+		} else {
+			end = now
+		}
+		if start.Before(windowStart) {
+			start = windowStart
+		}
+		if end.After(windowEnd) {
+			end = windowEnd
+		}
+		if end.After(start) {
+			intervals = append(intervals, interval{start, end})
+		}
+	}
+
+	if len(intervals) == 0 {
+		return windowEnd.Sub(windowStart)
+	}
+
+	// Merge overlapping intervals.
+	merged := []interval{intervals[0]}
+	for _, iv := range intervals[1:] {
+		last := &merged[len(merged)-1]
+		if !iv.start.After(last.end) {
+			if iv.end.After(last.end) {
+				last.end = iv.end
+			}
+		} else {
+			merged = append(merged, iv)
+		}
+	}
+
+	var sleepInWindow time.Duration
+	for _, iv := range merged {
+		sleepInWindow += iv.end.Sub(iv.start)
+	}
+	return windowEnd.Sub(windowStart) - sleepInWindow
+}
