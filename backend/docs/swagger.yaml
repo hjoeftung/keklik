@@ -56,6 +56,8 @@ definitions:
     type: object
   httpapi.getFamilyMemberResponse:
     properties:
+      account_id:
+        type: string
       id:
         type: string
       name:
@@ -109,6 +111,13 @@ definitions:
       version:
         type: integer
     type: object
+  httpapi.nightWindowInfoResponse:
+    properties:
+      end_hhmm:
+        type: string
+      start_hhmm:
+        type: string
+    type: object
   httpapi.periodAvgResponse:
     properties:
       avg_active_seconds:
@@ -150,6 +159,8 @@ definitions:
     type: object
   httpapi.sleepStatsResponse:
     properties:
+      night_window:
+        $ref: '#/definitions/httpapi.nightWindowInfoResponse'
       summary:
         additionalProperties:
           $ref: '#/definitions/httpapi.periodAvgResponse'

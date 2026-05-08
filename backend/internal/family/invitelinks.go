@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/url"
 	"strings"
 	"time"
 
@@ -22,17 +21,15 @@ type CreateFamilyInviteLinkCommand struct {
 	CreatorAccountID auth.AccountID
 }
 
-// CreateFamilyInviteLinkResult returns the persisted invite and its shareable URL.
+// CreateFamilyInviteLinkResult returns the persisted invite link.
 type CreateFamilyInviteLinkResult struct {
 	InviteLink InviteLink
-	InviteURL  string
 }
 
 // CreateFamilyInviteLinkHandler issues family invite links for existing family members.
 type CreateFamilyInviteLinkHandler struct {
 	families FamilyRepository
 	members  FamilyMemberRepository
-	baseURL  string
 	ttl      time.Duration
 	now      func() time.Time
 }
@@ -41,13 +38,11 @@ type CreateFamilyInviteLinkHandler struct {
 func NewCreateFamilyInviteLinkHandler(
 	families FamilyRepository,
 	members FamilyMemberRepository,
-	baseURL string,
 	ttl time.Duration,
 ) *CreateFamilyInviteLinkHandler {
 	return &CreateFamilyInviteLinkHandler{
 		families: families,
 		members:  members,
-		baseURL:  strings.TrimRight(baseURL, "/"),
 		ttl:      ttl,
 		now:      time.Now,
 	}
@@ -94,7 +89,6 @@ func (h *CreateFamilyInviteLinkHandler) Handle(
 
 	return CreateFamilyInviteLinkResult{
 		InviteLink: inviteLink,
-		InviteURL:  buildInviteURL(h.baseURL, inviteLink.Token),
 	}, nil
 }
 
@@ -224,10 +218,6 @@ func generateInviteToken() (InviteToken, error) {
 	}
 
 	return InviteToken(base64.RawURLEncoding.EncodeToString(tokenBytes)), nil
-}
-
-func buildInviteURL(baseURL string, token InviteToken) string {
-	return fmt.Sprintf("%s/join-family?token=%s", baseURL, url.QueryEscape(string(token)))
 }
 
 func findInviteLink(f Family, token InviteToken) (InviteLink, bool) {

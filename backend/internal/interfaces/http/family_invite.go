@@ -2,7 +2,10 @@ package httpapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/hjoeftung/keklik/internal/apperror"
 	"github.com/hjoeftung/keklik/internal/auth"
@@ -35,7 +38,7 @@ type joinFamilyByInviteLinkResponse struct {
 // @Failure   401  {object}  errorResponse
 // @Failure   403  {object}  errorResponse
 // @Router    /families/invite-links [post]
-func createFamilyInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.CreateFamilyInviteLinkHandler) {
+func createFamilyInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *family.CreateFamilyInviteLinkHandler, baseURL string) {
 	accountID, ok := auth.AccountIDFromContext(r.Context())
 	if !ok {
 		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "authorization required"))
@@ -50,11 +53,13 @@ func createFamilyInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *fa
 		return
 	}
 
+	inviteURL := fmt.Sprintf("%s/join-family?token=%s", strings.TrimRight(baseURL, "/"), url.QueryEscape(string(result.InviteLink.Token)))
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(createFamilyInviteLinkResponse{
 		Token:     string(result.InviteLink.Token),
-		InviteURL: result.InviteURL,
+		InviteURL: inviteURL,
 		ExpiresAt: result.InviteLink.ExpiresAt.UTC().Format(http.TimeFormat),
 	})
 }
