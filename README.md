@@ -78,7 +78,7 @@ docker compose down --volumes
 ## Run locally
 
 ```bash
-export DATABASE_URL='postgres://keklik:keklik@localhost:5432/keklik?sslmode=disable'
+export DATABASE_URL='postgres://keklik:keklik@localhost:5432/keklik'
 export GOOGLE_OAUTH_CLIENT_ID='your-google-client-id'
 export GOOGLE_OAUTH_CLIENT_SECRET='your-google-client-secret'
 export GOOGLE_OAUTH_REDIRECT_URL='http://localhost:8080/auth/google/callback'

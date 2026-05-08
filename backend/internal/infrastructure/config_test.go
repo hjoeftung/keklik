@@ -18,7 +18,7 @@ func TestLoadConfigUsesDefaultHTTPPortAndLoadsRequiredEnvironment(t *testing.T) 
 		t.Fatalf("expected default HTTP port %d, got %d", defaultHTTPPort, config.HTTP.Port)
 	}
 
-	if config.Database.URL != "postgres://keklik:keklik@localhost:5432/keklik?sslmode=disable" {
+	if config.Database.URL != "postgres://keklik:keklik@localhost:5432/keklik" {
 		t.Fatalf("unexpected database URL: %q", config.Database.URL)
 	}
 
@@ -157,7 +157,7 @@ func TestLoadConfigFailsOnInvalidInviteLinkLifetime(t *testing.T) {
 func setRequiredEnv(t *testing.T) {
 	t.Helper()
 
-	t.Setenv("DATABASE_URL", "postgres://keklik:keklik@localhost:5432/keklik?sslmode=disable")
+	t.Setenv("DATABASE_URL", "postgres://keklik:keklik@localhost:5432/keklik")
 	t.Setenv("GOOGLE_OAUTH_CLIENT_ID", "client-id")
 	t.Setenv("GOOGLE_OAUTH_CLIENT_SECRET", "client-secret")
 	t.Setenv("GOOGLE_OAUTH_REDIRECT_URL", "http://localhost:8080/auth/google/callback")
