@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
-	"strings"
 
 	"github.com/hjoeftung/keklik/internal/apperror"
 	"github.com/hjoeftung/keklik/internal/auth"
@@ -53,7 +51,7 @@ func createFamilyInviteLinkHandler(w http.ResponseWriter, r *http.Request, h *fa
 		return
 	}
 
-	inviteURL := fmt.Sprintf("%s/join-family?token=%s", strings.TrimRight(baseURL, "/"), url.QueryEscape(string(result.InviteLink.Token)))
+	inviteURL := fmt.Sprintf("%s/invite/%s", baseURL, string(result.InviteLink.Token))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

@@ -61,7 +61,7 @@ func addRoutes(mux *http.ServeMux, config infrastructure.Config, deps Dependenci
 		getFamilyHandler(w, r, deps.GetFamily)
 	})
 	protected.HandleFunc("POST /families/invite-links", func(w http.ResponseWriter, r *http.Request) {
-		createFamilyInviteLinkHandler(w, r, deps.CreateInviteLink)
+		createFamilyInviteLinkHandler(w, r, deps.CreateInviteLink, config.App.FrontendURL)
 	})
 	protected.HandleFunc("DELETE /families/invite-links/{token}", func(w http.ResponseWriter, r *http.Request) {
 		revokeInviteLinkHandler(w, r, deps.RevokeInviteLink)

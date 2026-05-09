@@ -75,7 +75,6 @@ func run(ctx context.Context, getenv func(string) string) error {
 	createInviteLink := family.NewCreateFamilyInviteLinkHandler(
 		familyRepo,
 		familyMemberRepo,
-		config.App.BaseURL,
 		config.App.InviteLinkLifetime,
 	)
 	joinFamilyByInvite := family.NewJoinFamilyByInviteLinkHandler(familyRepo, familyMemberRepo)

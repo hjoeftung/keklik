@@ -16,6 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"log/slog"
+
 	"golang.org/x/oauth2"
 
 	"github.com/google/uuid"
@@ -161,12 +163,14 @@ func oauthCallbackHandler(
 
 	token, err := cfg.Exchange(r.Context(), code)
 	if err != nil {
+		slog.ErrorContext(r.Context(), "oauth_token_exchange_failed", "error", err)
 		redirectError("token_exchange_failed")
 		return
 	}
 
 	userInfo, err := fetchGoogleUserInfo(r.Context(), cfg, token)
 	if err != nil {
+		slog.ErrorContext(r.Context(), "oauth_identity_fetch_failed", "error", err)
 		redirectError("identity_fetch_failed")
 		return
 	}
@@ -176,6 +180,7 @@ func oauthCallbackHandler(
 		Email:           userInfo.Email,
 	})
 	if err != nil {
+		slog.ErrorContext(r.Context(), "oauth_account_resolution_failed", "error", err)
 		redirectError("account_resolution_failed")
 		return
 	}
