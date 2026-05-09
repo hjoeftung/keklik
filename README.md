@@ -16,8 +16,6 @@ The dev server starts at `http://localhost:5173`.
 
 ---
 
-## Backend
-
 ## CI and image publishing
 
 GitHub Actions is split into two workflows:
@@ -55,7 +53,9 @@ This starts:
 
 The Compose stack uses a named Docker volume, `postgres-data`, so local database state survives container restarts.
 
-The API container is configured with development-safe placeholder Google OAuth values so the service can boot locally before the real OAuth flow is implemented. Override them in `compose.yaml` if you need different values.
+The API container is configured with development-safe placeholder Google OAuth values. Override them in `compose.yaml` if you need real OAuth credentials.
+
+When `ENABLE_SWAGGER_UI=true` (the default in Compose), the API docs are available at `http://localhost:8080/swagger`.
 
 To verify the stack is healthy:
 
@@ -77,17 +77,16 @@ docker compose down --volumes
 
 ## Run locally
 
+Requires [air](https://github.com/air-verse/air) for hot reload.
+
 ```bash
-export DATABASE_URL='postgres://keklik:keklik@localhost:5432/keklik'
-export GOOGLE_OAUTH_CLIENT_ID='your-google-client-id'
-export GOOGLE_OAUTH_CLIENT_SECRET='your-google-client-secret'
-export GOOGLE_OAUTH_REDIRECT_URL='http://localhost:8080/auth/google/callback'
-export ENABLE_TEST_AUTH='true'
-export APP_BASE_URL='http://localhost:8080'
-go run ./cmd/api
+cd backend
+cp .env.example .env
+# fill in real values if needed, then:
+air
 ```
 
-The service listens on port `8080` by default. Override it with `HTTP_PORT`.
+The service listens on port `8080` by default. Override it with `HTTP_PORT` in `.env`.
 
 ## Configuration
 
@@ -95,13 +94,17 @@ The service validates its environment contract during startup and exits immediat
 
 | Variable | Required | Notes |
 | --- | --- | --- |
-| `HTTP_PORT` | No | Optional local development override. Defaults to `8080`. |
-| `DATABASE_URL` | Yes | PostgreSQL DSN used by infrastructure components. |
+| `HTTP_PORT` | No | Defaults to `8080`. |
+| `DATABASE_URL` | Yes | PostgreSQL DSN. |
+| `JWT_SIGNING_KEY` | Yes | Secret used to sign auth tokens. |
 | `GOOGLE_OAUTH_CLIENT_ID` | Yes | Google OAuth client identifier. |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Yes | Google OAuth client secret. |
 | `GOOGLE_OAUTH_REDIRECT_URL` | Yes | Absolute callback URL registered with Google. |
+| `APP_BASE_URL` | Yes | Absolute base URL used to build application links such as invite URLs. |
+| `FRONTEND_URL` | Yes | Absolute URL of the frontend, used for CORS and post-auth redirects. |
 | `ENABLE_TEST_AUTH` | No | Enables the test-only `POST /auth/test/login` endpoint. Defaults to `false`. |
-| `APP_BASE_URL` | Yes | Absolute base URL used to build application links such as family invite URLs. |
+| `ENABLE_SWAGGER_UI` | No | Serves API docs at `/swagger`. Defaults to `false`. |
+| `FAMILY_INVITE_LINK_EXPIRY` | No | How long invite links are valid (e.g. `48h`). Defaults to `168h` (7 days). |
 
 ## Test-only auth flow
 
