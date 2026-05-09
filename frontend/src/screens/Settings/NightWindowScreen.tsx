@@ -49,12 +49,14 @@ export default function NightWindowScreen() {
     const end = parseTimeInput(nightEnd)
 
     try {
+      const startOfToday = new Date()
+      startOfToday.setHours(0, 0, 0, 0)
       await setNightWindow(babyId, {
         start_hour: start.hour,
         start_minute: start.minute,
         end_hour: end.hour,
         end_minute: end.minute,
-        effective_from: new Date().toISOString(),
+        effective_from: startOfToday.toISOString(),
       })
       navigate('/settings')
     } catch (err) {
