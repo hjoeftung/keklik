@@ -14,6 +14,7 @@ interface AppDataContextValue {
   isLoading: boolean
   error: string | null
   refresh: () => Promise<void>
+  updateSessions7d: (updater: (prev: SleepSession[]) => SleepSession[]) => void
 }
 
 const AppDataContext = createContext<AppDataContextValue | null>(null)
@@ -50,8 +51,35 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     refresh()
   }, [refresh])
 
+  useEffect(() => {
+    const lastRefresh = { at: 0 }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return
+      const now = Date.now()
+      if (now - lastRefresh.at < 5000) return
+      lastRefresh.at = now
+      refresh()
+    }
+
+    const handleFocus = () => {
+      const now = Date.now()
+      if (now - lastRefresh.at < 5000) return
+      lastRefresh.at = now
+      refresh()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [refresh])
+
   return (
-    <AppDataContext.Provider value={{ sessions7d, stats, isLoading, error, refresh }}>
+    <AppDataContext.Provider value={{ sessions7d, stats, isLoading, error, refresh, updateSessions7d: setSessions7d }}>
       {children}
     </AppDataContext.Provider>
   )

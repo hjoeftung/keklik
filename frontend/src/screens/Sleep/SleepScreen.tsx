@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuthContext } from '@/context/AuthContext'
 import { useTimeFormatContext } from '@/context/TimeFormatContext'
+import { useAppData } from '@/context/AppDataContext'
 import {
   startSleep,
   stopSleep,
   editSleepSession,
-  getSleepHistory,
   type SleepSession,
 } from '@/api/endpoints'
 import { ApiError } from '@/api/client'
@@ -50,9 +50,8 @@ export default function SleepScreen() {
   const { family } = useAuthContext()
   const babyId = family?.baby.id ?? ''
   const babyName = family?.baby.name ?? 'Baby'
+  const { sessions7d: sessions, isLoading, refresh, updateSessions7d: setSessions } = useAppData()
 
-  const [sessions, setSessions] = useState<SleepSession[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [isToggling, setIsToggling] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
@@ -64,23 +63,6 @@ export default function SleepScreen() {
   const session = sessions.find((s) => !s.stopped_at) ?? null
   const isActive = session !== null
   const lastCompleted = sessions.find((s) => !!s.stopped_at) ?? null
-
-  const loadSessions = useCallback(async () => {
-    if (!babyId) return
-    try {
-      const all = await getSleepHistory(babyId, '7d')
-      setSessions(all)
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load sleep status')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [babyId])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadSessions()
-  }, [loadSessions])
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 60_000)
@@ -197,7 +179,7 @@ export default function SleepScreen() {
             babyId={babyId}
             onSaved={() => {
               setShowLogPast(false)
-              loadSessions()
+              refresh()
             }}
             onClose={() => setShowLogPast(false)}
           />
@@ -379,7 +361,7 @@ export default function SleepScreen() {
           babyId={babyId}
           onSaved={() => {
             setShowLogPast(false)
-            loadSessions()
+            refresh()
           }}
           onClose={() => setShowLogPast(false)}
         />
