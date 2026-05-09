@@ -6,6 +6,9 @@ on:
       - master
     tags:
       - 'v*'
+    paths:
+      - 'backend/**'
+      - '.github/workflows/publish.yml'
 
 permissions:
   contents: read
@@ -96,7 +99,7 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./backend
           file: ./backend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
