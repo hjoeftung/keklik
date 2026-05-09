@@ -118,7 +118,7 @@ func TestCreateFamilyInviteLinkPersistsInviteAndReturnsURL(t *testing.T) {
 	f := mustFamily(t)
 	families := newInviteFamilyRepository(f)
 	members := &inviteMemberRepository{families: families}
-	handler := NewCreateFamilyInviteLinkHandler(families, members, "http://localhost:8080/", 24*time.Hour)
+	handler := NewCreateFamilyInviteLinkHandler(families, members, 24*time.Hour)
 	handler.now = func() time.Time {
 		return time.Date(2026, time.April, 15, 9, 0, 0, 0, time.UTC)
 	}
@@ -132,12 +132,6 @@ func TestCreateFamilyInviteLinkPersistsInviteAndReturnsURL(t *testing.T) {
 
 	if result.InviteLink.Token == "" {
 		t.Fatal("expected non-empty invite token")
-	}
-	if result.InviteURL == "" {
-		t.Fatal("expected non-empty invite URL")
-	}
-	if want := "http://localhost:8080/join-family?token="; result.InviteURL[:len(want)] != want {
-		t.Fatalf("expected invite URL to start with %q, got %q", want, result.InviteURL)
 	}
 
 	saved, err := families.FindByID(context.Background(), f.ID())
@@ -157,7 +151,7 @@ func TestCreateFamilyInviteLinkRejectsAccountOutsideFamily(t *testing.T) {
 
 	families := newInviteFamilyRepository(mustFamily(t))
 	members := &inviteMemberRepository{families: families}
-	handler := NewCreateFamilyInviteLinkHandler(families, members, "http://localhost:8080", 24*time.Hour)
+	handler := NewCreateFamilyInviteLinkHandler(families, members, 24*time.Hour)
 
 	_, err := handler.Handle(context.Background(), CreateFamilyInviteLinkCommand{
 		CreatorAccountID: "google-missing",

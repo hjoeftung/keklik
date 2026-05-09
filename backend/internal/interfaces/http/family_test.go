@@ -209,7 +209,6 @@ func newTestServer(familyRepo family.FamilyRepository, memberRepo family.FamilyM
 	createInviteLink := family.NewCreateFamilyInviteLinkHandler(
 		familyRepo,
 		memberRepo,
-		"http://localhost:8080",
 		24*time.Hour,
 	)
 	joinByInvite := family.NewJoinFamilyByInviteLinkHandler(familyRepo, memberRepo)

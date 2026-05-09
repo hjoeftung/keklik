@@ -575,7 +575,7 @@ type nightWindowInfoResponse struct {
 type sleepStatsResponse struct {
 	Today       todayStatsResponse           `json:"today"`
 	Summary     map[string]periodAvgResponse `json:"summary"`
-	NightWindow *nightWindowInfoResponse      `json:"night_window,omitempty"`
+	NightWindow *nightWindowInfoResponse     `json:"night_window,omitempty"`
 }
 
 // getSleepStatsHandler returns diary-window totals and rolling period averages.

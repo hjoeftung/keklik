@@ -10,9 +10,9 @@ import (
 )
 
 type stubLogPastSleepRepo struct {
-	hasOverlap  bool
-	overlapErr  error
-	saveErr     error
+	hasOverlap   bool
+	overlapErr   error
+	saveErr      error
 	savedSession sleep.SleepSession
 }
 

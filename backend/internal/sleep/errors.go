@@ -28,9 +28,9 @@ var (
 type SleepSessionConflictType string
 
 const (
-	SleepSessionConflictStaleVersion   SleepSessionConflictType = "stale_version"
-	SleepSessionConflictOverlap        SleepSessionConflictType = "overlap"
-	SleepSessionConflictActiveExists   SleepSessionConflictType = "active_session_exists"
+	SleepSessionConflictStaleVersion SleepSessionConflictType = "stale_version"
+	SleepSessionConflictOverlap      SleepSessionConflictType = "overlap"
+	SleepSessionConflictActiveExists SleepSessionConflictType = "active_session_exists"
 )
 
 type SleepSessionConflictError struct {

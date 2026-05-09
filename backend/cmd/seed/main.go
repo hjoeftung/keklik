@@ -51,7 +51,7 @@ func main() {
 	setNightWindow := sleep.NewSetNightWindowHandler(nightWindowRepo, transactor)
 
 	// Backdate the night window so it covers all seeded sessions.
-	effectiveFrom := time.Now().UTC().AddDate(0, 0, -(*days+1))
+	effectiveFrom := time.Now().UTC().AddDate(0, 0, -(*days + 1))
 	if err := setNightWindow.Handle(ctx, sleep.SetNightWindowCommand{
 		BabyID:                 sleep.BabyID(*babyID),
 		NightWindowStartHour:   21,
