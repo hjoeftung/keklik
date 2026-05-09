@@ -27,11 +27,12 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: go.mod
+          go-version-file: backend/go.mod
           cache: true
 
       - name: Verify gofmt
         shell: bash
+        working-directory: backend
         run: |
           mapfile -t files < <(find . -type f -name '*.go' -not -path './vendor/*' | sort)
 
@@ -48,12 +49,15 @@ jobs:
           fi
 
       - name: Run go vet
+        working-directory: backend
         run: go vet ./...
 
       - name: Run tests
+        working-directory: backend
         run: go test ./...
 
       - name: Build API binary
+        working-directory: backend
         run: go build ./cmd/api
 
   publish:
