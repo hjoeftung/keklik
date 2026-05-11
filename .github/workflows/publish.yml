@@ -8,6 +8,7 @@ on:
       - 'v*'
     paths:
       - 'backend/**'
+      - 'frontend/**'
       - '.github/workflows/publish.yml'
 
 permissions:
@@ -18,10 +19,43 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Filter paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**/*.go'
+              - 'backend/go.mod'
+              - 'backend/go.sum'
+              - 'backend/Dockerfile'
+              - '.github/workflows/publish.yml'
+            frontend:
+              - 'frontend/src/**'
+              - 'frontend/public/**'
+              - 'frontend/index.html'
+              - 'frontend/package.json'
+              - 'frontend/package-lock.json'
+              - 'frontend/vite.config.*'
+              - 'frontend/tsconfig.*'
+              - '.github/workflows/publish.yml'
+
   validate:
     name: Validate release candidate
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
 
     steps:
       - name: Check out repository
@@ -67,7 +101,8 @@ jobs:
     name: Publish container image
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: validate
+    needs: [changes, validate]
+    if: needs.changes.outputs.backend == 'true'
     permissions:
       contents: read
       packages: write
@@ -106,3 +141,36 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  publish-frontend:
+    name: Build and publish frontend bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/package.json
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build bundle
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-sha-${{ github.sha }}
+          path: frontend/dist/
+          retention-days: 30
