@@ -60,7 +60,7 @@ export default function OnboardingScreen() {
         start_minute: start.minute,
         end_hour: end.hour,
         end_minute: end.minute,
-        effective_from: new Date().toISOString(),
+        effective_from: new Date(0).toISOString(),
       })
 
       await refreshFamily()

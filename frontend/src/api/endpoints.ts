@@ -7,7 +7,7 @@ export function logout(): Promise<void> {
 }
 
 export function getGoogleOAuthStartUrl(): string {
-  return `${import.meta.env.VITE_API_BASE_URL ?? ''}/auth/google/start`
+  return `${import.meta.env.VITE_API_BASE_URL ?? '/api'}/auth/google/start`
 }
 
 // --- Family ---

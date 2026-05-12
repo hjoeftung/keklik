@@ -37,7 +37,7 @@ export class NetworkError extends Error {
   }
 }
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
 async function executeRequest(method: string, path: string, body: unknown): Promise<Response> {
   try {
