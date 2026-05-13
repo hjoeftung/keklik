@@ -52,15 +52,25 @@ async function executeRequest(method: string, path: string, body: unknown): Prom
   }
 }
 
+let pendingRefresh: Promise<boolean> | null = null
+
 async function tryRefreshSession(): Promise<boolean> {
+  if (pendingRefresh) return pendingRefresh
+  pendingRefresh = (async () => {
+    try {
+      const resp = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      return resp.ok
+    } catch {
+      return false
+    }
+  })()
   try {
-    const resp = await fetch(`${BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-    })
-    return resp.ok
-  } catch {
-    return false
+    return await pendingRefresh
+  } finally {
+    pendingRefresh = null
   }
 }
 
