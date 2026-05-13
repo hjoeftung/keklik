@@ -73,13 +73,13 @@ func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string, cfg
 		HttpOnly: true,
 		Secure:   cfg.Secure,
 		SameSite: http.SameSiteStrictMode,
-		Path:     "/auth/refresh",
+		Path:     "/",
 	})
 }
 
 func clearAuthCookies(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{Name: accessCookieName, Value: "", MaxAge: -1, Path: "/"})
-	http.SetCookie(w, &http.Cookie{Name: refreshCookieName, Value: "", MaxAge: -1, Path: "/auth/refresh"})
+	http.SetCookie(w, &http.Cookie{Name: refreshCookieName, Value: "", MaxAge: -1, Path: "/"})
 }
 
 // oauthStartHandler generates a random state, stores it in a signed cookie, and
