@@ -13,7 +13,7 @@ interface AppDataContextValue {
   stats: SleepStatsResponse | null
   isLoading: boolean
   error: string | null
-  refresh: () => Promise<void>
+  refresh: (silent?: boolean) => Promise<void>
   updateSessions7d: (updater: (prev: SleepSession[]) => SleepSession[]) => void
 }
 
@@ -28,21 +28,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (silent = false) => {
     if (!babyId) return
-    setIsLoading(true)
+    if (!silent) setIsLoading(true)
     setError(null)
     try {
       const [sessionData, statsData] = await Promise.all([
         getSleepHistory(babyId, '7d'),
         getSleepStats(babyId),
       ])
-      setSessions7d(sessionData)
-      setStats(statsData)
+      setSessions7d(prev => JSON.stringify(prev) === JSON.stringify(sessionData) ? prev : sessionData)
+      setStats(prev => JSON.stringify(prev) === JSON.stringify(statsData) ? prev : statsData)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load sleep data')
     } finally {
-      setIsLoading(false)
+      if (!silent) setIsLoading(false)
     }
   }, [babyId])
 
@@ -57,16 +57,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible') return
       const now = Date.now()
-      if (now - lastRefresh.at < 5000) return
+      if (now - lastRefresh.at < 30000) return
       lastRefresh.at = now
-      refresh()
+      refresh(true)
     }
 
     const handleFocus = () => {
       const now = Date.now()
-      if (now - lastRefresh.at < 5000) return
+      if (now - lastRefresh.at < 30000) return
       lastRefresh.at = now
-      refresh()
+      refresh(true)
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
