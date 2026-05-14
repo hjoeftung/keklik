@@ -63,6 +63,9 @@ func nightOverlap(sessionStart, sessionEnd time.Time, loc *time.Location, nw Nig
 		localStart.Year(), localStart.Month(), localStart.Day(),
 		0, 0, 0, 0, loc,
 	)
+	if nightWindowCrossesMidnight(nw) {
+		dayStart = dayStart.AddDate(0, 0, -1)
+	}
 
 	for {
 		windowStart, windowEnd := nightWindowBounds(dayStart, nw, loc)
@@ -106,6 +109,15 @@ func nightWindowBounds(dayStart time.Time, nw NightWindow, loc *time.Location) (
 	return ws, we
 }
 
+func nightWindowCrossesMidnight(nw NightWindow) bool {
+	start := nw.Start()
+	end := nw.End()
+	if end.Hour() != start.Hour() {
+		return end.Hour() < start.Hour()
+	}
+	return end.Minute() <= start.Minute()
+}
+
 // classifyActive classifies an active (not-yet-stopped) session by checking
 // whether its start time falls within the night window. It checks both the
 // calendar-day window and the previous day's window so that sessions starting
@@ -135,4 +147,17 @@ func minTime(a, b time.Time) time.Time {
 		return a
 	}
 	return b
+}
+
+func classifyForBuild(sleep SleepSession, windows []NightWindow, loc *time.Location) (SleepClassification, bool, error) {
+	window, ok := FindWindowForSession(windows, sleep)
+	if !ok {
+		return SleepClassificationUnknown, false, nil
+	}
+
+	if sleep.IsActive() {
+		return classifyActive(sleep, loc, window), true, nil
+	}
+
+	return classifyFromLocation(sleep, loc, window), true, nil
 }

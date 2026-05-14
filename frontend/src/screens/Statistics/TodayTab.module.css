@@ -3,6 +3,16 @@
 .tab {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.topSection {
+  flex-shrink: 0;
+  background: var(--kk-bg);
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Summary pills ──────────────────────────────────────────── */
@@ -67,6 +77,12 @@
 
 /* ── Diary scroll area ──────────────────────────────────────── */
 
+.diaryScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 .diaryInner {
   position: relative;

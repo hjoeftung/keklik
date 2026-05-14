@@ -71,9 +71,8 @@ func (h *GetSleepStatsHandler) Handle(ctx context.Context, q GetSleepStatsQuery)
 	}
 
 	// Fetch sessions covering 90d plus a 24h buffer for cross-midnight naps.
-	ninetyDaysAgoLocal := now.In(loc).AddDate(0, 0, -90)
-	periodStart := time.Date(ninetyDaysAgoLocal.Year(), ninetyDaysAgoLocal.Month(), ninetyDaysAgoLocal.Day(), 0, 0, 0, 0, loc).UTC()
-	fetchStart := periodStart.Add(-24 * time.Hour)
+	currentDayStart := statsDayStartForInstant(now, w, loc)
+	fetchStart := currentDayStart.AddDate(0, 0, -90).Add(-24 * time.Hour)
 
 	dr, err := NewDateRange(fetchStart, now)
 	if err != nil {
@@ -85,24 +84,15 @@ func (h *GetSleepStatsHandler) Handle(ctx context.Context, q GetSleepStatsQuery)
 		return SleepStats{}, fmt.Errorf("get sleep stats: %w", err)
 	}
 
-	userDays, err := buildUserDays(sessions, windows, loc, now, 91)
+	dayStats, err := buildDayStats(sessions, windows, loc, now, 91)
 	if err != nil {
 		return SleepStats{}, fmt.Errorf("get sleep stats: %w", err)
 	}
 
-	localNow := now.In(loc)
-	numDays := min(7, len(userDays))
+	numDays := min(7, len(dayStats))
 	days := make([]DayStats, numDays)
-	for i := range days {
-		d := localNow.AddDate(0, 0, -i)
-		days[i] = DayStats{
-			Date:               fmt.Sprintf("%04d-%02d-%02d", d.Year(), int(d.Month()), d.Day()),
-			TotalNapSeconds:    userDays[i].NapDuration(now).Seconds(),
-			TotalSleepSeconds:  userDays[i].NightDuration(now).Seconds() + userDays[i].NapDuration(now).Seconds(),
-			TotalActiveSeconds: userDays[i].ActiveDuration(now).Seconds(),
-		}
-	}
-	summary := summaryAveragesFrom(userDays[1:], now)
+	copy(days, dayStats[:numDays])
+	summary := summaryAveragesFromDayStats(dayStats[1:])
 
 	return SleepStats{
 		Days:        days,
@@ -125,13 +115,114 @@ func findWindowAt(windows []NightWindow, t time.Time) (NightWindow, bool) {
 	return best, found
 }
 
-func summaryAveragesFrom(days []*UserDay, now time.Time) map[string]PeriodAverage {
+func buildDayStats(
+	sessions []SleepSession,
+	windows []NightWindow,
+	loc *time.Location,
+	now time.Time,
+	days int,
+) ([]DayStats, error) {
+	windowNow, ok := findWindowAt(windows, now)
+	if !ok {
+		return nil, nil
+	}
+
+	currentDayStart := statsDayStartForInstant(now, windowNow, loc)
+	result := make([]DayStats, 0, days)
+	for i := 0; i < days; i++ {
+		dayStart := currentDayStart.AddDate(0, 0, -i)
+		windowAtDayStart, ok := findWindowAt(windows, dayStart)
+		if !ok {
+			continue
+		}
+		dayStart = statsDayStartForDate(dayStart.In(loc), windowAtDayStart, loc)
+		dayEnd := dayStart.Add(24 * time.Hour)
+		sleep, nap := overlapTotalsForWindow(sessions, windows, loc, dayStart, dayEnd, now)
+		active := dayEnd.Sub(dayStart).Seconds() - sleep
+		if i == 0 && now.Before(dayEnd) {
+			active = now.Sub(dayStart).Seconds() - sleep
+		}
+		localDayStart := dayStart.In(loc)
+		result = append(result, DayStats{
+			Date:               fmt.Sprintf("%04d-%02d-%02d", localDayStart.Year(), int(localDayStart.Month()), localDayStart.Day()),
+			TotalSleepSeconds:  sleep,
+			TotalNapSeconds:    nap,
+			TotalActiveSeconds: maxFloat64(0, active),
+		})
+	}
+	return result, nil
+}
+
+func overlapTotalsForWindow(
+	sessions []SleepSession,
+	windows []NightWindow,
+	loc *time.Location,
+	windowStart time.Time,
+	windowEnd time.Time,
+	now time.Time,
+) (sleepSeconds float64, napSeconds float64) {
+	for _, session := range sessions {
+		classification, ok, err := classifyForBuild(session, windows, loc)
+		if err != nil || !ok {
+			continue
+		}
+
+		seconds := overlapSeconds(session, windowStart, windowEnd, now)
+		if seconds <= 0 {
+			continue
+		}
+
+		sleepSeconds += seconds
+		if classification == SleepClassificationNap {
+			napSeconds += seconds
+		}
+	}
+	return sleepSeconds, napSeconds
+}
+
+func overlapSeconds(session SleepSession, start time.Time, end time.Time, now time.Time) float64 {
+	sessionStart := session.StartedAt()
+	sessionEnd, ok := session.StoppedAt()
+	if !ok {
+		sessionEnd = now
+	}
+	overlapStart := maxTime(sessionStart, start)
+	overlapEnd := minTime(sessionEnd, end)
+	if !overlapEnd.After(overlapStart) {
+		return 0
+	}
+	return overlapEnd.Sub(overlapStart).Seconds()
+}
+
+func statsDayStartForInstant(now time.Time, nw NightWindow, loc *time.Location) time.Time {
+	localNow := now.In(loc)
+	dayStart := statsDayStartForDate(localNow, nw, loc)
+	if localNow.Before(dayStart.In(loc)) {
+		return dayStart.AddDate(0, 0, -1)
+	}
+	return dayStart
+}
+
+func statsDayStartForDate(localDate time.Time, nw NightWindow, loc *time.Location) time.Time {
+	return time.Date(
+		localDate.Year(),
+		localDate.Month(),
+		localDate.Day(),
+		nw.End().Hour(),
+		nw.End().Minute(),
+		0,
+		0,
+		loc,
+	).UTC()
+}
+
+func summaryAveragesFromDayStats(days []DayStats) map[string]PeriodAverage {
 	avg := func(n int) PeriodAverage {
 		var sleep, nap, active float64
 		for i := 0; i < n && i < len(days); i++ {
-			sleep += days[i].NightDuration(now).Seconds() + days[i].NapDuration(now).Seconds()
-			nap += days[i].NapDuration(now).Seconds()
-			active += days[i].ActiveDuration(now).Seconds()
+			sleep += days[i].TotalSleepSeconds
+			nap += days[i].TotalNapSeconds
+			active += days[i].TotalActiveSeconds
 		}
 		count := min(n, len(days))
 		if count == 0 {
@@ -149,4 +240,11 @@ func summaryAveragesFrom(days []*UserDay, now time.Time) map[string]PeriodAverag
 		"30d": avg(30),
 		"90d": avg(90),
 	}
+}
+
+func maxFloat64(a, b float64) float64 {
+	if a > b {
+		return a
+	}
+	return b
 }

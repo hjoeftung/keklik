@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import type { SleepSession, SleepStatsResponse } from '@/api/endpoints'
+import type { SleepSession, SleepStatsResponse, DayStats } from '@/api/endpoints'
 import SessionDetailSheet from './SessionDetailSheet'
 import DatePickerStrip from './DatePickerStrip'
+import { computeDayWindow } from './utils'
 import styles from './TodayTab.module.css'
 
 interface Props {
@@ -45,15 +46,6 @@ interface SessionBar {
   showDuration: boolean
 }
 
-function isToday(d: Date): boolean {
-  const now = new Date()
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  )
-}
-
 export default function TodayTab({
   sessions,
   stats,
@@ -63,8 +55,6 @@ export default function TodayTab({
   selectedDate,
   onDateChange,
 }: Props) {
-  const selectedIsToday = isToday(selectedDate)
-
   const [selectedSession, setSelectedSession] = useState<SleepSession | null>(null)
   const [localSessions, setLocalSessions] = useState(sessions)
   const diaryRef = useRef<HTMLDivElement>(null)
@@ -78,16 +68,7 @@ export default function TodayTab({
     .filter((s) => s.stopped_at != null)
     .sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime())
 
-  let windowStart = new Date(selectedDate)
-  windowStart.setHours(7, 0, 0, 0)
-  let windowEnd = new Date(windowStart.getTime() + 24 * 60 * 60 * 1000)
-  if (stats?.night_window) {
-    const startHour = parseInt(stats.night_window.end_hhmm.split(':')[0], 10)
-    const viewStartHour = (startHour - 1 + 24) % 24
-    windowStart = new Date(selectedDate)
-    windowStart.setHours(viewStartHour, 0, 0, 0)
-    windowEnd = new Date(windowStart.getTime() + 24 * 60 * 60 * 1000)
-  }
+  const { windowStart, windowEnd } = computeDayWindow(selectedDate, stats?.night_window)
   const totalMinutes = (windowEnd.getTime() - windowStart.getTime()) / 60000
   const totalHeight = totalMinutes * PX_PER_MIN
 
@@ -198,43 +179,37 @@ const hourTicks: HourTick[] = []
     )
   }
 
-  const totalSleepSec = selectedIsToday
-    ? (stats?.today.total_sleep_seconds ?? 0)
-    : localSessions
-        .filter((s) => s.classification === 'night')
-        .reduce((a, s) => a + (s.duration_seconds ?? 0), 0)
-  const totalNapSec = selectedIsToday
-    ? (stats?.today.total_nap_seconds ?? 0)
-    : localSessions
-        .filter((s) => s.classification === 'nap')
-        .reduce((a, s) => a + (s.duration_seconds ?? 0), 0)
-  const totalActiveSec = selectedIsToday
-    ? (stats?.today.total_active_seconds ?? 0)
-    : localSessions
-        .filter((s) => s.classification === 'active')
-        .reduce((a, s) => a + (s.duration_seconds ?? 0), 0)
+  const selectedDateKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+  const dayStats: DayStats | undefined = stats?.days.find((d) => d.date === selectedDateKey)
+  const totalSleepSec = dayStats?.total_sleep_seconds ?? 0
+  const totalNapSec = dayStats?.total_nap_seconds ?? 0
+  const totalActiveSec = dayStats?.total_active_seconds ?? 0
 
   return (
     <div className={styles.tab}>
-      <DatePickerStrip selectedDate={selectedDate} onChange={onDateChange} />
+      <div className={styles.topSection}>
+        <DatePickerStrip selectedDate={selectedDate} onChange={onDateChange} />
 
-      {/* Summary pills */}
-      <div className={styles.summaryRow}>
-        <div className={`${styles.statPill} ${styles.statPillNight}`}>
-          <span className={styles.statLabel}>Sleep</span>
-          <span className={`${styles.statValue} ${styles.statNight}`}>
-            {formatDur(totalSleepSec)}
-          </span>
-        </div>
-        <div className={`${styles.statPill} ${styles.statPillNap}`}>
-          <span className={styles.statLabel}>Naps</span>
-          <span className={`${styles.statValue} ${styles.statNap}`}>{formatDur(totalNapSec)}</span>
-        </div>
-        <div className={`${styles.statPill} ${styles.statPillActive}`}>
-          <span className={styles.statLabel}>Active</span>
-          <span className={`${styles.statValue} ${styles.statActive}`}>
-            {formatDur(totalActiveSec)}
-          </span>
+        {/* Summary pills */}
+        <div className={styles.summaryRow}>
+          <div className={`${styles.statPill} ${styles.statPillNight}`}>
+            <span className={styles.statLabel}>Sleep</span>
+            <span className={`${styles.statValue} ${styles.statNight}`}>
+              {formatDur(totalSleepSec)}
+            </span>
+          </div>
+          <div className={`${styles.statPill} ${styles.statPillNap}`}>
+            <span className={styles.statLabel}>Naps</span>
+            <span className={`${styles.statValue} ${styles.statNap}`}>
+              {formatDur(totalNapSec)}
+            </span>
+          </div>
+          <div className={`${styles.statPill} ${styles.statPillActive}`}>
+            <span className={styles.statLabel}>Active</span>
+            <span className={`${styles.statValue} ${styles.statActive}`}>
+              {formatDur(totalActiveSec)}
+            </span>
+          </div>
         </div>
       </div>
 

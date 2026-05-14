@@ -170,7 +170,8 @@ export function getSleepHistory(
 
 // --- Sleep stats ---
 
-export interface TodayStats {
+export interface DayStats {
+  date: string
   total_sleep_seconds: number
   total_nap_seconds: number
   total_active_seconds: number
@@ -188,7 +189,7 @@ export interface NightWindowInfo {
 }
 
 export interface SleepStatsResponse {
-  today: TodayStats
+  days: DayStats[]
   summary: Record<string, PeriodAverage>
   night_window?: NightWindowInfo
 }

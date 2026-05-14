@@ -53,6 +53,14 @@ export default function StatsScreen() {
   const filteredSessions = sessionsForDate(sessions7d, selectedDate, stats?.night_window)
 
   useEffect(() => {
+    if (!stats?.days.length) return
+    const selectedDateKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+    if (stats.days.some((day) => day.date === selectedDateKey)) return
+    const [year, month, day] = stats.days[0].date.split('-').map(Number)
+    setSelectedDate(new Date(year, month - 1, day))
+  }, [selectedDate, stats?.days])
+
+  useEffect(() => {
     const el = screenRef.current
     if (!el) return
     let startY = 0

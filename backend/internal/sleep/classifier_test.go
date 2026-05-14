@@ -150,6 +150,25 @@ func TestClassifyMidnightCrossingWindowNap(t *testing.T) {
 	}
 }
 
+func TestClassifyMidnightCrossingWindowEarlyMorningTailIsNight(t *testing.T) {
+	t.Parallel()
+
+	// Window 21:00–07:00. Session 02:00–07:00 falls entirely in the previous
+	// day's cross-midnight tail and should still classify as night sleep.
+	nw := mustNightWindow(t, 21, 0, 7, 0)
+	start := time.Date(2026, time.March, 16, 2, 0, 0, 0, time.UTC)
+	stop := time.Date(2026, time.March, 16, 7, 0, 0, 0, time.UTC)
+
+	got, err := Classify(mustCompletedSession(t, start, stop), "UTC", nw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if got != SleepClassificationNight {
+		t.Fatalf("expected night, got %q", got)
+	}
+}
+
 // --- DST transitions ---
 
 // TestClassifyDSTSpringForwardNightSleep covers the North-American spring
