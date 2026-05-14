@@ -76,7 +76,6 @@ const hourTicks: HourTick[] = []
   {
     let t = new Date(windowStart)
     t.setMinutes(0, 0, 0)
-    t = new Date(t.getTime() + 3_600_000)
     while (t <= windowEnd) {
       const offsetMin = (t.getTime() - windowStart.getTime()) / 60000
       if (offsetMin >= 0 && offsetMin <= totalMinutes) {
@@ -230,7 +229,10 @@ const hourTicks: HourTick[] = []
               <div
                 key={tick.label}
                 className={styles.hourLabel}
-                style={{ top: tick.offsetMin * PX_PER_MIN }}
+                style={{
+                  top: tick.offsetMin * PX_PER_MIN,
+                  transform: tick.offsetMin === 0 ? 'translateY(0)' : undefined,
+                }}
               >
                 {tick.label}
               </div>
