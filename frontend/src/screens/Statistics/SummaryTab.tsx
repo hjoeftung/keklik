@@ -36,11 +36,8 @@ function formatDateRange(period: Period): string {
 
 function MoonIcon() {
   return (
-    <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M22 16.5C16.2 16.5 11.5 11.8 11.5 6c0-1.4.25-2.74.7-4C6.95 3.36 3 8.23 3 14c0 7.18 5.82 13 13 13 5.77 0 10.64-3.95 12-9.2-1.26.45-2.6.7-4 .7z"
-        fill="white"
-      />
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
   )
 }
