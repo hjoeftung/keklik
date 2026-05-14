@@ -100,10 +100,10 @@ export default function SettingsScreen() {
       <div className={styles.section}>
         <p className={styles.sectionLabel}>About</p>
         <div className={styles.group}>
-          <div className={styles.row}>
+          <button className={styles.row} onClick={() => navigate('/settings/help')}>
             <span className={styles.rowLabel}>Help</span>
             <span className={styles.rowChevron}>›</span>
-          </div>
+          </button>
           <div className={styles.divider} />
           <button className={styles.signOutRow} onClick={() => setShowSignOut(true)}>
             Sign out
