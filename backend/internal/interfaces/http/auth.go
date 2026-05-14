@@ -57,6 +57,10 @@ type authCookieConfig struct {
 }
 
 func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string, cfg authCookieConfig) {
+	// Evict any stale cookie left over from the previous Path:/auth/refresh era
+	// before writing the current cookie so consumers that scan duplicate cookie
+	// names in header order keep the active Path:/ value.
+	http.SetCookie(w, &http.Cookie{Name: refreshCookieName, Value: "", MaxAge: -1, Path: "/auth/refresh"})
 	http.SetCookie(w, &http.Cookie{
 		Name:     accessCookieName,
 		Value:    accessToken,
@@ -75,9 +79,6 @@ func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string, cfg
 		SameSite: http.SameSiteStrictMode,
 		Path:     "/",
 	})
-	// Evict any stale cookie left over from the previous Path:/auth/refresh era.
-	// Browsers send the more-specific path first, so the old cookie would shadow the new one.
-	http.SetCookie(w, &http.Cookie{Name: refreshCookieName, Value: "", MaxAge: -1, Path: "/auth/refresh"})
 }
 
 func clearAuthCookies(w http.ResponseWriter) {
