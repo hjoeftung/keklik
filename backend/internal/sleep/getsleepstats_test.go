@@ -137,10 +137,11 @@ func TestGetSleepStatsSummaryAnchorConsistency(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Apr 28: WokeAt=07:00, NightStartedAt=nil → active = dayEnd−07:00 − 1h nap = 17h−1h = 16h.
-	// Apr 27: WokeAt=midnight, NightStartedAt=Apr 27 21:00 (night starts tonight) → active = 21h.
-	// Apr 22–26: no sessions → active = 24h each.
-	want7dAvg := (16*3600.0 + 21*3600.0 + 5*86400.0) / 7.0
+	// Apr 28: WokeAt=07:00, active = dayEnd−07:00 − 1h nap = 17h−1h = 16h.
+	// Apr 27: NightStartedAt=Apr 27 21:00 → active = 21h.
+	// Apr 22–26: no sessions → skipped by the empty-day filter.
+	// Average is over 2 days with data, not the full 7-day period.
+	want7dAvg := (16*3600.0 + 21*3600.0) / 2.0
 	got := stats.Summary["7d"].AvgActiveSeconds
 	if got != want7dAvg {
 		t.Fatalf("7d AvgActiveSeconds: want %.2f (anchor at 07:00), got %.2f", want7dAvg, got)
@@ -174,9 +175,9 @@ func TestGetSleepStatsSummaryNightSleepAttributionByStartedAt(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Night counted once for Apr 27 (36000s); Apr 28 has 0 sleep (night started Apr 27).
-	// Old overlap-based code would give 72000/7 (counted for both Apr 27 and Apr 28).
-	want7dAvg := 36000.0 / 7.0
+	// Night counted once for Apr 27 (36000s); Apr 28 and Apr 22-26 have 0 sleep → skipped.
+	// Average is over 1 day with data, not the full 7-day period.
+	want7dAvg := 36000.0
 	got := stats.Summary["7d"].AvgSleepSeconds
 	if got != want7dAvg {
 		t.Fatalf("7d AvgSleepSeconds: want %.4f (night on Apr 27 only), got %.4f", want7dAvg, got)
@@ -211,8 +212,9 @@ func TestGetSleepStatsSummaryCrossMidnightNapCaptured(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Apr 28 nap total = 45 min = 2700s; all other days = 0.
-	want7dAvg := 2700.0 / 7.0
+	// Apr 28 nap total = 45 min = 2700s; all other days = 0 → skipped.
+	// Average is over 1 day with data, not the full 7-day period.
+	want7dAvg := 2700.0
 	got := stats.Summary["7d"].AvgNapSeconds
 	if got != want7dAvg {
 		t.Fatalf("7d AvgNapSeconds: want %.4f (cross-midnight nap), got %.4f", want7dAvg, got)
