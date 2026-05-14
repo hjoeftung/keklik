@@ -67,19 +67,24 @@ func (d *UserDay) AddNightSleep(sleep SleepSession) error {
 		}
 		return d.AddNightSleep(completedSleep)
 	}
-	nwStart, nwEnd := nightWindowBounds(d.dayStart, d.nightWindow, d.loc)
-	if startedWithin(sleep, d.dayStart, d.dayEnd) && intersects(sleep, nwStart, nwEnd) {
+
+	// A UserDay is anchored by wake-up, not by the previous night's sleep total.
+	// So a night session contributes to NightDuration only when it belongs to
+	// this day's night window. A night session from yesterday may still define
+	// today's wake-up anchor, but it must not be counted as today's night sleep.
+	if d.belongsToThisDayNightWindow(sleep) {
 		d.nightSessions = append(d.nightSessions, sleep)
 		if d.nightStartedAt.After(sleep.startedAt) {
 			d.nightStartedAt = sleep.startedAt
 		}
 		return nil
-	} else {
-		if stoppedAt.After(d.wokeAt) {
-			d.wokeAt = stoppedAt
-		}
-		return ErrSleepOutOfDayBound
 	}
+
+	if d.wakesIntoThisDay(sleep, stoppedAt) && stoppedAt.After(d.wokeAt) {
+		d.wokeAt = stoppedAt
+	}
+
+	return ErrSleepOutOfDayBound
 }
 
 func (d *UserDay) AddNap(sleep SleepSession) error {
@@ -158,6 +163,20 @@ func (d *UserDay) NightFinishedAt() (time.Time, bool) {
 	return stoppedAt, true
 }
 
+func (d *UserDay) belongsToThisDayNightWindow(sleep SleepSession) bool {
+	nwStart, nwEnd := nightWindowBounds(d.dayStart, d.nightWindow, d.loc)
+	return timeWithinRangeStartInclusive(sleep.StartedAt(), d.dayStart, d.dayEnd) &&
+		sleepOverlapsRange(sleep, nwStart, nwEnd)
+}
+
+func (d *UserDay) wakesIntoThisDay(sleep SleepSession, stoppedAt time.Time) bool {
+	previousNightStart, previousNightEnd := nightWindowBounds(d.dayStart.AddDate(0, 0, -1), d.nightWindow, d.loc)
+	return sleep.StartedAt().Before(d.dayStart) &&
+		sleepOverlapsRange(sleep, previousNightStart, previousNightEnd) &&
+		timeWithinRangeStartInclusive(stoppedAt, d.dayStart, d.dayEnd) &&
+		stoppedAt.Before(d.dayEnd)
+}
+
 
 // buildUserDays constructs one UserDay per calendar date in [today, today−(days−1)],
 // index 0 = today, in reverse-chronological order.
@@ -211,4 +230,16 @@ func intersects(sleep SleepSession, start time.Time, end time.Time) bool {
 
 func startedWithin(sleep SleepSession, start time.Time, end time.Time) bool {
 	return sleep.StartedAt().After(start) && sleep.StartedAt().Before(end) 
+}
+
+func sleepOverlapsRange(sleep SleepSession, start time.Time, end time.Time) bool {
+	stoppedAt, ok := sleep.StoppedAt()
+	if !ok {
+		return sleep.StartedAt().Before(end)
+	}
+	return sleep.StartedAt().Before(end) && stoppedAt.After(start)
+}
+
+func timeWithinRangeStartInclusive(t time.Time, start time.Time, end time.Time) bool {
+	return !t.Before(start) && t.Before(end)
 }

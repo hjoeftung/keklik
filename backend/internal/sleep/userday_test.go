@@ -56,7 +56,7 @@ func TestBuildUserDaysNoSessions(t *testing.T) {
 	}
 }
 
-func TestBuildUserDaysCompletedNightNoNaps(t *testing.T) {
+func TestBuildUserDaysYesterdayNightAnchorsWakeButIsNotTodaysNightSleep(t *testing.T) {
 	t.Parallel()
 
 	nw := mustNightWindow(t, 21, 0, 7, 0)
@@ -72,7 +72,7 @@ func TestBuildUserDaysCompletedNightNoNaps(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	want := struct{ night, nap, active float64 }{36000, 0, 18000}
+	want := struct{ night, nap, active float64 }{0, 0, 18000}
 	got := struct{ night, nap, active float64 }{
 		days[0].NightDuration(now).Seconds(),
 		days[0].NapDuration(now).Seconds(),
@@ -316,7 +316,7 @@ func TestBuildUserDaysMultiDayIndependence(t *testing.T) {
 	}
 }
 
-func TestBuildUserDaysNonUTCTimezone(t *testing.T) {
+func TestBuildUserDaysNonUTCTimezoneYesterdayNightSetsWakeAnchor(t *testing.T) {
 	t.Parallel()
 
 	nw := mustNightWindow(t, 21, 0, 7, 0)
@@ -340,7 +340,7 @@ func TestBuildUserDaysNonUTCTimezone(t *testing.T) {
 	}
 
 	// WokeAt = Apr 28 07:00 EDT; active = now(23:00 EDT) − 07:00 EDT = 16h.
-	want := struct{ night, active float64 }{36000, 57600}
+	want := struct{ night, active float64 }{0, 57600}
 	got := struct{ night, active float64 }{
 		days[0].NightDuration(now).Seconds(),
 		days[0].ActiveDuration(now).Seconds(),
