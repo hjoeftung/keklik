@@ -84,7 +84,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     }
     if (response.status === 401) {
       clearAccountId()
-      window.location.replace('/')
+      if (window.location.pathname !== '/') {
+        window.location.replace('/')
+      }
       throw new ApiError('Session expired. Please sign in again.', 'unauthenticated', 401)
     }
   }
