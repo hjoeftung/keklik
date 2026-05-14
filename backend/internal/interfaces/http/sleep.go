@@ -555,7 +555,8 @@ func mapLogPastSleepError(err error) apperror.AppError {
 	}
 }
 
-type todayStatsResponse struct {
+type dayStatsResponse struct {
+	Date               string  `json:"date"`
 	TotalSleepSeconds  float64 `json:"total_sleep_seconds"`
 	TotalNapSeconds    float64 `json:"total_nap_seconds"`
 	TotalActiveSeconds float64 `json:"total_active_seconds"`
@@ -573,7 +574,7 @@ type nightWindowInfoResponse struct {
 }
 
 type sleepStatsResponse struct {
-	Today       todayStatsResponse           `json:"today"`
+	Days        []dayStatsResponse           `json:"days"`
 	Summary     map[string]periodAvgResponse `json:"summary"`
 	NightWindow *nightWindowInfoResponse     `json:"night_window,omitempty"`
 }
@@ -631,12 +632,18 @@ func getSleepStatsHandler(w http.ResponseWriter, r *http.Request, h *sleep.GetSl
 		}
 	}
 
+	days := make([]dayStatsResponse, len(stats.Days))
+	for i, d := range stats.Days {
+		days[i] = dayStatsResponse{
+			Date:               d.Date,
+			TotalSleepSeconds:  d.TotalSleepSeconds,
+			TotalNapSeconds:    d.TotalNapSeconds,
+			TotalActiveSeconds: d.TotalActiveSeconds,
+		}
+	}
+
 	resp := sleepStatsResponse{
-		Today: todayStatsResponse{
-			TotalSleepSeconds:  stats.Today.TotalSleepSeconds,
-			TotalNapSeconds:    stats.Today.TotalNapSeconds,
-			TotalActiveSeconds: stats.Today.TotalActiveSeconds,
-		},
+		Days:        days,
 		Summary:     summary,
 		NightWindow: nightWindow,
 	}

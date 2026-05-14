@@ -16,7 +16,7 @@ import (
 )
 
 const testSigningKey = "test-signing-key"
-const testAccessTokenDuration = 15 * time.Minute
+const testAccessTokenDuration = 30 * time.Second
 const testRefreshTokenDuration = 30 * 24 * time.Hour
 
 // --- requireAuth middleware ---

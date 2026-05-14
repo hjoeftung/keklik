@@ -16,14 +16,21 @@ import "time"
 // wall-clock time of a boundary would land on the following calendar day it is
 // shifted forward by 24 hours relative to the night-window start anchor.
 func Classify(session SleepSession, timezone string, nightWindow NightWindow) (SleepClassification, error) {
-	stoppedAt, ok := session.StoppedAt()
-	if !ok {
+	if session.IsActive() {
 		return SleepClassificationUnknown, nil
 	}
-
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
 		return SleepClassificationUnknown, ErrInvalidTimezone
+	}
+
+	return classifyFromLocation(session, loc, nightWindow), nil
+}
+
+func classifyFromLocation(session SleepSession, loc *time.Location, nightWindow NightWindow) SleepClassification {
+	stoppedAt, ok := session.StoppedAt()
+	if !ok {
+		return classifyActive(session, loc, nightWindow)
 	}
 
 	overlap := nightOverlap(session.StartedAt(), stoppedAt, loc, nightWindow)
@@ -32,15 +39,15 @@ func Classify(session SleepSession, timezone string, nightWindow NightWindow) (S
 	if duration == 0 {
 		// Zero-duration session: classify by whether start falls in night window.
 		if overlap > 0 {
-			return SleepClassificationNight, nil
+			return SleepClassificationNight
 		}
-		return SleepClassificationNap, nil
+		return SleepClassificationNap
 	}
 
 	if overlap*2 > duration {
-		return SleepClassificationNight, nil
+		return SleepClassificationNight
 	}
-	return SleepClassificationNap, nil
+	return SleepClassificationNap
 }
 
 // nightOverlap returns how much of [sessionStart, sessionEnd) overlaps with
@@ -97,6 +104,23 @@ func nightWindowBounds(dayStart time.Time, nw NightWindow, loc *time.Location) (
 	}
 
 	return ws, we
+}
+
+// classifyActive classifies an active (not-yet-stopped) session by checking
+// whether its start time falls within the night window. It checks both the
+// calendar-day window and the previous day's window so that sessions starting
+// in the early-morning tail of a cross-midnight window are handled correctly.
+func classifyActive(session SleepSession, loc *time.Location, nw NightWindow) SleepClassification {
+	start := session.StartedAt()
+	localStart := start.In(loc)
+	day := time.Date(localStart.Year(), localStart.Month(), localStart.Day(), 0, 0, 0, 0, loc)
+	for _, offset := range []int{0, -1} {
+		ws, we := nightWindowBounds(day.AddDate(0, 0, offset), nw, loc)
+		if !start.Before(ws) && start.Before(we) {
+			return SleepClassificationNight
+		}
+	}
+	return SleepClassificationNap
 }
 
 func maxTime(a, b time.Time) time.Time {

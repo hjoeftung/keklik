@@ -25,8 +25,8 @@ func TestGetSleepStatsHandlerReturnsZeroStatsWhenNoNightWindow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if stats.Today.TotalSleepSeconds != 0 || stats.Today.TotalNapSeconds != 0 {
-		t.Fatalf("expected zero today stats, got %+v", stats.Today)
+	if len(stats.Days) > 0 && (stats.Days[0].TotalSleepSeconds != 0 || stats.Days[0].TotalNapSeconds != 0) {
+		t.Fatalf("expected zero today stats, got %+v", stats.Days[0])
 	}
 }
 
@@ -64,14 +64,14 @@ func TestGetSleepStatsHandlerTodayTotals(t *testing.T) {
 	}
 
 	wantNap := (1 * time.Hour).Seconds()
-	if stats.Today.TotalNapSeconds != wantNap {
-		t.Fatalf("TotalNapSeconds: want %.0f, got %.0f", wantNap, stats.Today.TotalNapSeconds)
+	if stats.Days[0].TotalNapSeconds != wantNap {
+		t.Fatalf("TotalNapSeconds: want %.0f, got %.0f", wantNap, stats.Days[0].TotalNapSeconds)
 	}
 
-	// Night sleep started April 28 (before dayStart), so it is not counted in today's total sleep.
-	wantSleep := (1 * time.Hour).Seconds()
-	if stats.Today.TotalSleepSeconds != wantSleep {
-		t.Fatalf("TotalSleepSeconds: want %.0f, got %.0f", wantSleep, stats.Today.TotalSleepSeconds)
+	// Night sleep (Apr 28 21:00–Apr 29 07:00) is in today's previous night window → sets WokeAt, not counted.
+	wantSleep := (1 * time.Hour).Seconds() // 0h night + 1h nap
+	if stats.Days[0].TotalSleepSeconds != wantSleep {
+		t.Fatalf("TotalSleepSeconds: want %.0f, got %.0f", wantSleep, stats.Days[0].TotalSleepSeconds)
 	}
 }
 
@@ -137,9 +137,10 @@ func TestGetSleepStatsSummaryAnchorConsistency(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Apr 28: anchor=07:00, window=17h, minus 1h nap = 16h active.
-	// Apr 22–27: no sessions, each contributes 24h active.
-	want7dAvg := (16*3600.0 + 6*86400.0) / 7.0
+	// Apr 28: WokeAt=07:00, NightStartedAt=nil → active = dayEnd−07:00 − 1h nap = 17h−1h = 16h.
+	// Apr 27: WokeAt=midnight, NightStartedAt=Apr 27 21:00 (night starts tonight) → active = 21h.
+	// Apr 22–26: no sessions → active = 24h each.
+	want7dAvg := (16*3600.0 + 21*3600.0 + 5*86400.0) / 7.0
 	got := stats.Summary["7d"].AvgActiveSeconds
 	if got != want7dAvg {
 		t.Fatalf("7d AvgActiveSeconds: want %.2f (anchor at 07:00), got %.2f", want7dAvg, got)

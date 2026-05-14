@@ -75,11 +75,15 @@ func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string, cfg
 		SameSite: http.SameSiteStrictMode,
 		Path:     "/",
 	})
+	// Evict any stale cookie left over from the previous Path:/auth/refresh era.
+	// Browsers send the more-specific path first, so the old cookie would shadow the new one.
+	http.SetCookie(w, &http.Cookie{Name: refreshCookieName, Value: "", MaxAge: -1, Path: "/auth/refresh"})
 }
 
 func clearAuthCookies(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{Name: accessCookieName, Value: "", MaxAge: -1, Path: "/"})
 	http.SetCookie(w, &http.Cookie{Name: refreshCookieName, Value: "", MaxAge: -1, Path: "/"})
+	http.SetCookie(w, &http.Cookie{Name: refreshCookieName, Value: "", MaxAge: -1, Path: "/auth/refresh"})
 }
 
 // oauthStartHandler generates a random state, stores it in a signed cookie, and
@@ -260,6 +264,7 @@ func testLoginHandler(w http.ResponseWriter, r *http.Request, enabled bool, h *a
 func refreshTokenHandler(w http.ResponseWriter, r *http.Request, h *auth.HandleRefreshTokenHandler, cfg authCookieConfig) {
 	cookie, err := r.Cookie(refreshCookieName)
 	if err != nil {
+		slog.WarnContext(r.Context(), "refresh_cookie_missing")
 		clearAuthCookies(w)
 		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "invalid or expired refresh token"))
 		return
@@ -267,6 +272,7 @@ func refreshTokenHandler(w http.ResponseWriter, r *http.Request, h *auth.HandleR
 
 	result, err := h.Handle(r.Context(), auth.HandleRefreshTokenCommand{Token: cookie.Value})
 	if err != nil {
+		slog.WarnContext(r.Context(), "refresh_token_invalid", "reason", err.Error())
 		clearAuthCookies(w)
 		writeError(w, r, apperror.New(apperror.CodeUnauthenticated, "invalid or expired refresh token"))
 		return
