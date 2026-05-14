@@ -19,43 +19,10 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  changes:
-    name: Detect changed paths
-    runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v5
-
-      - name: Filter paths
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            backend:
-              - 'backend/**/*.go'
-              - 'backend/go.mod'
-              - 'backend/go.sum'
-              - 'backend/Dockerfile'
-              - '.github/workflows/publish.yml'
-            frontend:
-              - 'frontend/src/**'
-              - 'frontend/public/**'
-              - 'frontend/index.html'
-              - 'frontend/package.json'
-              - 'frontend/package-lock.json'
-              - 'frontend/vite.config.*'
-              - 'frontend/tsconfig.*'
-              - '.github/workflows/publish.yml'
-
   validate:
     name: Validate release candidate
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
 
     steps:
       - name: Check out repository
@@ -101,7 +68,7 @@ jobs:
     name: Publish container image
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [changes, validate]
+    needs: validate
     permissions:
       contents: read
       packages: write
@@ -145,7 +112,6 @@ jobs:
     name: Build and publish frontend bundle
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: changes
 
     steps:
       - name: Check out repository
