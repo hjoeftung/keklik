@@ -195,11 +195,6 @@ export default function OnboardingScreen() {
         >
           {isSubmitting ? 'Setting up…' : 'Start tracking'}
         </button>
-
-        <div className={styles.dots}>
-          <span className={styles.dotInactive} />
-          <span className={styles.dotActive} />
-        </div>
       </form>
     </div>
   )

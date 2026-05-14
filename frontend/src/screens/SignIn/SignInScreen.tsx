@@ -128,10 +128,6 @@ export default function SignInScreen() {
               'Continue with Google'
             )}
           </button>
-          <div className={styles.dots}>
-            <span className={styles.dotActive} />
-            <span className={styles.dotInactive} />
-          </div>
         </div>
       </div>
     </div>
