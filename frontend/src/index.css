@@ -22,6 +22,8 @@
   --kk-accent: #a38fc4;
   --kk-night-sky: #2c2745;
 
+  --kk-danger: #c8553c;
+
   /* Typography */
   --kk-sans: 'Quicksand', system-ui, sans-serif;
   --kk-serif: 'Fraunces', Georgia, serif;
@@ -29,6 +31,7 @@
   /* Shadows */
   --kk-shadow-sm: 0 1px 3px rgba(46, 42, 51, 0.08), 0 1px 2px rgba(46, 42, 51, 0.04);
   --kk-shadow-md: 0 4px 12px rgba(46, 42, 51, 0.1), 0 2px 4px rgba(46, 42, 51, 0.06);
+  --kk-shadow-lg: 0 24px 60px rgba(46, 42, 51, 0.18), 0 8px 20px rgba(46, 42, 51, 0.10);
 }
 
 /* ── Legacy aliases (kept until per-screen migration is done) ── */
@@ -157,4 +160,25 @@ p {
   60% {
     opacity: 0.9;
   }
+}
+
+@keyframes kk-twinkle {
+  0%, 100% { opacity: 1; }
+  40% { opacity: 0.3; }
+  60% { opacity: 0.9; }
+}
+
+@keyframes kk-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes kk-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes kk-pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }

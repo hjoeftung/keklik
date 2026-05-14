@@ -1,0 +1,118 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(44, 39, 69, 0.55);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: kk-fade-in 0.22s ease;
+}
+
+.card {
+  width: 100%;
+  max-width: 320px;
+  background: var(--kk-surface);
+  border-radius: 26px;
+  padding: 16px 24px 22px;
+  box-shadow: var(--kk-shadow-lg);
+  position: relative;
+  overflow: hidden;
+  animation: kk-pop-in 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.band {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(180deg, #d9e2f3 0%, #f4ecdd 100%);
+  border-radius: 26px 26px 0 0;
+}
+
+.cloud { position: absolute; top: 14px; left: 20px; }
+.moon  { position: absolute; top: 12px; right: 22px; }
+.star1 { position: absolute; top: 32px; left: 130px; }
+.star2 { position: absolute; top: 58px; right: 70px; }
+.star3 { position: absolute; top: 78px; left: 36px; }
+
+.mascotWrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding-top: 22px;
+  animation: kk-float 3.6s ease-in-out infinite;
+}
+
+.heading {
+  font-family: var(--kk-serif);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--kk-ink);
+  margin: 14px 0 6px;
+  text-align: center;
+  letter-spacing: -0.01em;
+  position: relative;
+}
+
+.body {
+  font-size: 14px;
+  color: var(--kk-ink-soft);
+  margin: 0 auto 20px;
+  text-align: center;
+  line-height: 1.45;
+  max-width: 240px;
+  position: relative;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.primaryBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--kk-sans);
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--kk-primary);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(201, 123, 77, 0.25);
+  transition: transform 0.12s ease, opacity 0.15s ease;
+}
+
+.primaryBtn:active {
+  transform: scale(0.97);
+}
+
+.dangerBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--kk-sans);
+  font-size: 16px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--kk-danger);
+  transition: transform 0.12s ease, opacity 0.15s ease;
+}
+
+.dangerBtn:active {
+  transform: scale(0.97);
+}

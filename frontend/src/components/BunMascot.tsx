@@ -1,4 +1,4 @@
-export default function BunMascot({ size = 104 }: { size?: number }) {
+export default function BunMascot({ size = 104, sleepy = false }: { size?: number; sleepy?: boolean }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 120 120">
       <g fill="#FBE4D1" stroke="#C97B4D" strokeWidth="1.4" strokeOpacity="0.3">
@@ -29,10 +29,19 @@ export default function BunMascot({ size = 104 }: { size?: number }) {
       />
       <ellipse cx="40" cy="76" rx="5.5" ry="3.6" fill="#E59B6A" opacity="0.35" />
       <ellipse cx="78" cy="76" rx="5.5" ry="3.6" fill="#E59B6A" opacity="0.35" />
-      <ellipse cx="49" cy="69" rx="3.2" ry="3.6" fill="#2E2A33" />
-      <ellipse cx="71" cy="69" rx="3.2" ry="3.6" fill="#2E2A33" />
-      <circle cx="50" cy="67.5" r="1" fill="#fff" />
-      <circle cx="72" cy="67.5" r="1" fill="#fff" />
+      {sleepy ? (
+        <g fill="none" stroke="#2E2A33" strokeWidth="2" strokeLinecap="round">
+          <path d="M 46 70 Q 49 67, 52 70" />
+          <path d="M 68 70 Q 71 67, 74 70" />
+        </g>
+      ) : (
+        <g>
+          <ellipse cx="49" cy="69" rx="3.2" ry="3.6" fill="#2E2A33" />
+          <ellipse cx="71" cy="69" rx="3.2" ry="3.6" fill="#2E2A33" />
+          <circle cx="50" cy="67.5" r="1" fill="#fff" />
+          <circle cx="72" cy="67.5" r="1" fill="#fff" />
+        </g>
+      )}
       <path
         d="M 56 78 L 60 84 L 64 78 Q 60 76, 56 78 Z"
         fill="#E8B86E"
@@ -41,6 +50,12 @@ export default function BunMascot({ size = 104 }: { size?: number }) {
         strokeOpacity="0.4"
         strokeLinejoin="round"
       />
+      {sleepy && (
+        <g opacity="0.7">
+          <text x="96" y="46" fontFamily="Fraunces, Georgia, serif" fontSize="13" fontWeight="700" fill="#A38FC4">z</text>
+          <text x="104" y="38" fontFamily="Fraunces, Georgia, serif" fontSize="10" fontWeight="700" fill="#A38FC4">z</text>
+        </g>
+      )}
     </svg>
   )
 }

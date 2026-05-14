@@ -1,5 +1,7 @@
-import { NavLink } from 'react-router-dom'
+import { useState } from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuthContext } from '@/context/AuthContext'
+import { SignOutDialog } from '@/components/SignOutDialog'
 import './NavBar.css'
 
 function IconSleep({ active }: { active: boolean }) {
@@ -121,49 +123,66 @@ function IconSignOut() {
 }
 
 export function NavBar() {
-  const { signOut } = useAuthContext()
+  const { signOut, family } = useAuthContext()
+  const navigate = useNavigate()
+  const [showSignOut, setShowSignOut] = useState(false)
 
   function getLinkClass({ isActive }: { isActive: boolean }) {
     return isActive ? 'navbar__link navbar__link--active' : 'navbar__link'
   }
 
+  async function confirmSignOut() {
+    await signOut()
+    navigate('/')
+  }
+
   return (
-    <nav className="navbar" aria-label="Main navigation">
-      <span className="navbar__brand">Keklik</span>
+    <>
+      <nav className="navbar" aria-label="Main navigation">
+        <span className="navbar__brand">Keklik</span>
 
-      <div className="navbar__links">
-        <NavLink to="/sleep" className={getLinkClass} end>
-          {({ isActive }) => (
-            <>
-              <IconSleep active={isActive} />
-              <span className="navbar__label">Sleep</span>
-            </>
-          )}
-        </NavLink>
+        <div className="navbar__links">
+          <NavLink to="/sleep" className={getLinkClass} end>
+            {({ isActive }) => (
+              <>
+                <IconSleep active={isActive} />
+                <span className="navbar__label">Sleep</span>
+              </>
+            )}
+          </NavLink>
 
-        <NavLink to="/statistics" className={getLinkClass}>
-          {({ isActive }) => (
-            <>
-              <IconStats active={isActive} />
-              <span className="navbar__label">Stats</span>
-            </>
-          )}
-        </NavLink>
+          <NavLink to="/statistics" className={getLinkClass}>
+            {({ isActive }) => (
+              <>
+                <IconStats active={isActive} />
+                <span className="navbar__label">Stats</span>
+              </>
+            )}
+          </NavLink>
 
-        <NavLink to="/settings" className={getLinkClass}>
-          {({ isActive }) => (
-            <>
-              <IconSettings active={isActive} />
-              <span className="navbar__label">Settings</span>
-            </>
-          )}
-        </NavLink>
-      </div>
+          <NavLink to="/settings" className={getLinkClass}>
+            {({ isActive }) => (
+              <>
+                <IconSettings active={isActive} />
+                <span className="navbar__label">Settings</span>
+              </>
+            )}
+          </NavLink>
+        </div>
 
-      <button type="button" className="navbar__signout" onClick={signOut} aria-label="Sign out">
-        <IconSignOut />
-        <span className="navbar__label">Sign out</span>
-      </button>
-    </nav>
+        <button type="button" className="navbar__signout" onClick={() => setShowSignOut(true)} aria-label="Sign out">
+          <IconSignOut />
+          <span className="navbar__label">Sign out</span>
+        </button>
+      </nav>
+
+      {showSignOut && (
+        <SignOutDialog
+          babyName={family?.baby?.name}
+          onConfirm={confirmSignOut}
+          onCancel={() => setShowSignOut(false)}
+        />
+      )}
+    </>
   )
 }

@@ -4,6 +4,7 @@ import { useAuthContext } from '@/context/AuthContext'
 import { useTimeFormatContext } from '@/context/TimeFormatContext'
 import { getSleepStats } from '@/api/endpoints'
 import { hhmmToDisplay } from '@/utils/time'
+import { SignOutDialog } from '@/components/SignOutDialog'
 import styles from './SettingsScreen.module.css'
 
 export default function SettingsScreen() {
@@ -15,6 +16,7 @@ export default function SettingsScreen() {
   const memberCount = family?.members.length ?? 0
 
   const [nightWindowLabel, setNightWindowLabel] = useState<string | null>(null)
+  const [showSignOut, setShowSignOut] = useState(false)
 
   useEffect(() => {
     if (!baby?.id) return
@@ -29,7 +31,7 @@ export default function SettingsScreen() {
       .catch(() => {})
   }, [baby?.id, use24h])
 
-  async function handleSignOut() {
+  async function confirmSignOut() {
     await signOut()
     navigate('/')
   }
@@ -103,13 +105,21 @@ export default function SettingsScreen() {
             <span className={styles.rowChevron}>›</span>
           </div>
           <div className={styles.divider} />
-          <button className={styles.signOutRow} onClick={handleSignOut}>
+          <button className={styles.signOutRow} onClick={() => setShowSignOut(true)}>
             Sign out
           </button>
         </div>
       </div>
 
       <p className={styles.version}>Keklik · v0.1</p>
+
+      {showSignOut && (
+        <SignOutDialog
+          babyName={baby?.name}
+          onConfirm={confirmSignOut}
+          onCancel={() => setShowSignOut(false)}
+        />
+      )}
     </div>
   )
 }
