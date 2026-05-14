@@ -219,12 +219,16 @@ func statsDayStartForDate(localDate time.Time, nw NightWindow, loc *time.Locatio
 func summaryAveragesFromDayStats(days []DayStats) map[string]PeriodAverage {
 	avg := func(n int) PeriodAverage {
 		var sleep, nap, active float64
+		var count int
 		for i := 0; i < n && i < len(days); i++ {
+			if days[i].TotalSleepSeconds == 0 {
+				continue
+			}
 			sleep += days[i].TotalSleepSeconds
 			nap += days[i].TotalNapSeconds
 			active += days[i].TotalActiveSeconds
+			count++
 		}
-		count := min(n, len(days))
 		if count == 0 {
 			return PeriodAverage{}
 		}
