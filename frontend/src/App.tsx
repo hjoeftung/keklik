@@ -15,6 +15,7 @@ import SettingsScreen from '@/screens/Settings/SettingsScreen'
 import NightWindowScreen from '@/screens/Settings/NightWindowScreen'
 import CaregiversScreen from '@/screens/Settings/CaregiversScreen'
 import InvitePartnerScreen from '@/screens/Settings/InvitePartnerScreen'
+import HelpScreen from '@/screens/Settings/HelpScreen'
 
 export default function App() {
   return (
@@ -90,6 +91,16 @@ export default function App() {
                   <RequireAuth>
                     <AuthenticatedLayout>
                       <InvitePartnerScreen />
+                    </AuthenticatedLayout>
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/settings/help"
+                element={
+                  <RequireAuth>
+                    <AuthenticatedLayout>
+                      <HelpScreen />
                     </AuthenticatedLayout>
                   </RequireAuth>
                 }

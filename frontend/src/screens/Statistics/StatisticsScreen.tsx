@@ -64,13 +64,24 @@ export default function StatsScreen() {
     const el = screenRef.current
     if (!el) return
     let startY = 0
+    let startedInScrollable = false
 
     function onStart(e: TouchEvent) {
       startY = e.touches[0].clientY
+      // If the touch started inside a scrollable child, don't hijack the gesture
+      let node = e.target as Element | null
+      startedInScrollable = false
+      while (node && node !== el) {
+        if (node.scrollHeight > node.clientHeight) {
+          startedInScrollable = true
+          break
+        }
+        node = node.parentElement
+      }
     }
 
     function onMove(e: TouchEvent) {
-      if (!el) return
+      if (!el || startedInScrollable) return
       const delta = e.touches[0].clientY - startY
       if (delta > 0 && el.scrollTop <= 0) {
         pullDeltaRef.current = Math.min(PULL_THRESHOLD * 1.5, delta * 0.4)
